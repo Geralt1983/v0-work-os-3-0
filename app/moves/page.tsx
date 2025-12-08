@@ -2,46 +2,55 @@
 
 import type React from "react"
 
-import { useState, useMemo, useRef, useEffect } from "react"
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, Reorder } from "framer-motion"
-import { Check, Archive, LayoutGrid, List, Focus } from "lucide-react"
-import { useMoves, useClients, type Move, type MoveStatus } from "@/hooks/use-moves"
-import { Wand2 } from "lucide-react"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { Check, Archive, LayoutGrid, List, Focus, Zap, FileText, Layers, Clock, ArrowUp, ArrowDown } from "lucide-react"
+import { useMoves, type Move, type MoveStatus, useClients } from "@/hooks/use-moves"
 import { WorkOSNav } from "@/components/work-os-nav"
-import { RewriteDialog } from "@/components/rewrite-dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { NewMoveDialog } from "@/components/new-move-dialog"
+import { motion, AnimatePresence } from "framer-motion"
 import { useIsMobile } from "@/hooks/use-mobile"
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
-type FilterValue = "all" | string
-type UndoState = { id: string; title: string; previousStatus: MoveStatus } | null
-type SortKey = "client" | "title" | "type" | "status"
+type SortKey = "client" | "status" | "type"
 type SortDir = "asc" | "desc"
 
-const mobileTabs = [
+const mobileTabs: { key: MoveStatus; label: string }[] = [
   { key: "today", label: "Today" },
-  { key: "upnext", label: "Next" },
+  { key: "upnext", label: "Up Next" },
   { key: "backlog", label: "Backlog" },
-  { key: "done", label: "Done" },
-] as const
-
-type TabKey = (typeof mobileTabs)[number]["key"]
-type ViewType = "board" | "list" | "focus"
+]
 
 export default function MovesPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("today")
-  const [view, setView] = useState<ViewType>("board")
-  const [showBacklog, setShowBacklog] = useState(true)
-  const [clientFilter, setClientFilter] = useState<FilterValue>("all")
-  const [statusFilter, setStatusFilter] = useState<FilterValue>("all")
-  const [typeFilter, setTypeFilter] = useState<FilterValue>("all")
-  const [showNewMoveDialog, setShowNewMoveDialog] = useState(false)
-
   const {
     moves,
-    isLoading: loading,
+    loading,
+    todayMoves,
+    upNextMoves,
+    backlogMoves,
+    doneMoves,
     completeMove,
     restoreMove,
     reorderMoves,
@@ -50,32 +59,28 @@ export default function MovesPage() {
   } = useMoves()
   const { clients } = useClients()
 
-  const clientMap = useMemo(() => {
-    const map = new Map<number, string>()
-    clients.forEach((c) => map.set(c.id, c.name))
-    return map
-  }, [clients])
+  const [view, setView] = useState<MovesView>("board")
+  const [clientFilter, setClientFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
+  const [activeTab, setActiveTab] = useState<MoveStatus>("today")
+  const [showBacklog, setShowBacklog] = useState(true)
+  const [showNewMoveDialog, setShowNewMoveDialog] = useState(false)
+  const [undoState, setUndoState] = useState<{ id: string; previousStatus: MoveStatus } | null>(null)
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clientOptions = useMemo(() => [...new Set(moves.map((m) => m.client).filter(Boolean))], [moves])
 
   const enrichedMoves = useMemo(() => {
-    return moves.map((m) => ({
-      ...m,
-      client: m.clientId ? clientMap.get(m.clientId) || "Unknown" : "Unknown",
-    }))
-  }, [moves, clientMap])
+    return moves.map((move) => {
+      const clientMoves = moves.filter((m) => m.client === move.client && m.status !== "done")
+      return { ...move, movesCount: clientMoves.length }
+    })
+  }, [moves])
 
-  const clientOptions = useMemo(() => {
-    const unique = Array.from(new Set(enrichedMoves.map((m) => m.client).filter((c) => c !== "Unknown")))
-    return unique.sort()
-  }, [enrichedMoves])
-
-  const [undoState, setUndoState] = useState<UndoState>(null)
-  const undoTimeoutRef = useRef<number | null>(null)
-
-  const handleComplete = async (moveId: string, previousStatus: MoveStatus) => {
-    const move = enrichedMoves.find((m) => m.id === moveId)
-    if (!move) return
-    completeMove(moveId)
-    setUndoState({ id: moveId, title: move.title, previousStatus })
+  const handleComplete = async (id: string, previousStatus: MoveStatus = "today") => {
+    await completeMove(id)
+    setUndoState({ id, previousStatus })
     if (undoTimeoutRef.current) window.clearTimeout(undoTimeoutRef.current)
     undoTimeoutRef.current = window.setTimeout(() => setUndoState(null), 4000)
   }
@@ -129,7 +134,6 @@ export default function MovesPage() {
         </div>
 
         <div className="mt-4 flex items-center gap-2">
-          {/* Client filter - grows to fill on mobile */}
           <div className="flex-1 md:flex-none md:w-auto">
             <FilterSelect
               value={clientFilter}
@@ -139,7 +143,6 @@ export default function MovesPage() {
             />
           </div>
 
-          {/* Backlog toggle */}
           <button
             onClick={() => setShowBacklog((prev) => !prev)}
             className={`
@@ -159,7 +162,6 @@ export default function MovesPage() {
             <span className="hidden md:inline">{showBacklog ? "Hide Backlog" : "Show Backlog"}</span>
           </button>
 
-          {/* New Move button */}
           <button
             onClick={() => setShowNewMoveDialog(true)}
             className="flex h-9 items-center gap-1.5 rounded-full bg-fuchsia-500 px-4 text-sm font-medium text-white hover:bg-fuchsia-600 transition"
@@ -172,7 +174,6 @@ export default function MovesPage() {
         <NewMoveDialog open={showNewMoveDialog} onClose={() => setShowNewMoveDialog(false)} onSubmit={createMove} />
 
         <div className="mt-3 flex flex-col gap-3">
-          {/* Mobile: Tab pills */}
           <div className="lg:hidden flex items-center gap-1 p-1 rounded-full bg-zinc-900/50">
             {visibleMobileTabs.map((tab) => (
               <button
@@ -186,7 +187,6 @@ export default function MovesPage() {
             ))}
           </div>
 
-          {/* Desktop: View toggle + filters */}
           <div className="hidden lg:flex items-center justify-between">
             <ViewToggle view={view} onChange={setView} />
             <div className="flex items-center gap-2">
@@ -214,12 +214,10 @@ export default function MovesPage() {
           </div>
         </div>
 
-        {/* Mobile view */}
         <div className="lg:hidden mt-4">
           <MovesListMobile moves={byStatus[activeTab] || []} activeTab={activeTab} onComplete={handleComplete} />
         </div>
 
-        {/* Desktop view */}
         <div className="hidden lg:block mt-6">
           {view === "board" && (
             <MovesBoard
@@ -230,6 +228,7 @@ export default function MovesPage() {
               doneMoves={byStatus.done}
               onComplete={handleComplete}
               onReorder={reorderMoves}
+              onMoveToColumn={updateMoveStatus}
             />
           )}
           {view === "list" && <MovesList moves={filteredMoves} onComplete={handleComplete} />}
@@ -324,6 +323,7 @@ function MovesBoard({
   doneMoves,
   onComplete,
   onReorder,
+  onMoveToColumn,
 }: {
   showBacklog: boolean
   todayMoves: Move[]
@@ -331,50 +331,204 @@ function MovesBoard({
   backlogMoves: Move[]
   doneMoves: Move[]
   onComplete: (id: string) => Promise<void>
-  onReorder?: (moves: Move[]) => void
+  onReorder: (status: MoveStatus, orderedIds: string[]) => Promise<void>
+  onMoveToColumn: (id: string, newStatus: MoveStatus, insertAtIndex?: number) => Promise<void>
 }) {
-  const getMovesForStatus = (status: MoveStatus) => {
-    switch (status) {
-      case "today":
-        return todayMoves
-      case "upnext":
-        return upNextMoves
-      case "backlog":
-        return backlogMoves
-      default:
-        return []
+  const isMobile = useIsMobile()
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [localMoves, setLocalMoves] = useState<Record<MoveStatus, Move[]>>({
+    today: todayMoves,
+    upnext: upNextMoves,
+    backlog: backlogMoves,
+    done: doneMoves,
+  })
+
+  // Sync local state with props
+  useEffect(() => {
+    setLocalMoves({
+      today: todayMoves,
+      upnext: upNextMoves,
+      backlog: backlogMoves,
+      done: doneMoves,
+    })
+  }, [todayMoves, upNextMoves, backlogMoves, doneMoves])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  const findColumn = (id: string): MoveStatus | null => {
+    for (const [status, moves] of Object.entries(localMoves)) {
+      if (moves.some((m) => m.id === id)) {
+        return status as MoveStatus
+      }
+    }
+    return null
+  }
+
+  const activeMove = activeId
+    ? Object.values(localMoves)
+        .flat()
+        .find((m) => m.id === activeId)
+    : null
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over) return
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    const activeColumn = findColumn(activeId)
+    let overColumn = findColumn(overId)
+
+    // Check if we're over a column itself (empty column)
+    if (!overColumn && columns.some((c) => c.id === overId)) {
+      overColumn = overId as MoveStatus
+    }
+
+    if (!activeColumn || !overColumn || activeColumn === overColumn) return
+
+    setLocalMoves((prev) => {
+      const activeItems = [...prev[activeColumn]]
+      const overItems = [...prev[overColumn]]
+      const activeIndex = activeItems.findIndex((m) => m.id === activeId)
+      const overIndex = overItems.findIndex((m) => m.id === overId)
+
+      const [movedItem] = activeItems.splice(activeIndex, 1)
+      const updatedItem = { ...movedItem, status: overColumn }
+
+      const insertIndex = overIndex >= 0 ? overIndex : overItems.length
+      overItems.splice(insertIndex, 0, updatedItem)
+
+      return {
+        ...prev,
+        [activeColumn]: activeItems,
+        [overColumn]: overItems,
+      }
+    })
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (!over) return
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    const activeColumn = findColumn(activeId)
+    let overColumn = findColumn(overId)
+
+    // Check if we're over a column itself
+    if (!overColumn && columns.some((c) => c.id === overId)) {
+      overColumn = overId as MoveStatus
+    }
+
+    if (!activeColumn) return
+
+    if (activeColumn === overColumn && overColumn) {
+      // Reorder within same column
+      const items = localMoves[overColumn]
+      const oldIndex = items.findIndex((m) => m.id === activeId)
+      const newIndex = items.findIndex((m) => m.id === overId)
+
+      if (oldIndex !== newIndex && newIndex >= 0) {
+        const newItems = arrayMove(items, oldIndex, newIndex)
+        setLocalMoves((prev) => ({ ...prev, [overColumn]: newItems }))
+        await onReorder(
+          overColumn,
+          newItems.map((m) => m.id),
+        )
+      }
+    } else if (overColumn) {
+      // Move to different column
+      const overItems = localMoves[overColumn]
+      const insertIndex = overItems.findIndex((m) => m.id === overId)
+      await onMoveToColumn(activeId, overColumn, insertIndex >= 0 ? insertIndex : undefined)
     }
   }
+
   const visibleColumns = showBacklog ? columns : columns.filter((c) => c.id !== "backlog")
+
+  // Mobile: no drag and drop
+  if (isMobile) {
+    return (
+      <div className="mt-6 w-full grid grid-cols-1 gap-10 lg:grid-cols-3">
+        {visibleColumns.map((col) => {
+          const columnMoves = localMoves[col.id] || []
+          return (
+            <MoveColumnStatic
+              key={col.id}
+              id={col.id}
+              title={col.label}
+              count={columnMoves.length}
+              moves={columnMoves}
+              onComplete={onComplete}
+              variant={col.id === "backlog" ? "compact" : "primary"}
+              scrollable={col.id === "backlog"}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
-    <div className="mt-6 w-full grid grid-cols-1 gap-10 lg:grid-cols-3">
-      {visibleColumns.map((col) => {
-        const columnMoves = getMovesForStatus(col.id)
-        return (
-          <MoveColumn
-            key={col.id}
-            id={col.id}
-            title={col.label}
-            count={columnMoves.length}
-            moves={columnMoves}
-            onComplete={(id) => onComplete(id)}
-            onReorder={onReorder}
-            variant={col.id === "backlog" ? "compact" : "primary"}
-            scrollable={col.id === "backlog"}
-          />
-        )
-      })}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="mt-6 w-full grid grid-cols-1 gap-10 lg:grid-cols-3">
+        {visibleColumns.map((col) => {
+          const columnMoves = localMoves[col.id] || []
+          return (
+            <DroppableColumn
+              key={col.id}
+              id={col.id}
+              title={col.label}
+              count={columnMoves.length}
+              moves={columnMoves}
+              onComplete={onComplete}
+              variant={col.id === "backlog" ? "compact" : "primary"}
+              scrollable={col.id === "backlog"}
+            />
+          )
+        })}
+      </div>
+      <DragOverlay>
+        {activeMove ? (
+          <div className="opacity-90">
+            <MoveCard move={activeMove} variant="primary" onComplete={() => Promise.resolve()} isDragging />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }
 
-function MoveColumn({
+// Static column for mobile (no drag)
+function MoveColumnStatic({
   id,
   title,
   count,
   moves,
   onComplete,
-  onReorder,
   variant,
   scrollable,
 }: {
@@ -383,11 +537,48 @@ function MoveColumn({
   count: number
   moves: Move[]
   onComplete: (id: string) => Promise<void>
-  onReorder?: (moves: Move[]) => void
   variant: MoveVariant
   scrollable?: boolean
 }) {
-  const isMobile = useIsMobile()
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold text-zinc-100">{title}</h2>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-[11px] text-zinc-300">
+          {count}
+        </span>
+      </div>
+      <div className="mb-4 border-b border-zinc-800/60" />
+      <div className={`min-h-[100px] rounded-2xl ${scrollable ? "max-h-[72vh] overflow-y-auto pr-1" : ""}`}>
+        <div className="flex flex-col gap-3">
+          {moves.map((move) => (
+            <MoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Droppable column with sortable items
+function DroppableColumn({
+  id,
+  title,
+  count,
+  moves,
+  onComplete,
+  variant,
+  scrollable,
+}: {
+  id: MoveStatus
+  title: string
+  count: number
+  moves: Move[]
+  onComplete: (id: string) => Promise<void>
+  variant: MoveVariant
+  scrollable?: boolean
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
     <section>
@@ -398,38 +589,46 @@ function MoveColumn({
         </span>
       </div>
       <div className="mb-4 border-b border-zinc-800/60" />
-      <div id={id} className={`min-h-[100px] rounded-2xl ${scrollable ? "max-h-[72vh] overflow-y-auto pr-1" : ""}`}>
-        {!isMobile && onReorder ? (
-          <Reorder.Group axis="y" values={moves} onReorder={onReorder} className="flex flex-col gap-3">
-            {moves.map((move) => (
-              <Reorder.Item
-                key={move.id}
-                value={move}
-                className="cursor-grab active:cursor-grabbing"
-                whileDrag={{
-                  scale: 1.02,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  zIndex: 50,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 30,
-                }}
-              >
-                <MoveCard move={move} variant={variant} onComplete={onComplete} />
-              </Reorder.Item>
-            ))}
-          </Reorder.Group>
-        ) : (
+      <div
+        ref={setNodeRef}
+        className={`min-h-[100px] rounded-2xl transition-colors ${scrollable ? "max-h-[72vh] overflow-y-auto pr-1" : ""} ${isOver ? "bg-fuchsia-500/10 ring-2 ring-fuchsia-500/30" : ""}`}
+      >
+        <SortableContext items={moves.map((m) => m.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-3">
+            {moves.length === 0 && <div className="py-8 text-center text-sm text-zinc-600">Drop moves here</div>}
             {moves.map((move) => (
-              <MoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
+              <SortableMoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
             ))}
           </div>
-        )}
+        </SortableContext>
       </div>
     </section>
+  )
+}
+
+// Sortable wrapper for MoveCard
+function SortableMoveCard({
+  move,
+  variant,
+  onComplete,
+}: {
+  move: Move
+  variant: MoveVariant
+  onComplete: (id: string) => Promise<void>
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: move.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : "auto",
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <MoveCard move={move} variant={variant} onComplete={onComplete} isDragging={isDragging} />
+    </div>
   )
 }
 
@@ -449,177 +648,136 @@ function MovesList({
     }
   }
 
-  const sorted = useMemo(() => {
-    const copy = [...moves]
-    const statusOrder: Record<string, number> = { today: 0, upnext: 1, backlog: 2 }
-    const typeOrder: Record<string, number> = { Quick: 0, Standard: 1, Deep: 2 }
-    copy.sort((a, b) => {
-      let aVal: string | number = sortKey === "title" ? a.title : a[sortKey]
-      let bVal: string | number = sortKey === "title" ? b.title : b[sortKey]
-      if (sortKey === "status") {
-        aVal = statusOrder[a.status] ?? 99
-        bVal = statusOrder[b.status] ?? 99
-      } else if (sortKey === "type") {
-        aVal = typeOrder[a.type] ?? 99
-        bVal = typeOrder[b.type] ?? 99
-      }
-      let cmp: number
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        cmp = aVal.localeCompare(bVal)
-      } else {
-        cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
-      }
+  const sortedMoves = useMemo(() => {
+    return [...moves].sort((a, b) => {
+      let cmp = 0
+      if (sortKey === "client") cmp = (a.client || "").localeCompare(b.client || "")
+      else if (sortKey === "status") cmp = a.status.localeCompare(b.status)
+      else if (sortKey === "type") cmp = (a.type || "").localeCompare(b.type || "")
       return sortDir === "asc" ? cmp : -cmp
     })
-    return copy
   }, [moves, sortKey, sortDir])
 
+  const SortIcon = sortDir === "asc" ? ArrowUp : ArrowDown
+
   return (
-    <div className="mt-6">
-      <div className="h-[calc(100vh-280px)] rounded-2xl border border-zinc-800/60 bg-zinc-900/40 flex flex-col overflow-hidden">
-        <div className="flex-none">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-800/60 text-xs text-zinc-500 uppercase tracking-wide bg-zinc-900/60">
-                <SortableHeader
-                  label="Client"
-                  sortKey="client"
-                  active={sortKey === "client"}
-                  dir={sortDir}
-                  onClick={() => handleSort("client")}
-                  className="w-[15%]"
-                />
-                <SortableHeader
-                  label="Move"
-                  sortKey="title"
-                  active={sortKey === "title"}
-                  dir={sortDir}
-                  onClick={() => handleSort("title")}
-                  className="w-[45%]"
-                />
-                <SortableHeader
-                  label="Type"
-                  sortKey="type"
-                  active={sortKey === "type"}
-                  dir={sortDir}
-                  onClick={() => handleSort("type")}
-                  className="w-[12%]"
-                />
-                <SortableHeader
-                  label="Status"
-                  sortKey="status"
-                  active={sortKey === "status"}
-                  dir={sortDir}
-                  onClick={() => handleSort("status")}
-                  className="w-[15%]"
-                />
-                <th className="px-4 py-3 font-medium text-right w-[13%]">Actions</th>
-              </tr>
-            </thead>
-          </table>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <table className="w-full text-left text-sm">
-            <tbody>
-              {sorted.map((move) => (
-                <tr key={move.id} className="border-b border-zinc-800/40 hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-4 py-3 w-[15%]">
-                    <span className="text-xs font-medium text-zinc-400 uppercase">{move.client}</span>
-                  </td>
-                  <td className="px-4 py-3 w-[45%]">
-                    <span className="text-zinc-100 font-medium">{move.title}</span>
-                  </td>
-                  <td className="px-4 py-3 w-[12%]">
-                    <span className="inline-flex items-center gap-1">
-                      <TypeDot type={move.type} />
-                      {move.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 w-[15%]">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${move.status === "today" ? "bg-emerald-500/20 text-emerald-300" : move.status === "upnext" ? "bg-amber-500/20 text-amber-300" : "bg-zinc-700/50 text-zinc-400"}`}
-                    >
-                      {move.status === "today" ? "Today" : move.status === "upnext" ? "Up Next" : "Backlog"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right w-[13%]">
-                    <button
-                      type="button"
-                      onClick={() => onComplete(move.id, move.status)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400 transition-colors"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {moves.length === 0 && <div className="py-12 text-center text-zinc-500">No moves to display</div>}
-        </div>
-      </div>
+    <div className="mt-6 rounded-2xl border border-zinc-800 overflow-hidden">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-zinc-900/50 text-zinc-400 text-xs uppercase tracking-wide">
+          <tr>
+            <th className="px-4 py-3 cursor-pointer select-none" onClick={() => handleSort("client")}>
+              <span className="flex items-center gap-1">
+                Client {sortKey === "client" && <SortIcon className="h-3 w-3" />}
+              </span>
+            </th>
+            <th className="px-4 py-3">Title</th>
+            <th className="px-4 py-3 cursor-pointer select-none" onClick={() => handleSort("status")}>
+              <span className="flex items-center gap-1">
+                Status {sortKey === "status" && <SortIcon className="h-3 w-3" />}
+              </span>
+            </th>
+            <th className="px-4 py-3 cursor-pointer select-none" onClick={() => handleSort("type")}>
+              <span className="flex items-center gap-1">
+                Type {sortKey === "type" && <SortIcon className="h-3 w-3" />}
+              </span>
+            </th>
+            <th className="px-4 py-3 w-24"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-800/50">
+          {sortedMoves.map((move) => (
+            <tr key={move.id} className="hover:bg-zinc-900/30 transition">
+              <td className="px-4 py-3 font-medium text-zinc-100">{move.client || "—"}</td>
+              <td className="px-4 py-3 text-zinc-300">{move.title}</td>
+              <td className="px-4 py-3">
+                <span
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                    move.status === "today"
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : move.status === "upnext"
+                        ? "bg-amber-500/20 text-amber-300"
+                        : "bg-zinc-700/50 text-zinc-400"
+                  }`}
+                >
+                  {move.status === "today" ? "Today" : move.status === "upnext" ? "Up Next" : "Backlog"}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-zinc-400">{move.type}</td>
+              <td className="px-4 py-3">
+                <button
+                  onClick={() => onComplete(move.id, move.status)}
+                  className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300 hover:bg-fuchsia-500 hover:text-white transition"
+                >
+                  Done
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
 
-function SortableHeader({
-  label,
-  active,
-  dir,
-  onClick,
-  className,
-}: { label: string; sortKey: SortKey; active: boolean; dir: SortDir; onClick: () => void; className?: string }) {
-  return (
-    <th className={`px-4 py-3 font-medium ${className ?? ""}`}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`inline-flex items-center gap-1 text-xs tracking-wide uppercase transition-colors ${active ? "text-zinc-200" : "text-zinc-500 hover:text-zinc-300"}`}
-      >
-        {label}
-        {active && <span className="text-[9px]">{dir === "asc" ? "▲" : "▼"}</span>}
-      </button>
-    </th>
-  )
-}
+function FocusView({ moves, onComplete }: { moves: Move[]; onComplete: (id: string) => Promise<void> }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const activeMove = moves[currentIndex]
 
-function FocusView({
-  moves,
-  onComplete,
-}: { moves: Move[]; onComplete: (id: string, previousStatus: MoveStatus) => Promise<void> }) {
-  const move = moves.find((m) => m.status === "today") || moves.find((m) => m.status === "upnext")
-  if (!move) {
+  if (!activeMove) {
     return (
-      <div className="mt-6 flex items-center justify-center py-24">
-        <div className="text-center">
-          <Focus className="h-12 w-12 mx-auto text-zinc-700 mb-4" />
-          <p className="text-zinc-500">No moves in queue</p>
-          <p className="text-xs text-zinc-600 mt-1">Add a move to Today or Up Next to focus on it</p>
+      <div className="mt-12 flex flex-col items-center justify-center text-center">
+        <div className="rounded-full bg-emerald-500/20 p-6 mb-4">
+          <Check className="h-12 w-12 text-emerald-400" />
         </div>
+        <h2 className="text-2xl font-bold text-zinc-100">All done for today!</h2>
+        <p className="mt-2 text-zinc-400">No more moves in your Today queue.</p>
       </div>
     )
   }
+
   return (
-    <div className="mt-6 flex items-center justify-center py-12">
-      <div className="max-w-lg w-full">
-        <div className="rounded-3xl border border-zinc-800/60 bg-zinc-900/60 p-8 text-center">
-          <span className="inline-flex items-center rounded-md bg-zinc-800/60 px-3 py-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase mb-4">
-            {move.client}
+    <div className="mt-8 flex flex-col items-center">
+      <div className="w-full max-w-xl">
+        <div className="mb-4 flex items-center justify-between text-sm text-zinc-500">
+          <span>
+            Move {currentIndex + 1} of {moves.length}
           </span>
-          <h2 className="text-2xl font-bold text-white mb-2">{move.title}</h2>
-          <div className="flex items-center justify-center gap-4 text-sm text-zinc-400 mb-8">
-            <span className="inline-flex items-center gap-1.5">
-              <TypeDot type={move.type} />
-              {move.type}
-            </span>
-            {move.ageLabel && <span>{move.ageLabel}</span>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              disabled={currentIndex === 0}
+              className="rounded-full bg-zinc-800 px-3 py-1 text-zinc-300 disabled:opacity-30"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setCurrentIndex((i) => Math.min(moves.length - 1, i + 1))}
+              disabled={currentIndex >= moves.length - 1}
+              className="rounded-full bg-zinc-800 px-3 py-1 text-zinc-300 disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 border border-zinc-700/50">
+          <div className="mb-2 text-sm font-medium text-fuchsia-400">{activeMove.client}</div>
+          <h2 className="text-3xl font-bold text-zinc-100 mb-4">{activeMove.title}</h2>
+          {activeMove.description && <p className="text-zinc-400 mb-6">{activeMove.description}</p>}
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-zinc-700/50 px-3 py-1 text-sm text-zinc-300">{activeMove.type}</span>
+            <span className="text-sm text-zinc-500">{activeMove.ageLabel}</span>
           </div>
           <button
-            type="button"
-            onClick={() => onComplete(move.id, move.status)}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-8 py-3 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/25"
+            onClick={async () => {
+              await onComplete(activeMove.id)
+              if (currentIndex >= moves.length - 1) {
+                setCurrentIndex(Math.max(0, currentIndex - 1))
+              }
+            }}
+            className="mt-8 w-full rounded-full bg-fuchsia-500 py-3 text-lg font-semibold text-white hover:bg-fuchsia-600 transition"
           >
-            <Check className="h-4 w-4" /> Mark Complete
+            Complete Move
           </button>
         </div>
       </div>
@@ -629,177 +787,112 @@ function FocusView({
 
 function MoveCard({
   move,
-  variant = "primary",
+  variant,
   onComplete,
-}: { move: Move; variant?: MoveVariant; onComplete: (id: string) => Promise<void> }) {
-  const [isCompleting, setIsCompleting] = useState(false)
-  const [justCompleted, setJustCompleted] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [rewriteOpen, setRewriteOpen] = useState(false)
-  const isCompact = variant === "compact"
+  isDragging = false,
+}: {
+  move: Move
+  variant: MoveVariant
+  onComplete: (id: string) => Promise<void>
+  isDragging?: boolean
+}) {
   const isMobile = useIsMobile()
+  const [completing, setCompleting] = useState(false)
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
 
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const rotateX = useTransform(y, [-100, 100], [4, -4])
-  const rotateY = useTransform(x, [-100, 100], [-4, 4])
-  const springRotateX = useSpring(rotateX, { stiffness: 300, damping: 30 })
-  const springRotateY = useSpring(rotateY, { stiffness: 300, damping: 30 })
+  const handleComplete = async () => {
+    setCompleting(true)
+    await onComplete(move.id)
+  }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    if (isMobile) return
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobile || isDragging) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    x.set(e.clientX - centerX)
-    y.set(e.clientY - centerY)
+    const x = (e.clientX - rect.left) / rect.width - 0.5
+    const y = (e.clientY - rect.top) / rect.height - 0.5
+    setTilt({ x: y * 8, y: -x * 8 })
   }
 
   const handleMouseLeave = () => {
-    x.set(0)
-    y.set(0)
+    setTilt({ x: 0, y: 0 })
   }
 
-  if (isCompact) {
-    return (
-      <button className="w-full rounded-xl border border-zinc-800/50 bg-zinc-900/50 px-3 py-2 flex items-center gap-2 text-left hover:bg-zinc-800/50 hover:border-zinc-700/60 active:scale-[0.98] transition-all">
-        <TypeDot type={move.type} />
-        <span className="truncate text-[13px] text-zinc-200">{move.title}</span>
-      </button>
-    )
+  const typeIcon = {
+    Quick: <Zap className="h-3 w-3" />,
+    Standard: <FileText className="h-3 w-3" />,
+    Chunky: <Layers className="h-3 w-3" />,
+    Deep: <Clock className="h-3 w-3" />,
   }
+
+  const isCompact = variant === "compact"
 
   return (
-    <>
-      <motion.article
-        layout
-        animate={justCompleted ? { scale: 0.97, y: -2 } : { scale: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 420, damping: 26, mass: 0.6 }}
-        style={
-          !isMobile
-            ? {
-                rotateX: springRotateX,
-                rotateY: springRotateY,
-                transformPerspective: 1000,
-              }
-            : undefined
-        }
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        whileHover={
-          !isMobile
-            ? {
-                y: -2,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-                transition: { type: "spring", stiffness: 400, damping: 25 },
-              }
-            : undefined
-        }
-        className={`w-full relative rounded-3xl bg-zinc-900/70 border border-zinc-800/70 px-5 py-3.5 shadow-[0_4px_12px_rgba(0,0,0,0.25)] text-zinc-100 transition-opacity duration-300 ${isCompleted ? "opacity-60" : ""}`}
-      >
-        <div className="flex items-center justify-between gap-3 mb-1">
-          <ClientPill client={move.client} />
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setRewriteOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-700/50 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-zinc-400 hover:border-zinc-600 hover:text-zinc-300 transition"
-            >
-              <Wand2 className="h-2.5 w-2.5" />
-              <span>Rewrite</span>
-            </button>
-            <motion.button
-              type="button"
-              onClick={() => onComplete(move.id)}
-              whileTap={{ scale: 0.8, rotate: -8 }}
-              whileHover={{ scale: 1.06 }}
-              animate={justCompleted ? { scale: 1.15 } : { scale: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20, mass: 0.5 }}
-              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-emerald-950 shadow-lg shadow-emerald-500/40 hover:bg-emerald-400 transition-colors"
-            >
-              <motion.span
-                className="flex h-4 w-4 items-center justify-center"
-                animate={justCompleted ? { scale: 1.2 } : { scale: 1 }}
-                transition={{ type: "spring", stiffness: 600, damping: 24 }}
-              >
-                <Check className="h-3.5 w-3.5" />
-              </motion.span>
-              {justCompleted && (
-                <motion.span
-                  key="ring-1"
-                  className="pointer-events-none absolute inset-0 rounded-full border border-emerald-400/80"
-                  initial={{ scale: 0.9, opacity: 0.9 }}
-                  animate={{ scale: 1.9, opacity: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                />
-              )}
-              {justCompleted && (
-                <motion.span
-                  key="ring-2"
-                  className="pointer-events-none absolute inset-0 rounded-full border border-emerald-300/60"
-                  initial={{ scale: 0.9, opacity: 0.7 }}
-                  animate={{ scale: 2.4, opacity: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.07 }}
-                />
-              )}
-              <span className="sr-only">Complete move</span>
-            </motion.button>
-          </div>
+    <motion.div
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      animate={{
+        rotateX: isMobile || isDragging ? 0 : tilt.x,
+        rotateY: isMobile || isDragging ? 0 : tilt.y,
+        scale: completing ? 0.95 : isDragging ? 1.02 : 1,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 30,
+      }}
+      style={{ perspective: 1000 }}
+      className={`group relative rounded-2xl border transition-all cursor-grab active:cursor-grabbing ${
+        isDragging
+          ? "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20"
+          : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 hover:shadow-lg"
+      } ${isCompact ? "p-3" : "p-4"}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{move.client}</div>
+          <h3 className={`font-semibold text-zinc-100 truncate ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}>
+            {move.title}
+          </h3>
         </div>
-        <h3 className="text-[14px] font-semibold leading-snug mb-1.5">{move.title}</h3>
-        <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-400">
-          <span className="inline-flex items-center gap-1">
-            <TypeDot type={move.type} />
-            <span>{move.type}</span>
-          </span>
-          {move.movesCount !== undefined && (
-            <span>{move.movesCount === 1 ? "1 move" : `${move.movesCount} moves`}</span>
-          )}
-          {move.ageLabel && <span>{move.ageLabel}</span>}
-        </div>
-      </motion.article>
-      <RewriteDialog
-        open={rewriteOpen}
-        onOpenChange={setRewriteOpen}
-        originalText={move.title}
-        context={{ client: move.client, type: move.type, timeboxMinutes: 45 }}
-        onAccept={(newText) => console.log("[v0] Rewrite accepted:", newText)}
-      />
-    </>
+        <button
+          onClick={handleComplete}
+          disabled={completing}
+          className={`flex-shrink-0 rounded-full border border-zinc-700 transition hover:bg-fuchsia-500 hover:border-fuchsia-500 disabled:opacity-50 ${isCompact ? "p-1" : "p-1.5"}`}
+        >
+          <Check className={`text-zinc-500 group-hover:text-white ${isCompact ? "h-3 w-3" : "h-4 w-4"}`} />
+        </button>
+      </div>
+      <div className={`flex items-center gap-2 text-zinc-500 ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-xs"}`}>
+        <span className="flex items-center gap-1">
+          {typeIcon[move.type]}
+          {move.type}
+        </span>
+        <span className="text-zinc-700">•</span>
+        <span>{move.ageLabel}</span>
+      </div>
+    </motion.div>
   )
 }
 
-function ClientPill({ client }: { client: string }) {
-  return (
-    <div className="inline-flex items-center rounded-md bg-zinc-800/40 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-zinc-500 uppercase">
-      {client}
-    </div>
-  )
-}
-
-function TypeDot({ type }: { type: Move["type"] }) {
-  const color = type === "Quick" ? "bg-emerald-400" : type === "Chunky" ? "bg-amber-400" : "bg-cyan-400"
-  return <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
-}
-
-function UndoToast({ undoState, onUndo }: { undoState: UndoState; onUndo: () => void }) {
+function UndoToast({
+  undoState,
+  onUndo,
+}: {
+  undoState: { id: string; previousStatus: MoveStatus } | null
+  onUndo: () => void
+}) {
   return (
     <AnimatePresence>
       {undoState && (
         <motion.div
-          initial={{ y: 24, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 24, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          className="pointer-events-auto fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 50 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
         >
-          <div className="flex items-center gap-3 rounded-full bg-zinc-900/95 px-4 py-2.5 shadow-lg shadow-black/60 border border-zinc-800">
-            <span className="text-xs text-zinc-300 truncate max-w-[180px] sm:max-w-xs">Task completed</span>
-            <button
-              type="button"
-              onClick={onUndo}
-              className="text-xs font-medium text-emerald-400 hover:text-emerald-300 active:text-emerald-500"
-            >
+          <div className="flex items-center gap-3 rounded-full bg-zinc-800 border border-zinc-700 px-4 py-2 shadow-lg">
+            <span className="text-sm text-zinc-300">Move completed</span>
+            <button onClick={onUndo} className="text-sm font-medium text-fuchsia-400 hover:text-fuchsia-300">
               Undo
             </button>
           </div>
