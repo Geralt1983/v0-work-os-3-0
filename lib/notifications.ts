@@ -19,14 +19,18 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   try {
+    const encoder = new TextEncoder()
+    const bodyBytes = encoder.encode(message)
+
     const response = await fetch(`https://ntfy.sh/${TOPIC}`, {
       method: "POST",
-      body: message,
+      body: bodyBytes,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Title: options.title || "Work OS",
         Tags: options.tags || "briefcase",
         Priority: options.priority || "default",
+        "Content-Type": "text/plain; charset=utf-8",
       },
     })
 
