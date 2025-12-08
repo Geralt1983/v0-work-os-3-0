@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useMemo, useRef, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, Reorder } from "framer-motion"
 import { Check, Archive, LayoutGrid, List, Focus } from "lucide-react"
 import { useMoves, useClients, type Move, type MoveStatus } from "@/hooks/use-moves"
 import { Wand2 } from "lucide-react"
@@ -9,6 +11,7 @@ import { WorkOSNav } from "@/components/work-os-nav"
 import { RewriteDialog } from "@/components/rewrite-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { NewMoveDialog } from "@/components/new-move-dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -226,6 +229,7 @@ export default function MovesPage() {
               backlogMoves={byStatus.backlog}
               doneMoves={byStatus.done}
               onComplete={handleComplete}
+              onReorder={reorderMoves}
             />
           )}
           {view === "list" && <MovesList moves={filteredMoves} onComplete={handleComplete} />}
@@ -319,13 +323,15 @@ function MovesBoard({
   backlogMoves,
   doneMoves,
   onComplete,
+  onReorder,
 }: {
   showBacklog: boolean
   todayMoves: Move[]
   upNextMoves: Move[]
   backlogMoves: Move[]
   doneMoves: Move[]
-  onComplete: (id: string, previousStatus: MoveStatus) => Promise<void>
+  onComplete: (id: string) => Promise<void>
+  onReorder?: (moves: Move[]) => void
 }) {
   const getMovesForStatus = (status: MoveStatus) => {
     switch (status) {
@@ -351,7 +357,8 @@ function MovesBoard({
             title={col.label}
             count={columnMoves.length}
             moves={columnMoves}
-            onComplete={(id) => onComplete(id, col.id)}
+            onComplete={(id) => onComplete(id)}
+            onReorder={onReorder}
             variant={col.id === "backlog" ? "compact" : "primary"}
             scrollable={col.id === "backlog"}
           />
@@ -367,6 +374,7 @@ function MoveColumn({
   count,
   moves,
   onComplete,
+  onReorder,
   variant,
   scrollable,
 }: {
@@ -375,9 +383,12 @@ function MoveColumn({
   count: number
   moves: Move[]
   onComplete: (id: string) => Promise<void>
+  onReorder?: (moves: Move[]) => void
   variant: MoveVariant
   scrollable?: boolean
 }) {
+  const isMobile = useIsMobile()
+
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
@@ -388,11 +399,35 @@ function MoveColumn({
       </div>
       <div className="mb-4 border-b border-zinc-800/60" />
       <div id={id} className={`min-h-[100px] rounded-2xl ${scrollable ? "max-h-[72vh] overflow-y-auto pr-1" : ""}`}>
-        <div className="flex flex-col gap-3">
-          {moves.map((move) => (
-            <MoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
-          ))}
-        </div>
+        {!isMobile && onReorder ? (
+          <Reorder.Group axis="y" values={moves} onReorder={onReorder} className="flex flex-col gap-3">
+            {moves.map((move) => (
+              <Reorder.Item
+                key={move.id}
+                value={move}
+                className="cursor-grab active:cursor-grabbing"
+                whileDrag={{
+                  scale: 1.02,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                  zIndex: 50,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                }}
+              >
+                <MoveCard move={move} variant={variant} onComplete={onComplete} />
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {moves.map((move) => (
+              <MoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
@@ -593,54 +628,36 @@ function FocusView({
 }
 
 function MoveCard({
-  variant,
   move,
+  variant = "primary",
   onComplete,
-}: { variant: MoveVariant; move: Move; onComplete: (id: string) => Promise<void> }) {
-  const isCompact = variant === "compact"
+}: { move: Move; variant?: MoveVariant; onComplete: (id: string) => Promise<void> }) {
+  const [isCompleting, setIsCompleting] = useState(false)
   const [justCompleted, setJustCompleted] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
-  const [isCompleting, setIsCompleting] = useState(false)
   const [rewriteOpen, setRewriteOpen] = useState(false)
+  const isCompact = variant === "compact"
+  const isMobile = useIsMobile()
 
-  const playSound = () => {
-    try {
-      const AudioContext =
-        window.AudioContext ||
-        (window as typeof window & { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext
-      if (!AudioContext) return
-      const ctx = new AudioContext()
-      if (ctx.state === "suspended") ctx.resume()
-      const oscillator = ctx.createOscillator()
-      const gain = ctx.createGain()
-      oscillator.connect(gain)
-      gain.connect(ctx.destination)
-      oscillator.frequency.setValueAtTime(220, ctx.currentTime)
-      oscillator.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.06)
-      oscillator.type = "sine"
-      gain.gain.setValueAtTime(0.25, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08)
-      oscillator.start(ctx.currentTime)
-      oscillator.stop(ctx.currentTime + 0.08)
-      setTimeout(() => ctx.close(), 120)
-    } catch {
-      /* Silently fail */
-    }
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const rotateX = useTransform(y, [-100, 100], [4, -4])
+  const rotateY = useTransform(x, [-100, 100], [-4, 4])
+  const springRotateX = useSpring(rotateX, { stiffness: 300, damping: 30 })
+  const springRotateY = useSpring(rotateY, { stiffness: 300, damping: 30 })
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (isMobile) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    x.set(e.clientX - centerX)
+    y.set(e.clientY - centerY)
   }
 
-  const handleCompleteClick = async () => {
-    if (isCompleting || justCompleted) return
-    setIsCompleting(true)
-    setJustCompleted(true)
-    playSound()
-    await new Promise((resolve) => setTimeout(resolve, 220))
-    try {
-      await onComplete(move.id)
-    } finally {
-      setIsCompleting(false)
-      setJustCompleted(false)
-      setIsCompleted(true)
-    }
+  const handleMouseLeave = () => {
+    x.set(0)
+    y.set(0)
   }
 
   if (isCompact) {
@@ -658,6 +675,26 @@ function MoveCard({
         layout
         animate={justCompleted ? { scale: 0.97, y: -2 } : { scale: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 420, damping: 26, mass: 0.6 }}
+        style={
+          !isMobile
+            ? {
+                rotateX: springRotateX,
+                rotateY: springRotateY,
+                transformPerspective: 1000,
+              }
+            : undefined
+        }
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        whileHover={
+          !isMobile
+            ? {
+                y: -2,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                transition: { type: "spring", stiffness: 400, damping: 25 },
+              }
+            : undefined
+        }
         className={`w-full relative rounded-3xl bg-zinc-900/70 border border-zinc-800/70 px-5 py-3.5 shadow-[0_4px_12px_rgba(0,0,0,0.25)] text-zinc-100 transition-opacity duration-300 ${isCompleted ? "opacity-60" : ""}`}
       >
         <div className="flex items-center justify-between gap-3 mb-1">
@@ -673,7 +710,7 @@ function MoveCard({
             </button>
             <motion.button
               type="button"
-              onClick={handleCompleteClick}
+              onClick={() => onComplete(move.id)}
               whileTap={{ scale: 0.8, rotate: -8 }}
               whileHover={{ scale: 1.06 }}
               animate={justCompleted ? { scale: 1.15 } : { scale: 1 }}
