@@ -237,6 +237,13 @@ export function useMoves() {
 
     try {
       await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
+
+      try {
+        await fetch("/api/notifications/milestone", { method: "POST" })
+      } catch (notifyErr) {
+        console.log("[v0] Milestone notification check failed (non-critical):", notifyErr)
+      }
+
       globalMutate("/api/metrics/today")
       globalMutate("/api/metrics/clients")
       mutate()
