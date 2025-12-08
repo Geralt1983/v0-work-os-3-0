@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { MOCK_CLIENTS, MOCK_MOVES, isPreviewEnvironment } from "@/lib/mock-data"
+import { trackCompletedMove } from "@/hooks/use-metrics"
 
 // =============================================================================
 // API CONFIGURATION - Removed debug logs, using local API routes
@@ -177,14 +178,33 @@ export function useMoves() {
   // MUTATIONS
   // =============================================================================
   const completeMove = async (id: string) => {
+    const moveToComplete = moves.find((m) => m.id === id)
+    const effortEstimate =
+      moveToComplete?.type === "Quick"
+        ? 1
+        : moveToComplete?.type === "Standard"
+          ? 2
+          : moveToComplete?.type === "Chunky"
+            ? 3
+            : moveToComplete?.type === "Deep"
+              ? 4
+              : 2
+
     mutate(
       (current: Move[] | undefined) =>
         current?.map((m) => (m.id === id ? { ...m, status: "done" as MoveStatus, completedAt: Date.now() } : m)),
       false,
     )
 
+    if (shouldUseMockMode()) {
+      trackCompletedMove({ id: Number.parseInt(id), effortEstimate })
+    }
+
     try {
       await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("move-completed"))
+      }
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] completeMove: API failed in preview, using local state")
