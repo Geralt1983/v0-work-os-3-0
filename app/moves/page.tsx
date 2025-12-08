@@ -8,6 +8,7 @@ import { Wand2 } from "lucide-react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { RewriteDialog } from "@/components/rewrite-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { NewMoveDialog } from "@/components/new-move-dialog"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -33,8 +34,17 @@ export default function MovesPage() {
   const [clientFilter, setClientFilter] = useState<FilterValue>("all")
   const [statusFilter, setStatusFilter] = useState<FilterValue>("all")
   const [typeFilter, setTypeFilter] = useState<FilterValue>("all")
+  const [showNewMoveDialog, setShowNewMoveDialog] = useState(false)
 
-  const { moves, isLoading: loading, completeMove, restoreMove, reorderMoves, updateMoveStatus } = useMoves()
+  const {
+    moves,
+    isLoading: loading,
+    completeMove,
+    restoreMove,
+    reorderMoves,
+    updateMoveStatus,
+    createMove,
+  } = useMoves()
   const { clients } = useClients()
 
   const clientMap = useMemo(() => {
@@ -147,11 +157,16 @@ export default function MovesPage() {
           </button>
 
           {/* New Move button */}
-          <button className="flex h-9 items-center gap-1.5 rounded-full bg-fuchsia-500 px-4 text-sm font-medium text-white hover:bg-fuchsia-600 transition">
+          <button
+            onClick={() => setShowNewMoveDialog(true)}
+            className="flex h-9 items-center gap-1.5 rounded-full bg-fuchsia-500 px-4 text-sm font-medium text-white hover:bg-fuchsia-600 transition"
+          >
             <span className="hidden md:inline text-lg leading-none">+</span>
             <span>New</span>
           </button>
         </div>
+
+        <NewMoveDialog open={showNewMoveDialog} onClose={() => setShowNewMoveDialog(false)} onSubmit={createMove} />
 
         <div className="mt-3 flex flex-col gap-3">
           {/* Mobile: Tab pills */}

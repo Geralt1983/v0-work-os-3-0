@@ -233,6 +233,32 @@ export function useMoves() {
     mutate()
   }
 
+  const createMove = async (moveData: {
+    title: string
+    clientId?: number
+    description?: string
+    status?: MoveStatus
+    effortEstimate?: number
+    drainType?: string
+  }) => {
+    const backendStatus = moveData.status ? statusToBackend[moveData.status] : "backlog"
+
+    const response = await apiFetch<BackendMove>("/api/moves", {
+      method: "POST",
+      body: JSON.stringify({
+        title: moveData.title,
+        clientId: moveData.clientId || null,
+        description: moveData.description || null,
+        status: backendStatus,
+        effortEstimate: moveData.effortEstimate || 2,
+        drainType: moveData.drainType || null,
+      }),
+    })
+
+    mutate()
+    return response
+  }
+
   return {
     moves,
     loading: isLoading,
@@ -246,6 +272,7 @@ export function useMoves() {
     restoreMove,
     updateMoveStatus,
     reorderMoves,
+    createMove, // Export createMove
     refresh: () => mutate(),
   }
 }
@@ -270,17 +297,31 @@ export interface Client {
 }
 
 export function useClients() {
-  const { data, error, isLoading } = useSWR<Client[]>("clients", async () => {
-    const backendClients = await apiFetch<BackendClient[]>("/api/clients")
-    return backendClients
-      .filter((c) => c.isActive === 1)
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        color: c.color ?? undefined,
-        isActive: c.isActive === 1,
-      }))
-  })
+  const { data, error, isLoading } = useSWR<Client[]>(
+    "clients",
+    async () => {
+      console.log("[v0] useClients: fetching from /api/clients")
+      const backendClients = await apiFetch<BackendClient[]>("/api/clients")
+      console.log("[v0] useClients: received", backendClients)
+
+      const mapped = backendClients
+        .filter((c) => c.isActive === 1)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color ?? undefined,
+          isActive: c.isActive === 1,
+        }))
+
+      console.log("[v0] useClients: mapped to", mapped)
+      return mapped
+    },
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+      revalidateOnMount: true,
+    },
+  )
 
   return {
     clients: data ?? [],
