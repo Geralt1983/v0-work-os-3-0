@@ -1,12 +1,13 @@
 import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core"
+import type { InferSelectModel } from "drizzle-orm"
 
 // =============================================================================
 // CLIENTS
 // =============================================================================
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull().default("standard"),
+  name: text("name").notNull().unique(),
+  type: text("type").notNull().default("client"),
   color: text("color"),
   isActive: integer("is_active").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -20,11 +21,11 @@ export const moves = pgTable("moves", {
   clientId: integer("client_id").references(() => clients.id),
   title: text("title").notNull(),
   description: text("description"),
-  status: text("status").notNull().default("backlog"), // active, queued, backlog, done
-  effortEstimate: integer("effort_estimate"), // 1=Quick, 2=Standard, 3=Chunky, 4=Deep
+  status: text("status").notNull().default("backlog"),
+  effortEstimate: integer("effort_estimate").default(2),
   effortActual: integer("effort_actual"),
   drainType: text("drain_type"),
-  sortOrder: integer("sort_order"),
+  sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
@@ -34,7 +35,7 @@ export const moves = pgTable("moves", {
 // SESSIONS (for chat)
 // =============================================================================
 export const sessions = pgTable("sessions", {
-  id: text("id").primaryKey(), // UUID
+  id: text("id").primaryKey(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
 })
@@ -43,12 +44,55 @@ export const sessions = pgTable("sessions", {
 // MESSAGES (for chat)
 // =============================================================================
 export const messages = pgTable("messages", {
-  id: text("id").primaryKey(), // UUID
+  id: text("id").primaryKey(),
   sessionId: text("session_id")
     .references(() => sessions.id)
     .notNull(),
-  role: text("role").notNull(), // "user" | "assistant"
+  role: text("role").notNull(),
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-  taskCard: jsonb("task_card"), // Optional task card data
+  taskCard: jsonb("task_card"),
 })
+
+// =============================================================================
+// =============================================================================
+export const clientMemory = pgTable("client_memory", {
+  id: text("id").primaryKey(),
+  clientName: text("client_name").notNull().unique(),
+  tier: text("tier").default("active"),
+  lastMoveId: text("last_move_id"),
+  lastMoveDescription: text("last_move_description"),
+  lastMoveAt: timestamp("last_move_at"),
+  totalMoves: integer("total_moves").default(0),
+  staleDays: integer("stale_days").default(0),
+  notes: text("notes"),
+  sentiment: text("sentiment").default("neutral"),
+  importance: text("importance").default("medium"),
+  preferredWorkTime: text("preferred_work_time"),
+  avoidanceScore: integer("avoidance_score").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const dailyLog = pgTable("daily_log", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  completedMoves: jsonb("completed_moves").default([]),
+  clientsTouched: jsonb("clients_touched").default([]),
+  clientsSkipped: jsonb("clients_skipped").default([]),
+  summary: text("summary"),
+  backlogMovesCount: integer("backlog_moves_count").default(0),
+  nonBacklogMovesCount: integer("non_backlog_moves_count").default(0),
+  notificationsSent: jsonb("notifications_sent").default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// =============================================================================
+// TYPE EXPORTS
+// =============================================================================
+export type Client = InferSelectModel<typeof clients>
+export type Move = InferSelectModel<typeof moves>
+export type Session = InferSelectModel<typeof sessions>
+export type Message = InferSelectModel<typeof messages>
+export type MoveStatus = "active" | "queued" | "backlog" | "done"
+export type DrainType = "deep" | "comms" | "admin" | "creative" | "easy"

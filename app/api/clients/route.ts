@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { clients } from "@/lib/schema"
+import { eq } from "drizzle-orm"
 
 // GET all clients
 export async function GET() {
   try {
-    const allClients = await db.select().from(clients)
+    const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
     return NextResponse.json(allClients)
   } catch (error) {
     console.error("Failed to fetch clients:", error)
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       .insert(clients)
       .values({
         name,
-        type: type || "standard",
+        type: type || "client",
         color: color || null,
         isActive: isActive ?? 1,
       })

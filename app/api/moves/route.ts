@@ -1,16 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
-import { eq, and, asc } from "drizzle-orm"
+import { eq, and, ne, desc, asc } from "drizzle-orm"
 
-// GET all moves (with optional filters)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const clientId = searchParams.get("clientId")
+    const excludeCompleted = searchParams.get("excludeCompleted") === "true"
 
-    // Build query with joins to get client name
     const query = db
       .select({
         id: moves.id,
@@ -29,16 +28,12 @@ export async function GET(request: NextRequest) {
       })
       .from(moves)
       .leftJoin(clients, eq(moves.clientId, clients.id))
-      .orderBy(asc(moves.sortOrder), asc(moves.createdAt))
+      .orderBy(asc(moves.sortOrder), desc(moves.createdAt))
 
-    // Apply filters
     const conditions = []
-    if (status) {
-      conditions.push(eq(moves.status, status))
-    }
-    if (clientId) {
-      conditions.push(eq(moves.clientId, Number.parseInt(clientId)))
-    }
+    if (status) conditions.push(eq(moves.status, status))
+    if (clientId) conditions.push(eq(moves.clientId, Number.parseInt(clientId)))
+    if (excludeCompleted) conditions.push(ne(moves.status, "done"))
 
     const allMoves = conditions.length > 0 ? await query.where(and(...conditions)) : await query
 
@@ -49,7 +44,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST create move
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -66,9 +60,10 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         status: status || "backlog",
-        effortEstimate: effortEstimate || null,
+        effortEstimate: effortEstimate || 2,
         drainType: drainType || null,
-        sortOrder: sortOrder || null,
+        sortOrder: sortOrder || 0,
+        updatedAt: new Date(),
       })
       .returning()
 

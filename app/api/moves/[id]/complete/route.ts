@@ -7,12 +7,14 @@ import { eq } from "drizzle-orm"
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const body = await request.json().catch(() => ({}))
 
     const [updated] = await db
       .update(moves)
       .set({
         status: "done",
         completedAt: new Date(),
+        effortActual: body.effortActual || null,
         updatedAt: new Date(),
       })
       .where(eq(moves.id, Number.parseInt(id)))

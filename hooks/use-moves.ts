@@ -3,20 +3,16 @@
 import useSWR from "swr"
 
 // =============================================================================
-// API CONFIGURATION
+// API CONFIGURATION - Removed debug logs, using local API routes
 // =============================================================================
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://daily-work-os-agent.replit.app"
+const API_BASE_URL = ""
 
 // =============================================================================
 // TYPE DEFINITIONS
 // =============================================================================
-// Work-OS backend status values
 export type BackendMoveStatus = "active" | "queued" | "backlog" | "done"
-
-// v0 UI status values (what the components expect)
 export type MoveStatus = "today" | "upnext" | "backlog" | "done"
 
-// Backend Move shape (from Work-OS /api/moves)
 interface BackendMove {
   id: number
   clientId: number | null
@@ -34,7 +30,6 @@ interface BackendMove {
   client?: { id: number; name: string }
 }
 
-// Frontend Move shape (what v0 UI components expect)
 export interface Move {
   id: string
   client: string
@@ -100,8 +95,6 @@ function getAgeLabel(createdAt: string): string {
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`
 
-  console.log("[v0] apiFetch:", url)
-
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -110,11 +103,8 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     },
   })
 
-  console.log("[v0] apiFetch response:", res.status, res.ok)
-
   if (!res.ok) {
     const error = await res.text().catch(() => "Unknown error")
-    console.log("[v0] apiFetch error:", error)
     throw new Error(`API error ${res.status}: ${error}`)
   }
 
@@ -130,21 +120,19 @@ export function useMoves() {
   const { data, error, isLoading, mutate } = useSWR<Move[]>(
     MOVES_KEY,
     async () => {
-      console.log("[v0] Fetching moves from:", `${API_BASE_URL}/api/moves`)
       const backendMoves = await apiFetch<BackendMove[]>("/api/moves")
-      console.log("[v0] Got moves:", backendMoves.length, backendMoves)
       return backendMoves.map((move) => ({
         id: move.id.toString(),
         client: move.clientName ?? (move.client ? move.client.name : ""),
-        clientId: move.clientId,
+        clientId: move.clientId ?? undefined,
         title: move.title,
-        description: move.description,
+        description: move.description ?? undefined,
         type: effortToType(move.effortEstimate),
         status: statusToFrontend[move.status],
         movesCount: undefined,
         ageLabel: getAgeLabel(move.createdAt),
         completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
-        sortOrder: move.sortOrder,
+        sortOrder: move.sortOrder ?? undefined,
       }))
     },
     {
@@ -152,8 +140,6 @@ export function useMoves() {
       revalidateOnFocus: false,
     },
   )
-
-  console.log("[v0] useMoves state:", { isLoading, error: error?.message, movesCount: data?.length })
 
   const moves = data ?? []
 
@@ -169,9 +155,8 @@ export function useMoves() {
       false,
     )
 
-    await apiFetch(`/api/moves/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "done" }),
+    await apiFetch(`/api/moves/${id}/complete`, {
+      method: "POST",
     })
 
     mutate()
@@ -186,7 +171,7 @@ export function useMoves() {
 
     await apiFetch(`/api/moves/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: statusToBackend[previousStatus] }),
+      body: JSON.stringify({ status: statusToBackend[previousStatus], completedAt: null }),
     })
 
     mutate()
@@ -301,21 +286,5 @@ export function useClients() {
     clients: data ?? [],
     isLoading,
     error,
-  }
-}
-
-function transformMove(move: BackendMove): Move {
-  return {
-    id: move.id.toString(),
-    client: move.clientName ?? (move.client ? move.client.name : ""),
-    clientId: move.clientId,
-    title: move.title,
-    description: move.description,
-    type: effortToType(move.effortEstimate),
-    status: statusToFrontend[move.status],
-    movesCount: undefined,
-    ageLabel: getAgeLabel(move.createdAt),
-    completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
-    sortOrder: move.sortOrder,
   }
 }

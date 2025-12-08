@@ -4,9 +4,9 @@ import { useState, useCallback, useEffect } from "react"
 import useSWR from "swr"
 
 // =============================================================================
-// API CONFIGURATION
+// API CONFIGURATION - Using local API routes
 // =============================================================================
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://daily-work-os-agent.replit.app"
+const API_BASE_URL = ""
 
 // =============================================================================
 // TYPES
@@ -38,7 +38,6 @@ interface ChatResponse {
 // =============================================================================
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`
-  console.log("[v0] Chat apiFetch:", url)
 
   const res = await fetch(url, {
     ...options,
@@ -50,7 +49,6 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const error = await res.text().catch(() => "Unknown error")
-    console.error("[v0] Chat API error:", res.status, error)
     throw new Error(`API error ${res.status}: ${error}`)
   }
 
@@ -81,10 +79,8 @@ export function useChat() {
       if (!sessionId) return []
       try {
         const messages = await apiFetch<Message[]>(`/api/sessions/${sessionId}/messages`)
-        console.log("[v0] Loaded message history:", messages.length)
         return messages
-      } catch (err) {
-        console.error("[v0] Failed to load history:", err)
+      } catch {
         return []
       }
     },
@@ -125,8 +121,6 @@ export function useChat() {
           }),
         })
 
-        console.log("[v0] Chat response:", response)
-
         // Store session ID
         if (response.sessionId && response.sessionId !== sessionId) {
           setSessionId(response.sessionId)
@@ -154,7 +148,6 @@ export function useChat() {
           ]
         })
       } catch (err) {
-        console.error("[v0] Chat error:", err)
         setError(err instanceof Error ? err.message : "Failed to send message")
         // Remove optimistic message on error
         setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id))
