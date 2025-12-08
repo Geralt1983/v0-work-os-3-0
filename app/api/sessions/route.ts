@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { sessions } from "@/lib/schema"
 import { randomUUID } from "crypto"
 
 export async function POST() {
   try {
+    const db = getDb()
     const id = randomUUID()
     const [session] = await db
       .insert(sessions)

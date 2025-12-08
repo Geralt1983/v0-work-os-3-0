@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves } from "@/lib/schema"
 import { eq, and, gte } from "drizzle-orm"
 
 export async function GET() {
   try {
+    const db = getDb()
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 

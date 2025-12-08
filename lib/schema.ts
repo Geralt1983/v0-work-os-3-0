@@ -55,6 +55,7 @@ export const messages = pgTable("messages", {
 })
 
 // =============================================================================
+// CLIENT MEMORY
 // =============================================================================
 export const clientMemory = pgTable("client_memory", {
   id: text("id").primaryKey(),
@@ -74,16 +75,19 @@ export const clientMemory = pgTable("client_memory", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+// =============================================================================
+// DAILY LOG
+// =============================================================================
 export const dailyLog = pgTable("daily_log", {
   id: text("id").primaryKey(),
   date: text("date").notNull(),
-  completedMoves: jsonb("completed_moves").default([]),
-  clientsTouched: jsonb("clients_touched").default([]),
-  clientsSkipped: jsonb("clients_skipped").default([]),
+  completedMoves: jsonb("completed_moves"),
+  clientsTouched: jsonb("clients_touched"),
+  clientsSkipped: jsonb("clients_skipped"),
   summary: text("summary"),
   backlogMovesCount: integer("backlog_moves_count").default(0),
   nonBacklogMovesCount: integer("non_backlog_moves_count").default(0),
-  notificationsSent: jsonb("notifications_sent").default([]),
+  notificationsSent: jsonb("notifications_sent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

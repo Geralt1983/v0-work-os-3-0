@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 
@@ -7,6 +7,7 @@ const statusOrder = ["backlog", "queued", "active"]
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const db = getDb()
     const { id } = await params
 
     const [move] = await db

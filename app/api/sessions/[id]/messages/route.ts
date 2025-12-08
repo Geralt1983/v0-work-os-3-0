@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { messages } from "@/lib/schema"
 import { eq, asc } from "drizzle-orm"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const db = getDb()
     const { id } = await params
 
     const allMessages = await db

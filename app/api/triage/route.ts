@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq, ne } from "drizzle-orm"
 
 export async function GET() {
   try {
+    const db = getDb()
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
     const allMoves = await db.select().from(moves).where(ne(moves.status, "done"))
 

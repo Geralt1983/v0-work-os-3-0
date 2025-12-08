@@ -1,8 +1,10 @@
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
 
 export async function executeTool(name: string, args: Record<string, unknown>) {
+  const db = getDb()
+
   switch (name) {
     case "get_all_client_pipelines": {
       const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))

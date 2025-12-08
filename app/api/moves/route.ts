@@ -1,14 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq, and, ne, desc, asc } from "drizzle-orm"
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Moves API: Starting GET request")
+    const db = getDb()
+
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const clientId = searchParams.get("clientId")
     const excludeCompleted = searchParams.get("excludeCompleted") === "true"
+
+    console.log("[v0] Moves API: Params", { status, clientId, excludeCompleted })
 
     const query = db
       .select({
@@ -37,15 +42,18 @@ export async function GET(request: NextRequest) {
 
     const allMoves = conditions.length > 0 ? await query.where(and(...conditions)) : await query
 
+    console.log("[v0] Moves API: Fetched", allMoves.length, "moves")
+
     return NextResponse.json(allMoves)
   } catch (error) {
-    console.error("Failed to fetch moves:", error)
-    return NextResponse.json({ error: "Failed to fetch moves" }, { status: 500 })
+    console.error("[v0] Moves API error:", error)
+    return NextResponse.json({ error: "Failed to fetch moves", details: String(error) }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const db = getDb()
     const body = await request.json()
     const { clientId, title, description, status, effortEstimate, drainType, sortOrder } = body
 

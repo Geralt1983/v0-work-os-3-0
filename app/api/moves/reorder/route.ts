@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 
 // POST reorder moves
 export async function POST(request: NextRequest) {
   try {
+    const db = getDb()
     const body = await request.json()
     const { status, orderedIds } = body
 

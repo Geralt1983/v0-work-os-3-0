@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { sessions, messages } from "@/lib/schema"
 import { eq, asc } from "drizzle-orm"
 import { randomUUID } from "crypto"
@@ -12,6 +12,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(request: Request) {
   try {
+    const db = getDb()
     const { sessionId: providedSessionId, message } = await request.json()
 
     // Get or create session

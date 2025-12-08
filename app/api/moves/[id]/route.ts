@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 
 // GET single move
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const db = getDb()
     const { id } = await params
     const [move] = await db
       .select({
@@ -41,10 +42,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 // PATCH update move
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const db = getDb()
     const { id } = await params
     const body = await request.json()
 
-    // Add updatedAt timestamp
     const updateData = {
       ...body,
       updatedAt: new Date(),
@@ -70,6 +71,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 // DELETE move
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const db = getDb()
     const { id } = await params
     const [deleted] = await db
       .delete(moves)

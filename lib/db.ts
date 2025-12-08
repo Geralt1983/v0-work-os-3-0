@@ -1,35 +1,33 @@
-import { neon, type NeonQueryFunction } from "@neondatabase/serverless"
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http"
+import { neon } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-http"
 import * as schema from "./schema"
 
-let _db: NeonHttpDatabase<typeof schema> | null = null
-let _sql: NeonQueryFunction<false, false> | null = null
+let cachedDb: ReturnType<typeof drizzle> | null = null
 
-function getConnectionString(): string {
+export function getDb() {
+  if (cachedDb) return cachedDb
+
   const url = process.env.DATABASE_URL
   if (!url) {
+    console.error("[v0] DATABASE_URL is not set")
     throw new Error("DATABASE_URL environment variable is not set")
   }
-  // Clean up common copy-paste mistakes (e.g., `psql 'url'` wrapper)
-  let cleaned = url.trim()
-  if (cleaned.startsWith("psql ")) {
-    cleaned = cleaned.replace(/^psql\s+['"]?/, "").replace(/['"]?\s*$/, "")
-  }
-  return cleaned
-}
 
-export function getDb(): NeonHttpDatabase<typeof schema> {
-  if (!_db) {
-    const connectionString = getConnectionString()
-    _sql = neon(connectionString)
-    _db = drizzle(_sql, { schema })
-  }
-  return _db
-}
+  console.log("[v0] Initializing database connection")
 
-// For convenience, export a getter that can be used like `db`
-export const db = new Proxy({} as NeonHttpDatabase<typeof schema>, {
-  get(_, prop) {
-    return getDb()[prop as keyof NeonHttpDatabase<typeof schema>]
-  },
-})
+  // Clean up common copy-paste mistakes
+  let connectionString = url.trim()
+  if (connectionString.startsWith("psql ")) {
+    connectionString = connectionString.replace(/^psql\s+['"]?/, "").replace(/['"]?\s*$/, "")
+  }
+
+  try {
+    const sql = neon(connectionString)
+    cachedDb = drizzle(sql, { schema })
+    console.log("[v0] Database connection initialized successfully")
+    return cachedDb
+  } catch (error) {
+    console.error("[v0] Failed to initialize database:", error)
+    throw error
+  }
+}
