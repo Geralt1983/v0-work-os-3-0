@@ -199,11 +199,7 @@ export function isPreviewEnvironment(): boolean {
     return process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "development"
   }
   const hostname = window.location.hostname
-  const isPreview =
-    hostname.includes("vusercontent.net") ||
-    hostname.includes("localhost") ||
-    hostname.includes("vercel.app") ||
-    hostname.includes("v0.dev")
+  const isPreview = hostname.includes("vusercontent.net") || hostname === "localhost" || hostname.includes("v0.dev")
 
   console.log("[v0] isPreviewEnvironment:", { hostname, isPreview })
   return isPreview
