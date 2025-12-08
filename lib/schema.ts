@@ -26,6 +26,7 @@ export const moves = pgTable("moves", {
   effortActual: integer("effort_actual"),
   drainType: text("drain_type"),
   sortOrder: integer("sort_order").default(0),
+  subtasks: jsonb("subtasks").default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
@@ -100,3 +101,9 @@ export type Session = InferSelectModel<typeof sessions>
 export type Message = InferSelectModel<typeof messages>
 export type MoveStatus = "active" | "queued" | "backlog" | "done"
 export type DrainType = "deep" | "comms" | "admin" | "creative" | "easy"
+
+export type Subtask = {
+  id: string
+  title: string
+  completed: boolean
+}

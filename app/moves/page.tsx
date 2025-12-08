@@ -3,11 +3,25 @@
 import type React from "react"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Check, Archive, LayoutGrid, List, Focus, Zap, FileText, Layers, Clock, ArrowUp, ArrowDown } from "lucide-react"
+import {
+  Check,
+  Archive,
+  LayoutGrid,
+  List,
+  Focus,
+  Zap,
+  FileText,
+  Layers,
+  Clock,
+  ArrowUp,
+  ArrowDown,
+  CheckSquare,
+} from "lucide-react"
 import { useMoves, type Move, type MoveStatus, useClients } from "@/hooks/use-moves"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { NewMoveDialog } from "@/components/new-move-dialog"
+import { EditMoveDialog } from "@/components/edit-move-dialog"
 import { motion, AnimatePresence } from "framer-motion"
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
@@ -56,6 +70,9 @@ export default function MovesPage() {
     reorderMoves,
     updateMoveStatus,
     createMove,
+    updateMove,
+    updateSubtasks,
+    setSubtasksFromTitles,
   } = useMoves()
   const { clients } = useClients()
 
@@ -67,6 +84,7 @@ export default function MovesPage() {
   const [showBacklog, setShowBacklog] = useState(true)
   const [showNewMoveDialog, setShowNewMoveDialog] = useState(false)
   const [undoState, setUndoState] = useState<{ id: string; previousStatus: MoveStatus } | null>(null)
+  const [editingMove, setEditingMove] = useState<Move | null>(null)
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clientOptions = useMemo(() => [...new Set(moves.map((m) => m.client).filter(Boolean))], [moves])
@@ -90,6 +108,21 @@ export default function MovesPage() {
     restoreMove(undoState.id, undoState.previousStatus)
     setUndoState(null)
     if (undoTimeoutRef.current) window.clearTimeout(undoTimeoutRef.current)
+  }
+
+  const handleCreateSubtasks = async (subtasks: string[]) => {
+    if (!editingMove) return
+
+    // Create each subtask as a new move with the same client and status
+    for (const subtaskTitle of subtasks) {
+      await createMove({
+        title: subtaskTitle,
+        clientId: editingMove.clientId,
+        clientName: editingMove.client,
+        status: editingMove.status === "done" ? "today" : editingMove.status,
+        effortEstimate: 1, // Quick tasks
+      })
+    }
   }
 
   useEffect(() => {
@@ -173,6 +206,15 @@ export default function MovesPage() {
         </div>
 
         <NewMoveDialog open={showNewMoveDialog} onClose={() => setShowNewMoveDialog(false)} onSubmit={createMove} />
+        <EditMoveDialog
+          open={editingMove !== null}
+          move={editingMove}
+          onClose={() => setEditingMove(null)}
+          onSave={updateMove}
+          onCreateSubtasks={handleCreateSubtasks}
+          onUpdateSubtasks={updateSubtasks}
+          onSetSubtasksFromTitles={setSubtasksFromTitles}
+        />
 
         <div className="mt-3 flex flex-col gap-3">
           <div className="lg:hidden flex items-center gap-1 p-1 rounded-full bg-zinc-900/50">
@@ -218,7 +260,12 @@ export default function MovesPage() {
         </div>
 
         <div className="lg:hidden mt-4">
-          <MovesListMobile moves={byStatus[activeTab] || []} activeTab={activeTab} onComplete={handleComplete} />
+          <MovesListMobile
+            moves={byStatus[activeTab] || []}
+            activeTab={activeTab}
+            onComplete={handleComplete}
+            onEditMove={setEditingMove}
+          />
         </div>
 
         <div className="hidden lg:block mt-6">
@@ -232,9 +279,12 @@ export default function MovesPage() {
               onComplete={handleComplete}
               onReorder={reorderMoves}
               onMoveToColumn={updateMoveStatus}
+              onEditMove={setEditingMove}
             />
           )}
-          {view === "list" && <MovesList moves={filteredMoves} onComplete={handleComplete} />}
+          {view === "list" && (
+            <MovesList moves={filteredMoves} onComplete={handleComplete} onEditMove={setEditingMove} />
+          )}
           {view === "focus" && <FocusView moves={byStatus.today} onComplete={handleComplete} />}
         </div>
       </div>
@@ -247,12 +297,24 @@ function MovesListMobile({
   moves,
   activeTab,
   onComplete,
-}: { moves: Move[]; activeTab: MoveStatus; onComplete: (id: string, previousStatus: MoveStatus) => Promise<void> }) {
+  onEditMove,
+}: {
+  moves: Move[]
+  activeTab: MoveStatus
+  onComplete: (id: string, previousStatus: MoveStatus) => Promise<void>
+  onEditMove?: (move: Move) => void
+}) {
   return (
     <div className="flex flex-col gap-3">
       {moves.length === 0 && <div className="text-center py-12 text-zinc-500">No moves in this category</div>}
       {moves.map((move) => (
-        <MoveCard key={move.id} move={move} variant="primary" onComplete={(id) => onComplete(id, activeTab)} />
+        <MoveCard
+          key={move.id}
+          move={move}
+          variant="primary"
+          onComplete={(id) => onComplete(id, activeTab)}
+          onClick={() => onEditMove?.(move)}
+        />
       ))}
     </div>
   )
@@ -330,6 +392,7 @@ function MovesBoard({
   onComplete,
   onReorder,
   onMoveToColumn,
+  onEditMove,
 }: {
   showBacklog: boolean
   todayMoves: Move[]
@@ -339,6 +402,7 @@ function MovesBoard({
   onComplete: (id: string) => Promise<void>
   onReorder: (status: MoveStatus, orderedIds: string[]) => Promise<void>
   onMoveToColumn: (id: string, newStatus: MoveStatus, insertAtIndex?: number) => Promise<void>
+  onEditMove?: (move: Move) => void
 }) {
   const isMobile = useIsMobile()
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -513,6 +577,7 @@ function MovesBoard({
               onComplete={onComplete}
               variant={col.id === "backlog" ? "compact" : "primary"}
               scrollable={col.id === "backlog"}
+              onEditMove={onEditMove}
             />
           )
         })}
@@ -575,6 +640,7 @@ function DroppableColumn({
   onComplete,
   variant,
   scrollable,
+  onEditMove,
 }: {
   id: MoveStatus
   title: string
@@ -583,6 +649,7 @@ function DroppableColumn({
   onComplete: (id: string) => Promise<void>
   variant: MoveVariant
   scrollable?: boolean
+  onEditMove?: (move: Move) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
 
@@ -603,7 +670,13 @@ function DroppableColumn({
           <div className="flex flex-col gap-3">
             {moves.length === 0 && <div className="py-8 text-center text-sm text-zinc-600">Drop moves here</div>}
             {moves.map((move) => (
-              <SortableMoveCard key={move.id} move={move} variant={variant} onComplete={onComplete} />
+              <SortableMoveCard
+                key={move.id}
+                move={move}
+                variant={variant}
+                onComplete={onComplete}
+                onClick={() => onEditMove?.(move)}
+              />
             ))}
           </div>
         </SortableContext>
@@ -617,23 +690,40 @@ function SortableMoveCard({
   move,
   variant,
   onComplete,
+  onClick,
+  isDragging = false,
 }: {
   move: Move
   variant: MoveVariant
   onComplete: (id: string) => Promise<void>
+  onClick?: () => void
+  isDragging?: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: move.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: sortableIsDragging,
+  } = useSortable({ id: move.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : "auto",
+    opacity: sortableIsDragging ? 0.5 : 1,
+    zIndex: sortableIsDragging ? 50 : "auto",
   }
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <MoveCard move={move} variant={variant} onComplete={onComplete} isDragging={isDragging} />
+      <MoveCard
+        move={move}
+        variant={variant}
+        onComplete={onComplete}
+        onClick={onClick}
+        isDragging={sortableIsDragging}
+      />
     </div>
   )
 }
@@ -641,7 +731,12 @@ function SortableMoveCard({
 function MovesList({
   moves,
   onComplete,
-}: { moves: Move[]; onComplete: (id: string, previousStatus: MoveStatus) => Promise<void> }) {
+  onEditMove,
+}: {
+  moves: Move[]
+  onComplete: (id: string, previousStatus: MoveStatus) => Promise<void>
+  onEditMove?: (move: Move) => void
+}) {
   const [sortKey, setSortKey] = useState<SortKey>("client")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
 
@@ -711,7 +806,10 @@ function MovesList({
               <td className="px-4 py-3 text-zinc-400">{move.type}</td>
               <td className="px-4 py-3">
                 <button
-                  onClick={() => onComplete(move.id, move.status)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onComplete(move.id, move.status)
+                  }}
                   className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300 hover:bg-fuchsia-500 hover:text-white transition"
                 >
                   Done
@@ -795,11 +893,13 @@ function MoveCard({
   move,
   variant,
   onComplete,
+  onClick,
   isDragging = false,
 }: {
   move: Move
   variant: MoveVariant
   onComplete: (id: string) => Promise<void>
+  onClick?: () => void
   isDragging?: boolean
 }) {
   const isMobile = useIsMobile()
@@ -832,8 +932,14 @@ function MoveCard({
 
   const isCompact = variant === "compact"
 
+  const subtasks = move.subtasks || []
+  const completedSubtasks = subtasks.filter((s) => s.completed).length
+  const totalSubtasks = subtasks.length
+  const hasSubtasks = totalSubtasks > 0
+
   return (
     <motion.div
+      onClick={onClick}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       animate={{
@@ -847,7 +953,7 @@ function MoveCard({
         damping: 30,
       }}
       style={{ perspective: 1000 }}
-      className={`group relative rounded-2xl border transition-all cursor-grab active:cursor-grabbing ${
+      className={`group relative rounded-2xl border transition-all ${onClick ? "cursor-pointer" : "cursor-grab"} active:cursor-grabbing ${
         isDragging
           ? "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20"
           : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 hover:shadow-lg"
@@ -861,25 +967,45 @@ function MoveCard({
           </h3>
         </div>
         <button
-          onClick={handleComplete}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleComplete()
+          }}
           disabled={completing}
-          aria-label={`Mark "${move.title}" as complete`}
-          title="Mark as complete"
-          className={`flex-shrink-0 rounded-full border border-zinc-700 transition hover:bg-fuchsia-500 hover:border-fuchsia-500 disabled:opacity-50 ${isCompact ? "p-1" : "p-1.5"}`}
+          aria-label={`Complete task: ${move.title}`}
+          title={`Complete: ${move.title}`}
+          className={`flex-shrink-0 p-2 rounded-xl transition-all ${
+            completing
+              ? "bg-emerald-500 text-white scale-90"
+              : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400"
+          }`}
         >
-          <Check
-            className={`text-zinc-500 group-hover:text-white ${isCompact ? "h-3 w-3" : "h-4 w-4"}`}
-            aria-hidden="true"
-          />
+          <Check className={`${isCompact ? "h-4 w-4" : "h-5 w-5"} ${completing ? "animate-pulse" : ""}`} />
         </button>
       </div>
-      <div className={`flex items-center gap-2 text-zinc-500 ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-xs"}`}>
+
+      {hasSubtasks && (
+        <div className={`flex items-center gap-2 ${isCompact ? "mt-2" : "mt-3"}`}>
+          <CheckSquare className="h-3.5 w-3.5 text-zinc-500" />
+          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-fuchsia-500 transition-all duration-300"
+              style={{ width: `${totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0}%` }}
+            />
+          </div>
+          <span className="text-xs text-zinc-500 tabular-nums">
+            {completedSubtasks}/{totalSubtasks}
+          </span>
+        </div>
+      )}
+
+      <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
+        {/* Type badge and age label */}
         <span className="flex items-center gap-1">
           {typeIcon[move.type]}
           {move.type}
         </span>
-        <span className="text-zinc-700">•</span>
-        <span>{move.ageLabel}</span>
+        <span className="text-sm text-zinc-500">{move.ageLabel}</span>
       </div>
     </motion.div>
   )

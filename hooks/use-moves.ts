@@ -25,6 +25,7 @@ interface BackendMove {
   effortActual: number | null
   drainType: string | null
   sortOrder: number | null
+  subtasks?: Subtask[] | null // Add subtasks
   createdAt: string
   updatedAt: string
   completedAt: string | null
@@ -40,10 +41,17 @@ export interface Move {
   description?: string
   type: "Quick" | "Standard" | "Chunky" | "Deep"
   status: MoveStatus
+  subtasks?: Subtask[] // Add subtasks
   movesCount?: number
   ageLabel?: string
   completedAt?: number
   sortOrder?: number
+}
+
+export interface Subtask {
+  id: string
+  title: string
+  completed: boolean
 }
 
 // =============================================================================
@@ -180,6 +188,7 @@ export function useMoves() {
         description: move.description ?? undefined,
         type: effortToType(move.effortEstimate),
         status: statusToFrontend[move.status],
+        subtasks: (move.subtasks as Subtask[]) ?? [], // Map subtasks
         movesCount: undefined,
         ageLabel: getAgeLabel(move.createdAt),
         completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
@@ -188,19 +197,16 @@ export function useMoves() {
 
       if (isPreviewEnvironment()) {
         const localMovesData = getLocalMoves()
-        // Get IDs of moves from API/mock to avoid duplicates
         const apiMoveIds = new Set(mappedMoves.map((m) => m.id))
-        // Add local moves that don't exist in API response
         const uniqueLocalMoves = localMovesData.filter((m) => !apiMoveIds.has(m.id))
-        // Local moves go first (newest at top), then API moves
         return [...uniqueLocalMoves, ...mappedMoves]
       }
 
       return mappedMoves
     },
     {
-      refreshInterval: 30000,
-      revalidateOnFocus: false,
+      refreshInterval: 10000,
+      revalidateOnFocus: true,
     },
   )
 
@@ -434,6 +440,82 @@ export function useMoves() {
     }
   }
 
+  const updateMove = async (
+    id: string,
+    moveData: {
+      title?: string
+      clientId?: number
+      description?: string
+      status?: MoveStatus
+      effortEstimate?: number
+      drainType?: string
+    },
+  ) => {
+    const backendStatus = moveData.status ? statusToBackend[moveData.status] : undefined
+
+    // Optimistic update
+    mutate((current: Move[] | undefined) => {
+      if (!current) return current
+      return current.map((m) => {
+        if (m.id !== id) return m
+        return {
+          ...m,
+          title: moveData.title ?? m.title,
+          clientId: moveData.clientId ?? m.clientId,
+          description: moveData.description ?? m.description,
+          status: moveData.status ?? m.status,
+          type: moveData.effortEstimate ? effortToType(moveData.effortEstimate) : m.type,
+        }
+      })
+    }, false)
+
+    try {
+      await apiFetch(`/api/moves/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: moveData.title,
+          clientId: moveData.clientId,
+          description: moveData.description,
+          status: backendStatus,
+          effortEstimate: moveData.effortEstimate,
+          drainType: moveData.drainType,
+        }),
+      })
+      mutate()
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] updateMove: API failed in preview, using local state")
+    }
+  }
+
+  const updateSubtasks = async (id: string, subtasks: Subtask[]) => {
+    // Optimistic update
+    mutate((current: Move[] | undefined) => {
+      if (!current) return current
+      return current.map((m) => (m.id === id ? { ...m, subtasks } : m))
+    }, false)
+
+    try {
+      await apiFetch(`/api/moves/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ subtasks }),
+      })
+      mutate()
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] updateSubtasks: API failed in preview, using local state")
+    }
+  }
+
+  const setSubtasksFromTitles = async (id: string, titles: string[]) => {
+    const subtasks: Subtask[] = titles.map((title) => ({
+      id: `subtask-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      completed: false,
+    }))
+    await updateSubtasks(id, subtasks)
+  }
+
   return {
     moves,
     loading: isLoading,
@@ -448,6 +530,9 @@ export function useMoves() {
     updateMoveStatus,
     reorderMoves,
     createMove,
+    updateMove,
+    updateSubtasks, // Export updateSubtasks
+    setSubtasksFromTitles, // Export setSubtasksFromTitles
     refresh: () => mutate(),
   }
 }

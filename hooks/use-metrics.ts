@@ -191,8 +191,9 @@ export function useMetrics() {
     isLoading: todayLoading,
     mutate: mutateToday,
   } = useSWR<TodayMetrics>("/api/metrics/today", fetcher, {
-    refreshInterval: 30000,
-    onError: () => {}, // Suppress error logging, we handle it below
+    refreshInterval: 10000,
+    revalidateOnFocus: true,
+    onError: () => {},
   })
 
   const {
@@ -201,7 +202,8 @@ export function useMetrics() {
     isLoading: clientsLoading,
     mutate: mutateClients,
   } = useSWR<ClientMetrics[]>("/api/metrics/clients", fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 10000,
+    revalidateOnFocus: true,
     onError: () => {},
   })
 

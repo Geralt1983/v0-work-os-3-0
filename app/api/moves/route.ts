@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         effortActual: moves.effortActual,
         drainType: moves.drainType,
         sortOrder: moves.sortOrder,
+        subtasks: moves.subtasks,
         createdAt: moves.createdAt,
         updatedAt: moves.updatedAt,
         completedAt: moves.completedAt,
