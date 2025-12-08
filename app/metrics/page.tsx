@@ -1,6 +1,6 @@
 "use client"
 
-import { TargetIcon, BarChartIcon, PersonIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons"
+import { TargetIcon, BarChartIcon, PersonIcon, ExclamationTriangleIcon, LightningBoltIcon } from "@radix-ui/react-icons"
 import { useEffect } from "react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { PageHeader } from "@/components/page-header"
@@ -25,6 +25,19 @@ function getDaysSinceLabel(days: number | null): { label: string; tone: "positiv
   return { label: `${days}d stale`, tone: "negative" }
 }
 
+function getMomentumColor(score: number): string {
+  if (score >= 70) return "text-emerald-400"
+  if (score >= 40) return "text-amber-400"
+  return "text-rose-400"
+}
+
+function getMomentumLabel(score: number, trend: "rising" | "falling" | "steady"): string {
+  const trendIcon = trend === "rising" ? "↑" : trend === "falling" ? "↓" : "→"
+  if (score >= 70) return `High ${trendIcon}`
+  if (score >= 40) return `Medium ${trendIcon}`
+  return `Low ${trendIcon}`
+}
+
 export default function MetricsDashboard() {
   const { today, clients, isLoading, error } = useMetrics()
 
@@ -42,7 +55,6 @@ export default function MetricsDashboard() {
       }
     }
 
-    const resizeObserverLoopErrRe = /^[^(ResizeObserver loop limit exceeded)]/
     const originalError = window.console.error
     window.console.error = (...args) => {
       if (args[0]?.toString().includes("ResizeObserver loop")) {
@@ -64,9 +76,11 @@ export default function MetricsDashboard() {
   const earnedMinutes = today?.earnedMinutes || 0
   const targetMinutes = today?.targetMinutes || 180
   const pacingPercent = Math.min(Math.round((earnedMinutes / targetMinutes) * 100), 100)
+  const fullPercent = today?.percent || pacingPercent
   const pacingWidth = `${pacingPercent}%`
   const completedCount = today?.completedCount || 0
   const paceStatus = today?.paceStatus || "behind"
+  const momentum = today?.momentum || { score: 0, trend: "steady" as const }
 
   const staleClients = clients.filter((c) => c.isStale)
   const activeClients = clients.filter((c) => c.activeMoves > 0)
@@ -99,8 +113,8 @@ export default function MetricsDashboard() {
           {!isLoading && !error && (
             <>
               {/* Top row - Today's Progress */}
-              <section className="grid gap-6 md:grid-cols-2">
-                {/* Today pacing - REAL DATA */}
+              <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* Today pacing */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -112,7 +126,7 @@ export default function MetricsDashboard() {
                     <span
                       className={`text-xl font-semibold ${paceStatus === "on_track" ? "text-emerald-400" : "text-amber-400"}`}
                     >
-                      {pacingPercent}
+                      {fullPercent}
                       <span className="text-base align-middle">%</span>
                     </span>
                   </div>
@@ -139,8 +153,43 @@ export default function MetricsDashboard() {
                   </div>
                 </div>
 
-                {/* Daily Summary */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-violet-500/15">
+                        <LightningBoltIcon className="h-4 w-4 text-violet-400" />
+                      </div>
+                      <h2 className="text-lg font-semibold">Momentum</h2>
+                    </div>
+                    <span className={`text-xl font-semibold ${getMomentumColor(momentum.score)}`}>
+                      {momentum.score}
+                      <span className="text-base align-middle">/100</span>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-zinc-300">{getMomentumLabel(momentum.score, momentum.trend)}</p>
+                  <div className="mt-3 h-2 rounded-full bg-zinc-800">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        momentum.score >= 70
+                          ? "bg-gradient-to-r from-emerald-500 to-cyan-500"
+                          : momentum.score >= 40
+                            ? "bg-gradient-to-r from-amber-500 to-yellow-500"
+                            : "bg-gradient-to-r from-rose-500 to-orange-500"
+                      }`}
+                      style={{ width: `${momentum.score}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-zinc-500">
+                    {momentum.score >= 70
+                      ? "Great flow! Keep the energy going."
+                      : momentum.score >= 40
+                        ? "Decent pace. Try shorter tasks to build speed."
+                        : "Momentum is low. Start with an easy win."}
+                  </p>
+                </div>
+
+                {/* Daily Summary */}
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-500/15">
@@ -162,7 +211,9 @@ export default function MetricsDashboard() {
                       <div className="text-xs text-zinc-500">min earned</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 text-center">
-                      <div className="text-2xl font-semibold text-zinc-100">{targetMinutes - earnedMinutes}</div>
+                      <div className="text-2xl font-semibold text-zinc-100">
+                        {Math.max(0, targetMinutes - earnedMinutes)}
+                      </div>
                       <div className="text-xs text-zinc-500">min remaining</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 text-center">
@@ -203,7 +254,7 @@ export default function MetricsDashboard() {
                 </section>
               )}
 
-              {/* Client Activity - REAL DATA */}
+              {/* Client Activity */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">

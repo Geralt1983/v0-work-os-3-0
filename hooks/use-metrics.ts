@@ -6,7 +6,13 @@ export interface TodayMetrics {
   completedCount: number
   earnedMinutes: number
   targetMinutes: number
+  percent: number
   paceStatus: "on_track" | "behind"
+  momentum: {
+    score: number
+    trend: "rising" | "falling" | "steady"
+  }
+  streak: number
 }
 
 export interface ClientMetrics {
@@ -24,6 +30,7 @@ export function useMetrics() {
     data: todayData,
     error: todayError,
     isLoading: todayLoading,
+    mutate: mutateToday,
   } = useSWR<TodayMetrics>("/api/metrics/today", fetcher, {
     refreshInterval: 30000,
   })
@@ -36,10 +43,21 @@ export function useMetrics() {
     refreshInterval: 30000,
   })
 
+  const checkMilestone = async () => {
+    try {
+      await fetch("/api/notifications/milestone", { method: "POST" })
+      mutateToday() // Refresh metrics after milestone check
+    } catch (error) {
+      console.error("Failed to check milestone:", error)
+    }
+  }
+
   return {
     today: todayData,
     clients: clientsData || [],
     isLoading: todayLoading || clientsLoading,
     error: todayError || clientsError,
+    checkMilestone,
+    refresh: mutateToday,
   }
 }
