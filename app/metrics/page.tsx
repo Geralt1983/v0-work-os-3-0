@@ -101,6 +101,13 @@ function getMomentumStatusEmoji(status: string): string {
   }
 }
 
+function getMomentumScoreColor(score: number): string {
+  if (score >= 100) return "text-amber-400" // gold for crushing
+  if (score >= 70) return "text-emerald-400" // green for on track
+  if (score >= 40) return "text-amber-500" // orange for behind
+  return "text-rose-400" // red for stalled
+}
+
 export default function MetricsDashboard() {
   const { today, clients, isLoading, error } = useMetrics()
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null)
@@ -262,7 +269,7 @@ export default function MetricsDashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 flex flex-col">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-violet-500/15">
@@ -270,31 +277,18 @@ export default function MetricsDashboard() {
                       </div>
                       <h2 className="text-lg font-semibold">Momentum</h2>
                     </div>
-                    <span className={`text-3xl font-bold tabular-nums ${getMomentumStatusColor(momentum.status)}`}>
+                    <span className={`text-4xl font-bold tabular-nums ${getMomentumScoreColor(momentum.score)}`}>
                       {momentum.score}
                     </span>
                   </div>
-                  <p className={`mt-1 text-right text-sm ${getMomentumStatusColor(momentum.status)}`}>
-                    {getMomentumStatusEmoji(momentum.status)} {getMomentumStatusLabel(momentum.status)}
-                  </p>
-                  <div className="mt-4">
-                    <div className="h-2.5 rounded-full bg-zinc-800 relative overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${getMomentumGradient(momentum.status)}`}
-                        style={{ width: `${Math.min(momentum.percent, 100)}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm text-zinc-300">
-                        <span className="font-semibold text-zinc-100">{momentum.actualMinutes}</span>
-                        <span className="text-zinc-500"> / {earnedMinutes > 0 ? targetMinutes : 180} min</span>
-                      </span>
-                    </div>
+
+                  <div className="flex-1 flex flex-col items-center justify-center py-6">
+                    <span className={`text-2xl ${getMomentumStatusColor(momentum.status)}`}>
+                      {getMomentumStatusEmoji(momentum.status)} {getMomentumStatusLabel(momentum.status)}
+                    </span>
                   </div>
-                  <p className="mt-3 text-xs text-zinc-500">
-                    {momentum.expectedByNow} min expected by now ({momentum.dayProgress}% through work day)
-                  </p>
-                  <p className="mt-2 text-xs text-zinc-400">{getMomentumAdvice(momentum.status)}</p>
+
+                  <p className="text-sm text-zinc-400 text-center italic">"{getMomentumAdvice(momentum.status)}"</p>
                 </div>
 
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
@@ -303,30 +297,17 @@ export default function MetricsDashboard() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-500/15">
                         <BarChartIcon className="h-4 w-4 text-cyan-400" />
                       </div>
-                      <div>
-                        <h2 className="text-lg font-semibold">Daily Summary</h2>
-                        <p className="text-xs uppercase tracking-wide text-zinc-500">Real-time stats</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-semibold text-cyan-400">{completedCount}</div>
-                      <div className="text-xs font-medium text-zinc-400">moves today</div>
+                      <h2 className="text-lg font-semibold">Daily Summary</h2>
                     </div>
                   </div>
-                  <div className="mt-5 grid grid-cols-3 gap-3">
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 text-center">
-                      <div className="text-2xl font-semibold text-zinc-100">{earnedMinutes}</div>
-                      <div className="text-xs text-zinc-500">min earned</div>
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
+                      <div className="text-3xl font-semibold text-cyan-400">{completedCount}</div>
+                      <div className="text-xs text-zinc-500 mt-1">moves today</div>
                     </div>
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 text-center">
-                      <div className="text-2xl font-semibold text-zinc-100">
-                        {Math.max(0, targetMinutes - earnedMinutes)}
-                      </div>
-                      <div className="text-xs text-zinc-500">min remaining</div>
-                    </div>
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 text-center">
-                      <div className="text-2xl font-semibold text-zinc-100">{clients.length}</div>
-                      <div className="text-xs text-zinc-500">total clients</div>
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
+                      <div className="text-3xl font-semibold text-zinc-100">{clients.length}</div>
+                      <div className="text-xs text-zinc-500 mt-1">total clients</div>
                     </div>
                   </div>
                   {paceStatus === "on_track" ? (
