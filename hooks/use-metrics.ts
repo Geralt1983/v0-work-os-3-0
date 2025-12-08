@@ -1,7 +1,6 @@
 "use client"
 
 import useSWR from "swr"
-import { useEffect, useCallback } from "react"
 import { isPreviewEnvironment } from "@/lib/mock-data"
 
 const fetcher = async (url: string) => {
@@ -165,24 +164,6 @@ export function useMetrics() {
     onError: () => {},
   })
 
-  const handleMoveCompleted = useCallback(() => {
-    console.log("[v0] useMetrics: move-completed event received, revalidating...")
-    // Force revalidation by passing true
-    mutateToday()
-    mutateClients()
-  }, [mutateToday, mutateClients])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    console.log("[v0] useMetrics: Setting up move-completed listener")
-    window.addEventListener("move-completed", handleMoveCompleted)
-    return () => {
-      console.log("[v0] useMetrics: Removing move-completed listener")
-      window.removeEventListener("move-completed", handleMoveCompleted)
-    }
-  }, [handleMoveCompleted])
-
   const isPreview = typeof window !== "undefined" && isPreviewEnvironment()
 
   const today = todayError && isPreview ? getPreviewMetrics() : todayData
@@ -197,8 +178,7 @@ export function useMetrics() {
     }
   }
 
-  const refresh = useCallback(() => {
-    console.log("[v0] useMetrics: Manual refresh triggered")
+  const refresh = () => {
     if (isPreview && todayError) {
       // In preview mode with failed API, trigger a re-render by mutating with new data
       mutateToday(getPreviewMetrics(), false)
@@ -206,7 +186,7 @@ export function useMetrics() {
       mutateToday()
       mutateClients()
     }
-  }, [isPreview, todayError, mutateToday, mutateClients])
+  }
 
   return {
     today,

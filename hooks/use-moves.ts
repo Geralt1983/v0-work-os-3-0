@@ -1,6 +1,6 @@
 "use client"
 
-import useSWR from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { MOCK_CLIENTS, MOCK_MOVES, isPreviewEnvironment } from "@/lib/mock-data"
 import { trackCompletedMove } from "@/hooks/use-metrics"
 
@@ -237,14 +237,15 @@ export function useMoves() {
 
     try {
       await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("move-completed"))
-      }
+      globalMutate("/api/metrics/today")
+      globalMutate("/api/metrics/clients")
       mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] completeMove: API failed in preview, using local state")
-      // Don't call mutate() to avoid re-fetching and losing local state
+      // Still refresh metrics in preview mode
+      globalMutate("/api/metrics/today")
+      globalMutate("/api/metrics/clients")
     }
   }
 
