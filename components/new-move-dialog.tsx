@@ -57,7 +57,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || !clientId) return
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -162,7 +162,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                 {/* Client */}
                 <div>
                   <label htmlFor="client-select" className="block text-sm font-medium text-zinc-400 mb-2">
-                    Client
+                    Client <span className="text-red-400">*</span>
                   </label>
                   {clientsLoading ? (
                     <div className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500">
@@ -178,9 +178,11 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
                       aria-label="Select client"
-                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer"
+                      className={`w-full px-4 py-3 bg-zinc-800 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer ${
+                        !clientId ? "border-red-500" : "border-zinc-700"
+                      }`}
                     >
-                      <option value="">No client ({clients.length} available)</option>
+                      <option value="">Select a client...</option>
                       {clients.map((client) => (
                         <option key={client.id} value={client.id}>
                           {client.name}
@@ -281,7 +283,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={!title.trim() || isSubmitting}
+                  disabled={!title.trim() || !clientId || isSubmitting}
                   className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {isSubmitting ? "Creating..." : "Create Move"}

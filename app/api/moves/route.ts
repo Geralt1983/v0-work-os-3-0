@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
 
+    const parsedClientId = clientId && clientId !== "" ? Number(clientId) : null
+    const validClientId = parsedClientId && !isNaN(parsedClientId) ? parsedClientId : null
+
     const targetStatus = status || "backlog"
     const existingMoves = await db
       .select({ sortOrder: moves.sortOrder })
@@ -74,18 +77,18 @@ export async function POST(request: NextRequest) {
     const minSortOrder = existingMoves.reduce((min, m) => Math.min(min, m.sortOrder ?? 0), 0)
     const newSortOrder = minSortOrder - 1
 
-    console.log("[v0] Moves API: Inserting move at sortOrder", newSortOrder)
+    console.log("[v0] Moves API: Inserting move with clientId:", validClientId, "sortOrder:", newSortOrder)
 
     const [newMove] = await db
       .insert(moves)
       .values({
-        clientId: clientId || null,
+        clientId: validClientId,
         title,
         description: description || null,
         status: targetStatus,
         effortEstimate: effortEstimate || 2,
         drainType: drainType || null,
-        sortOrder: newSortOrder, // Insert at top of column
+        sortOrder: newSortOrder,
         updatedAt: new Date(),
       })
       .returning()
