@@ -19,17 +19,16 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   try {
-    const encoder = new TextEncoder()
-    const bodyBytes = encoder.encode(message)
+    const url = new URL(`https://ntfy.sh/${TOPIC}`)
+    url.searchParams.set("title", options.title || "Work OS")
+    url.searchParams.set("tags", options.tags || "briefcase")
+    url.searchParams.set("priority", options.priority || "default")
 
-    const response = await fetch(`https://ntfy.sh/${TOPIC}`, {
+    const response = await fetch(url.toString(), {
       method: "POST",
-      body: bodyBytes,
+      body: message,
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Title: options.title || "Work OS",
-        Tags: options.tags || "briefcase",
-        Priority: options.priority || "default",
         "Content-Type": "text/plain; charset=utf-8",
       },
     })
