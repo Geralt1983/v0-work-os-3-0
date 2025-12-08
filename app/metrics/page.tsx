@@ -71,6 +71,36 @@ function getMomentumAdvice(status: string): string {
   }
 }
 
+function getMomentumStatusLabel(status: string): string {
+  switch (status) {
+    case "crushing":
+      return "Crushing it"
+    case "on_track":
+      return "On track"
+    case "behind":
+      return "Behind pace"
+    case "stalled":
+      return "Stalled"
+    default:
+      return ""
+  }
+}
+
+function getMomentumStatusEmoji(status: string): string {
+  switch (status) {
+    case "crushing":
+      return "🔥"
+    case "on_track":
+      return "✅"
+    case "behind":
+      return "⚠️"
+    case "stalled":
+      return "🚨"
+    default:
+      return ""
+  }
+}
+
 export default function MetricsDashboard() {
   const { today, clients, isLoading, error } = useMetrics()
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null)
@@ -116,6 +146,7 @@ export default function MetricsDashboard() {
   const paceStatus = today?.paceStatus || "behind"
 
   const momentum = today?.momentum || {
+    score: 0,
     percent: 0,
     status: "stalled" as const,
     label: "Stalled",
@@ -239,38 +270,33 @@ export default function MetricsDashboard() {
                       </div>
                       <h2 className="text-lg font-semibold">Momentum</h2>
                     </div>
-                    <span className={`text-xl font-semibold ${getMomentumStatusColor(momentum.status)}`}>
-                      {momentum.percent}
-                      <span className="text-base align-middle">%</span>
+                    <span className={`text-3xl font-bold tabular-nums ${getMomentumStatusColor(momentum.status)}`}>
+                      {momentum.score}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-zinc-300">
-                    {momentum.label} ({momentum.dayProgress}% through work day)
+                  <p className={`mt-1 text-right text-sm ${getMomentumStatusColor(momentum.status)}`}>
+                    {getMomentumStatusEmoji(momentum.status)} {getMomentumStatusLabel(momentum.status)}
                   </p>
-                  <div className="mt-3 h-2 rounded-full bg-zinc-800 relative">
-                    {/* Expected progress marker */}
-                    <div
-                      className="absolute top-0 h-full w-0.5 bg-zinc-500 z-10"
-                      style={{ left: `${momentum.dayProgress}%` }}
-                    />
-                    {/* Actual progress */}
-                    <div
-                      className={`h-full rounded-full transition-all ${getMomentumGradient(momentum.status)}`}
-                      style={{ width: `${Math.min(momentum.percent, 150)}%` }}
-                    />
+                  <div className="mt-4">
+                    <div className="h-2.5 rounded-full bg-zinc-800 relative overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${getMomentumGradient(momentum.status)}`}
+                        style={{ width: `${Math.min(momentum.percent, 100)}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-zinc-300">
+                        <span className="font-semibold text-zinc-100">{momentum.actualMinutes}</span>
+                        <span className="text-zinc-500"> / {earnedMinutes > 0 ? targetMinutes : 180} min</span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
-                    <span>
-                      <span className="text-zinc-100">{momentum.actualMinutes}</span> min earned
-                    </span>
-                    <span>
-                      <span className="text-zinc-100">{momentum.expectedByNow}</span> min expected
-                    </span>
-                  </div>
-                  <p className="mt-3 text-xs text-zinc-500">{getMomentumAdvice(momentum.status)}</p>
+                  <p className="mt-3 text-xs text-zinc-500">
+                    {momentum.expectedByNow} min expected by now ({momentum.dayProgress}% through work day)
+                  </p>
+                  <p className="mt-2 text-xs text-zinc-400">{getMomentumAdvice(momentum.status)}</p>
                 </div>
 
-                {/* Existing code for Daily Summary card */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -313,7 +339,6 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              {/* Existing code for stale clients section */}
               {staleClients.length > 0 && (
                 <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
                   <div className="flex items-center gap-2">
@@ -336,7 +361,6 @@ export default function MetricsDashboard() {
                 </section>
               )}
 
-              {/* Existing code for Client Activity section */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">
@@ -400,7 +424,6 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              {/* Existing code for Notification Testing section */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-amber-500/15">

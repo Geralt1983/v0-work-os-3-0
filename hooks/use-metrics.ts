@@ -19,7 +19,12 @@ export interface TodayMetrics {
   paceStatus: "on_track" | "behind"
   momentum: {
     score: number
-    trend: "rising" | "falling" | "steady"
+    percent: number
+    status: "crushing" | "on_track" | "behind" | "stalled"
+    label: string
+    expectedByNow: number
+    actualMinutes: number
+    dayProgress: number
   }
   streak: number
 }
@@ -48,33 +53,69 @@ export function clearPreviewCompletedMoves() {
   previewCompletedMoves = []
 }
 
-function calculatePreviewMomentum(): { score: number; trend: "rising" | "falling" | "steady" } {
-  if (previewCompletedMoves.length === 0) return { score: 0, trend: "steady" }
-
-  const sorted = [...previewCompletedMoves].sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime())
-
-  const gaps: number[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    const prevTime = sorted[i - 1].completedAt.getTime()
-    const currTime = sorted[i].completedAt.getTime()
-    gaps.push((currTime - prevTime) / (1000 * 60)) // Gap in minutes
+function calculatePreviewMomentum(): TodayMetrics["momentum"] {
+  if (previewCompletedMoves.length === 0) {
+    return {
+      score: 0,
+      percent: 0,
+      status: "stalled",
+      label: "Stalled",
+      expectedByNow: 0,
+      actualMinutes: 0,
+      dayProgress: 0,
+    }
   }
 
-  if (gaps.length === 0) return { score: 50, trend: "steady" }
+  const now = new Date()
+  const hour = now.getHours()
+  const minute = now.getMinutes()
 
-  const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length
-  const score = Math.max(0, Math.min(100, Math.round(100 - (avgGap / 120) * 100)))
+  // Calculate day progress (9am-6pm = 9 hours)
+  const workdayStart = 9
+  const workdayEnd = 18
+  const currentHour = hour + minute / 60
 
-  const midpoint = Math.floor(gaps.length / 2)
-  if (midpoint > 0) {
-    const firstHalf = gaps.slice(0, midpoint).reduce((a, b) => a + b, 0) / midpoint
-    const secondHalf = gaps.slice(midpoint).reduce((a, b) => a + b, 0) / (gaps.length - midpoint)
-
-    if (secondHalf < firstHalf * 0.8) return { score, trend: "rising" }
-    if (secondHalf > firstHalf * 1.2) return { score, trend: "falling" }
+  let dayProgress = 0
+  if (currentHour >= workdayEnd) {
+    dayProgress = 100
+  } else if (currentHour > workdayStart) {
+    dayProgress = Math.round(((currentHour - workdayStart) / (workdayEnd - workdayStart)) * 100)
   }
 
-  return { score, trend: "steady" }
+  const targetMinutes = 180
+  const expectedByNow = Math.round((dayProgress / 100) * targetMinutes)
+  const actualMinutes = previewCompletedMoves.reduce((sum, m) => sum + m.effortEstimate * 20, 0)
+
+  // Score based on actual vs expected
+  const score = expectedByNow > 0 ? Math.round((actualMinutes / expectedByNow) * 100) : actualMinutes > 0 ? 100 : 0
+
+  // Determine status
+  let status: "crushing" | "on_track" | "behind" | "stalled" = "stalled"
+  let label = "Stalled"
+
+  if (actualMinutes === 0) {
+    status = "stalled"
+    label = "Stalled"
+  } else if (score >= 120) {
+    status = "crushing"
+    label = "Crushing it"
+  } else if (score >= 80) {
+    status = "on_track"
+    label = "On track"
+  } else {
+    status = "behind"
+    label = "Behind pace"
+  }
+
+  return {
+    score,
+    percent: Math.round((actualMinutes / targetMinutes) * 100),
+    status,
+    label,
+    expectedByNow,
+    actualMinutes,
+    dayProgress,
+  }
 }
 
 function getPreviewMetrics(): TodayMetrics {
