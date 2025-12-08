@@ -140,6 +140,7 @@ export default function MovesPage() {
               onValueChange={setClientFilter}
               options={[{ value: "all", label: "All Clients" }, ...clientOptions.map((c) => ({ value: c, label: c }))]}
               fullWidth
+              ariaLabel="Client Filter"
             />
           </div>
 
@@ -199,6 +200,7 @@ export default function MovesPage() {
                   { value: "upnext", label: "Up Next" },
                   { value: "backlog", label: "Backlog" },
                 ]}
+                ariaLabel="Status Filter"
               />
               <FilterSelect
                 value={typeFilter}
@@ -209,6 +211,7 @@ export default function MovesPage() {
                   { value: "Standard", label: "Standard" },
                   { value: "Deep", label: "Deep" },
                 ]}
+                ariaLabel="Type Filter"
               />
             </div>
           </div>
@@ -285,15 +288,18 @@ function FilterSelect({
   onValueChange,
   options,
   fullWidth,
+  ariaLabel,
 }: {
   value: string
   onValueChange: (v: string) => void
   options: { value: string; label: string }[]
   fullWidth?: boolean
+  ariaLabel: string
 }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
+        aria-label={ariaLabel}
         className={`h-9 rounded-full bg-zinc-900 border-zinc-800 text-zinc-100 ${fullWidth ? "w-full" : "w-auto min-w-[140px]"}`}
       >
         <SelectValue />
@@ -857,9 +863,14 @@ function MoveCard({
         <button
           onClick={handleComplete}
           disabled={completing}
+          aria-label={`Mark "${move.title}" as complete`}
+          title="Mark as complete"
           className={`flex-shrink-0 rounded-full border border-zinc-700 transition hover:bg-fuchsia-500 hover:border-fuchsia-500 disabled:opacity-50 ${isCompact ? "p-1" : "p-1.5"}`}
         >
-          <Check className={`text-zinc-500 group-hover:text-white ${isCompact ? "h-3 w-3" : "h-4 w-4"}`} />
+          <Check
+            className={`text-zinc-500 group-hover:text-white ${isCompact ? "h-3 w-3" : "h-4 w-4"}`}
+            aria-hidden="true"
+          />
         </button>
       </div>
       <div className={`flex items-center gap-2 text-zinc-500 ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-xs"}`}>

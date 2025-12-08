@@ -117,7 +117,7 @@ function shouldUseMockMode(): boolean {
   return isPreviewEnvironment()
 }
 
-let mockIdCounter = 1000
+const mockIdCounter = 1000
 
 function mergeWithMockData<T extends { id: number }>(realData: T[] | null | undefined, mockData: T[]): T[] {
   const isPreview = isPreviewEnvironment()
@@ -130,6 +130,28 @@ function mergeWithMockData<T extends { id: number }>(realData: T[] | null | unde
 
   console.log("[v0] Using mock data in preview environment")
   return mockData
+}
+
+// =============================================================================
+// =============================================================================
+let localMoves: Move[] = []
+const localMovesInitialized = false
+
+function getLocalMoves(): Move[] {
+  return localMoves
+}
+
+function addLocalMove(move: Move) {
+  // Add to beginning (top of column)
+  localMoves = [move, ...localMoves]
+}
+
+function updateLocalMove(id: string, updates: Partial<Move>) {
+  localMoves = localMoves.map((m) => (m.id === id ? { ...m, ...updates } : m))
+}
+
+function removeLocalMove(id: string) {
+  localMoves = localMoves.filter((m) => m.id !== id)
 }
 
 // =============================================================================
@@ -150,7 +172,7 @@ export function useMoves() {
 
       const movesToUse = mergeWithMockData(backendMoves, MOCK_MOVES as any)
 
-      return movesToUse.map((move) => ({
+      const mappedMoves = movesToUse.map((move) => ({
         id: move.id.toString(),
         client: move.clientName ?? (move.client ? move.client.name : ""),
         clientId: move.clientId ?? undefined,
@@ -163,6 +185,18 @@ export function useMoves() {
         completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
         sortOrder: move.sortOrder ?? undefined,
       }))
+
+      if (isPreviewEnvironment()) {
+        const localMovesData = getLocalMoves()
+        // Get IDs of moves from API/mock to avoid duplicates
+        const apiMoveIds = new Set(mappedMoves.map((m) => m.id))
+        // Add local moves that don't exist in API response
+        const uniqueLocalMoves = localMovesData.filter((m) => !apiMoveIds.has(m.id))
+        // Local moves go first (newest at top), then API moves
+        return [...uniqueLocalMoves, ...mappedMoves]
+      }
+
+      return mappedMoves
     },
     {
       refreshInterval: 30000,
@@ -190,30 +224,35 @@ export function useMoves() {
               ? 4
               : 2
 
+    if (shouldUseMockMode()) {
+      updateLocalMove(id, { status: "done" as MoveStatus, completedAt: Date.now() })
+      trackCompletedMove({ id: Number.parseInt(id), effortEstimate })
+    }
+
     mutate(
       (current: Move[] | undefined) =>
         current?.map((m) => (m.id === id ? { ...m, status: "done" as MoveStatus, completedAt: Date.now() } : m)),
       false,
     )
 
-    if (shouldUseMockMode()) {
-      trackCompletedMove({ id: Number.parseInt(id), effortEstimate })
-    }
-
     try {
       await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("move-completed"))
       }
+      mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] completeMove: API failed in preview, using local state")
+      // Don't call mutate() to avoid re-fetching and losing local state
     }
-
-    mutate()
   }
 
   const restoreMove = async (id: string, previousStatus: MoveStatus = "today") => {
+    if (shouldUseMockMode()) {
+      updateLocalMove(id, { status: previousStatus, completedAt: undefined })
+    }
+
     mutate(
       (current: Move[] | undefined) =>
         current?.map((m) => (m.id === id ? { ...m, status: previousStatus, completedAt: undefined } : m)),
@@ -225,15 +264,18 @@ export function useMoves() {
         method: "PATCH",
         body: JSON.stringify({ status: statusToBackend[previousStatus], completedAt: null }),
       })
+      mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] restoreMove: API failed in preview, using local state")
     }
-
-    mutate()
   }
 
   const updateMoveStatus = async (id: string, newStatus: MoveStatus, insertAtIndex?: number) => {
+    if (shouldUseMockMode()) {
+      updateLocalMove(id, { status: newStatus })
+    }
+
     mutate((current: Move[] | undefined) => {
       if (!current) return current
       const moveToUpdate = current.find((m) => m.id === id)
@@ -264,12 +306,11 @@ export function useMoves() {
           ...(insertAtIndex !== undefined && { sortOrder: insertAtIndex }),
         }),
       })
+      mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] updateMoveStatus: API failed in preview, using local state")
     }
-
-    mutate()
   }
 
   const reorderMoves = async (status: MoveStatus, orderedIds: string[]) => {
@@ -291,12 +332,11 @@ export function useMoves() {
           orderedIds: orderedIds.map((id) => Number.parseInt(id, 10)),
         }),
       })
+      mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] reorderMoves: API failed in preview, using local state")
     }
-
-    mutate()
   }
 
   const createMove = async (moveData: {
@@ -309,12 +349,27 @@ export function useMoves() {
     drainType?: string
   }) => {
     const backendStatus = moveData.status ? statusToBackend[moveData.status] : "backlog"
+    const targetStatus = moveData.status || "backlog"
 
-    console.log("[v0] createMove: preparing request", {
+    const optimisticId = `temp-${Date.now()}`
+    const optimisticMove: Move = {
+      id: optimisticId,
+      client: moveData.clientName || "",
+      clientId: moveData.clientId,
       title: moveData.title,
-      clientId: moveData.clientId || null,
-      status: backendStatus,
-    })
+      description: moveData.description,
+      type: effortToType(moveData.effortEstimate || 2),
+      status: targetStatus,
+      ageLabel: "today",
+      sortOrder: -1,
+    }
+
+    mutate(
+      (current: Move[] | undefined) => {
+        return current ? [optimisticMove, ...current] : [optimisticMove]
+      },
+      false, // Don't revalidate yet
+    )
 
     try {
       const response = await apiFetch<BackendMove>("/api/moves", {
@@ -326,55 +381,44 @@ export function useMoves() {
           status: backendStatus,
           effortEstimate: moveData.effortEstimate || 2,
           drainType: moveData.drainType || null,
+          sortOrder: -1, // Ensure it's at the top
         }),
       })
 
-      console.log("[v0] createMove: response received", response)
+      mutate(
+        (current: Move[] | undefined) => {
+          if (!current) return current
+          return current.map((m) =>
+            m.id === optimisticId
+              ? {
+                  ...m,
+                  id: response.id.toString(),
+                  client: response.clientName || moveData.clientName || "",
+                }
+              : m,
+          )
+        },
+        false, // Don't revalidate - we have the correct data
+      )
+
+      return response
+    } catch (err) {
+      if (shouldUseMockMode()) {
+        const localMoveId = `local-${Date.now()}`
+        addLocalMove({ ...optimisticMove, id: localMoveId })
+
+        mutate((current: Move[] | undefined) => {
+          if (!current) return current
+          return current.map((m) => (m.id === optimisticId ? { ...m, id: localMoveId } : m))
+        }, false)
+
+        return { id: Number(localMoveId) } as BackendMove
+      }
 
       mutate((current: Move[] | undefined) => {
         if (!current) return current
-        const newMove: Move = {
-          id: response.id.toString(),
-          client: response.clientName || moveData.clientName || "",
-          clientId: response.clientId ?? undefined,
-          title: response.title,
-          description: response.description ?? undefined,
-          type: effortToType(response.effortEstimate),
-          status: statusToFrontend[response.status as BackendMoveStatus],
-          ageLabel: "today",
-          sortOrder: response.sortOrder ?? -1,
-        }
-        // Insert at beginning of array (top of column)
-        return [newMove, ...current]
+        return current.filter((m) => m.id !== optimisticId)
       }, false)
-
-      mutate()
-      return response
-    } catch (err) {
-      // In preview mode, create locally
-      if (shouldUseMockMode()) {
-        console.log("[v0] createMove: API failed in preview, creating local mock move")
-
-        const mockClient = MOCK_CLIENTS.find((c) => c.id === moveData.clientId)
-        const newMockMove: Move = {
-          id: String(++mockIdCounter),
-          client: moveData.clientName || mockClient?.name || "",
-          clientId: moveData.clientId,
-          title: moveData.title,
-          description: moveData.description,
-          type: effortToType(moveData.effortEstimate || 2),
-          status: moveData.status || "backlog",
-          ageLabel: "today",
-          sortOrder: 0,
-        }
-
-        // Optimistically add to local state
-        mutate((current: Move[] | undefined) => {
-          return current ? [...current, newMockMove] : [newMockMove]
-        }, false)
-
-        return { id: Number(newMockMove.id) } as BackendMove
-      }
       throw err
     }
   }
@@ -392,7 +436,7 @@ export function useMoves() {
     restoreMove,
     updateMoveStatus,
     reorderMoves,
-    createMove, // Export createMove
+    createMove,
     refresh: () => mutate(),
   }
 }

@@ -131,9 +131,10 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                 <button
                   type="button"
                   onClick={onClose}
+                  aria-label="Close dialog"
                   className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -160,7 +161,9 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
 
                 {/* Client */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Client</label>
+                  <label htmlFor="client-select" className="block text-sm font-medium text-zinc-400 mb-2">
+                    Client
+                  </label>
                   {clientsLoading ? (
                     <div className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500">
                       Loading clients...
@@ -171,8 +174,10 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                     </div>
                   ) : (
                     <select
+                      id="client-select"
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
+                      aria-label="Select client"
                       className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer"
                     >
                       <option value="">No client ({clients.length} available)</option>

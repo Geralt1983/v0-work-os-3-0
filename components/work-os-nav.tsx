@@ -9,28 +9,31 @@ export function WorkOSNav() {
   const pathname = usePathname()
 
   const items = [
-    { href: "/", icon: MessageSquare },
-    { href: "/moves", icon: ListTodo },
-    { href: "/metrics", icon: BarChart3 },
-    { href: "/clients", icon: Users },
+    { href: "/", icon: MessageSquare, label: "Chat" },
+    { href: "/moves", icon: ListTodo, label: "Moves" },
+    { href: "/metrics", icon: BarChart3, label: "Metrics" },
+    { href: "/clients", icon: Users, label: "Clients" },
   ]
 
   return (
     <div className="flex items-center gap-4">
-      {items.map(({ href, icon: Icon }) => {
+      {items.map(({ href, icon: Icon, label }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href)
 
         return (
           <Link
             key={href}
             href={href}
+            aria-label={label}
+            title={label}
             className={cn(
               "h-10 w-10 flex items-center justify-center rounded-xl border border-white/10 bg-black/40 text-white/70 transition",
               "hover:text-white hover:border-white/30",
               active && "text-fuchsia-300 border-fuchsia-500/60 bg-fuchsia-500/10",
             )}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-5 w-5" aria-hidden="true" />
+            <span className="sr-only">{label}</span>
           </Link>
         )
       })}
