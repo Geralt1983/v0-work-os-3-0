@@ -53,13 +53,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Moves API: Starting POST request")
     const db = getDb()
     const body = await request.json()
+    console.log("[v0] Moves API: POST body received", body)
+
     const { clientId, title, description, status, effortEstimate, drainType, sortOrder } = body
 
     if (!title) {
+      console.log("[v0] Moves API: Title is missing")
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
+
+    console.log("[v0] Moves API: Inserting move", { clientId, title, status, effortEstimate, drainType })
 
     const [newMove] = await db
       .insert(moves)
@@ -75,9 +81,10 @@ export async function POST(request: NextRequest) {
       })
       .returning()
 
+    console.log("[v0] Moves API: Move created successfully", newMove)
     return NextResponse.json(newMove, { status: 201 })
   } catch (error) {
-    console.error("Failed to create move:", error)
-    return NextResponse.json({ error: "Failed to create move" }, { status: 500 })
+    console.error("[v0] Moves API POST error:", error)
+    return NextResponse.json({ error: "Failed to create move", details: String(error) }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { MOCK_CLIENTS, MOCK_MOVES, isPreviewEnvironment } from "@/lib/mock-data"
 
 // =============================================================================
 // API CONFIGURATION - Removed debug logs, using local API routes
@@ -111,6 +112,25 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
+function shouldUseMockMode(): boolean {
+  return isPreviewEnvironment()
+}
+
+let mockIdCounter = 1000
+
+function mergeWithMockData<T extends { id: number }>(realData: T[] | null | undefined, mockData: T[]): T[] {
+  const isPreview = isPreviewEnvironment()
+  const hasRealData = Array.isArray(realData) && realData.length > 0
+
+  console.log("[v0] mergeWithMockData:", { isPreview, realDataLength: realData?.length, hasRealData })
+
+  if (!isPreview) return realData || []
+  if (hasRealData) return realData
+
+  console.log("[v0] Using mock data in preview environment")
+  return mockData
+}
+
 // =============================================================================
 // MOVES HOOK
 // =============================================================================
@@ -120,8 +140,16 @@ export function useMoves() {
   const { data, error, isLoading, mutate } = useSWR<Move[]>(
     MOVES_KEY,
     async () => {
-      const backendMoves = await apiFetch<BackendMove[]>("/api/moves")
-      return backendMoves.map((move) => ({
+      let backendMoves: BackendMove[] = []
+      try {
+        backendMoves = await apiFetch<BackendMove[]>("/api/moves")
+      } catch (err) {
+        console.log("[v0] useMoves: API error, will use mock data if in preview", err)
+      }
+
+      const movesToUse = mergeWithMockData(backendMoves, MOCK_MOVES as any)
+
+      return movesToUse.map((move) => ({
         id: move.id.toString(),
         client: move.clientName ?? (move.client ? move.client.name : ""),
         clientId: move.clientId ?? undefined,
@@ -155,9 +183,12 @@ export function useMoves() {
       false,
     )
 
-    await apiFetch(`/api/moves/${id}/complete`, {
-      method: "POST",
-    })
+    try {
+      await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] completeMove: API failed in preview, using local state")
+    }
 
     mutate()
   }
@@ -169,10 +200,15 @@ export function useMoves() {
       false,
     )
 
-    await apiFetch(`/api/moves/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: statusToBackend[previousStatus], completedAt: null }),
-    })
+    try {
+      await apiFetch(`/api/moves/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: statusToBackend[previousStatus], completedAt: null }),
+      })
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] restoreMove: API failed in preview, using local state")
+    }
 
     mutate()
   }
@@ -200,13 +236,18 @@ export function useMoves() {
       return [...withoutMove, updatedMove]
     }, false)
 
-    await apiFetch(`/api/moves/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: statusToBackend[newStatus],
-        ...(insertAtIndex !== undefined && { sortOrder: insertAtIndex }),
-      }),
-    })
+    try {
+      await apiFetch(`/api/moves/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: statusToBackend[newStatus],
+          ...(insertAtIndex !== undefined && { sortOrder: insertAtIndex }),
+        }),
+      })
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] updateMoveStatus: API failed in preview, using local state")
+    }
 
     mutate()
   }
@@ -222,13 +263,18 @@ export function useMoves() {
       return [...otherMoves, ...reordered]
     }, false)
 
-    await apiFetch(`/api/moves/reorder`, {
-      method: "POST",
-      body: JSON.stringify({
-        status: statusToBackend[status],
-        orderedIds: orderedIds.map((id) => Number.parseInt(id, 10)),
-      }),
-    })
+    try {
+      await apiFetch(`/api/moves/reorder`, {
+        method: "POST",
+        body: JSON.stringify({
+          status: statusToBackend[status],
+          orderedIds: orderedIds.map((id) => Number.parseInt(id, 10)),
+        }),
+      })
+    } catch (err) {
+      if (!shouldUseMockMode()) throw err
+      console.log("[v0] reorderMoves: API failed in preview, using local state")
+    }
 
     mutate()
   }
@@ -243,20 +289,55 @@ export function useMoves() {
   }) => {
     const backendStatus = moveData.status ? statusToBackend[moveData.status] : "backlog"
 
-    const response = await apiFetch<BackendMove>("/api/moves", {
-      method: "POST",
-      body: JSON.stringify({
-        title: moveData.title,
-        clientId: moveData.clientId || null,
-        description: moveData.description || null,
-        status: backendStatus,
-        effortEstimate: moveData.effortEstimate || 2,
-        drainType: moveData.drainType || null,
-      }),
+    console.log("[v0] createMove: preparing request", {
+      title: moveData.title,
+      clientId: moveData.clientId || null,
+      status: backendStatus,
     })
 
-    mutate()
-    return response
+    try {
+      const response = await apiFetch<BackendMove>("/api/moves", {
+        method: "POST",
+        body: JSON.stringify({
+          title: moveData.title,
+          clientId: moveData.clientId || null,
+          description: moveData.description || null,
+          status: backendStatus,
+          effortEstimate: moveData.effortEstimate || 2,
+          drainType: moveData.drainType || null,
+        }),
+      })
+
+      console.log("[v0] createMove: response received", response)
+      mutate()
+      return response
+    } catch (err) {
+      // In preview mode, create locally
+      if (shouldUseMockMode()) {
+        console.log("[v0] createMove: API failed in preview, creating local mock move")
+
+        const mockClient = MOCK_CLIENTS.find((c) => c.id === moveData.clientId)
+        const newMockMove: Move = {
+          id: String(++mockIdCounter),
+          client: mockClient?.name ?? "",
+          clientId: moveData.clientId,
+          title: moveData.title,
+          description: moveData.description,
+          type: effortToType(moveData.effortEstimate || 2),
+          status: moveData.status || "backlog",
+          ageLabel: "today",
+          sortOrder: 0,
+        }
+
+        // Optimistically add to local state
+        mutate((current: Move[] | undefined) => {
+          return current ? [...current, newMockMove] : [newMockMove]
+        }, false)
+
+        return { id: Number(newMockMove.id) } as BackendMove
+      }
+      throw err
+    }
   }
 
   return {
@@ -301,10 +382,19 @@ export function useClients() {
     "clients",
     async () => {
       console.log("[v0] useClients: fetching from /api/clients")
-      const backendClients = await apiFetch<BackendClient[]>("/api/clients")
-      console.log("[v0] useClients: received", backendClients)
 
-      const mapped = backendClients
+      let backendClients: BackendClient[] = []
+      try {
+        backendClients = await apiFetch<BackendClient[]>("/api/clients")
+        console.log("[v0] useClients: received from API", backendClients)
+      } catch (err) {
+        console.log("[v0] useClients: API error, will use mock data if in preview", err)
+      }
+
+      const clientsToUse = mergeWithMockData(backendClients, MOCK_CLIENTS as any)
+      console.log("[v0] useClients: clientsToUse", clientsToUse)
+
+      const mapped = clientsToUse
         .filter((c) => c.isActive === 1)
         .map((c) => ({
           id: c.id,
@@ -313,7 +403,7 @@ export function useClients() {
           isActive: c.isActive === 1,
         }))
 
-      console.log("[v0] useClients: mapped to", mapped)
+      console.log("[v0] useClients: returning", mapped)
       return mapped
     },
     {

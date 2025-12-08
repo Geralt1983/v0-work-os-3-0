@@ -52,12 +52,24 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
   const [effortEstimate, setEffortEstimate] = useState(2)
   const [drainType, setDrainType] = useState<string>("easy")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
 
     setIsSubmitting(true)
+    setSubmitError(null)
+
+    console.log("[v0] NewMoveDialog: submitting", {
+      title: title.trim(),
+      clientId,
+      description: description.trim() || undefined,
+      status,
+      effortEstimate,
+      drainType,
+    })
+
     try {
       await onSubmit({
         title: title.trim(),
@@ -67,6 +79,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
         effortEstimate,
         drainType,
       })
+      console.log("[v0] NewMoveDialog: submit successful")
       // Reset form
       setTitle("")
       setClientId(undefined)
@@ -75,6 +88,9 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
       setEffortEstimate(2)
       setDrainType("easy")
       onClose()
+    } catch (error) {
+      console.error("[v0] NewMoveDialog: submit error", error)
+      setSubmitError(error instanceof Error ? error.message : "Failed to create move")
     } finally {
       setIsSubmitting(false)
     }
@@ -118,6 +134,12 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
 
               {/* Body */}
               <div className="px-6 py-5 space-y-5">
+                {submitError && (
+                  <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                    {submitError}
+                  </div>
+                )}
+
                 {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-2">Title</label>
