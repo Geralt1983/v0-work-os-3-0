@@ -302,6 +302,7 @@ export function useMoves() {
   const createMove = async (moveData: {
     title: string
     clientId?: number
+    clientName?: string // Accept clientName for display
     description?: string
     status?: MoveStatus
     effortEstimate?: number
@@ -329,6 +330,24 @@ export function useMoves() {
       })
 
       console.log("[v0] createMove: response received", response)
+
+      mutate((current: Move[] | undefined) => {
+        if (!current) return current
+        const newMove: Move = {
+          id: response.id.toString(),
+          client: response.clientName || moveData.clientName || "",
+          clientId: response.clientId ?? undefined,
+          title: response.title,
+          description: response.description ?? undefined,
+          type: effortToType(response.effortEstimate),
+          status: statusToFrontend[response.status as BackendMoveStatus],
+          ageLabel: "today",
+          sortOrder: response.sortOrder ?? -1,
+        }
+        // Insert at beginning of array (top of column)
+        return [newMove, ...current]
+      }, false)
+
       mutate()
       return response
     } catch (err) {
@@ -339,7 +358,7 @@ export function useMoves() {
         const mockClient = MOCK_CLIENTS.find((c) => c.id === moveData.clientId)
         const newMockMove: Move = {
           id: String(++mockIdCounter),
-          client: mockClient?.name ?? "",
+          client: moveData.clientName || mockClient?.name || "",
           clientId: moveData.clientId,
           title: moveData.title,
           description: moveData.description,

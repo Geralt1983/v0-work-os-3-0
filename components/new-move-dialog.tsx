@@ -13,6 +13,7 @@ interface NewMoveDialogProps {
   onSubmit: (data: {
     title: string
     clientId?: number
+    clientName?: string // Add clientName to pass to createMove
     description?: string
     status?: MoveStatus
     effortEstimate?: number
@@ -61,9 +62,12 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
     setIsSubmitting(true)
     setSubmitError(null)
 
+    const selectedClient = clients.find((c) => c.id === clientId)
+
     console.log("[v0] NewMoveDialog: submitting", {
       title: title.trim(),
       clientId,
+      clientName: selectedClient?.name,
       description: description.trim() || undefined,
       status,
       effortEstimate,
@@ -74,6 +78,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
       await onSubmit({
         title: title.trim(),
         clientId,
+        clientName: selectedClient?.name, // Pass clientName for immediate display
         description: description.trim() || undefined,
         status,
         effortEstimate,

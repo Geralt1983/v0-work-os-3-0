@@ -58,14 +58,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log("[v0] Moves API: POST body received", body)
 
-    const { clientId, title, description, status, effortEstimate, drainType, sortOrder } = body
+    const { clientId, title, description, status, effortEstimate, drainType } = body
 
     if (!title) {
       console.log("[v0] Moves API: Title is missing")
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
 
-    console.log("[v0] Moves API: Inserting move", { clientId, title, status, effortEstimate, drainType })
+    const targetStatus = status || "backlog"
+    const existingMoves = await db
+      .select({ sortOrder: moves.sortOrder })
+      .from(moves)
+      .where(eq(moves.status, targetStatus))
+
+    const minSortOrder = existingMoves.reduce((min, m) => Math.min(min, m.sortOrder ?? 0), 0)
+    const newSortOrder = minSortOrder - 1
+
+    console.log("[v0] Moves API: Inserting move at sortOrder", newSortOrder)
 
     const [newMove] = await db
       .insert(moves)
@@ -73,16 +82,23 @@ export async function POST(request: NextRequest) {
         clientId: clientId || null,
         title,
         description: description || null,
-        status: status || "backlog",
+        status: targetStatus,
         effortEstimate: effortEstimate || 2,
         drainType: drainType || null,
-        sortOrder: sortOrder || 0,
+        sortOrder: newSortOrder, // Insert at top of column
         updatedAt: new Date(),
       })
       .returning()
 
-    console.log("[v0] Moves API: Move created successfully", newMove)
-    return NextResponse.json(newMove, { status: 201 })
+    let clientName: string | null = null
+    if (newMove.clientId) {
+      const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, newMove.clientId))
+      clientName = client?.name ?? null
+    }
+
+    const response = { ...newMove, clientName }
+    console.log("[v0] Moves API: Move created successfully", response)
+    return NextResponse.json(response, { status: 201 })
   } catch (error) {
     console.error("[v0] Moves API POST error:", error)
     return NextResponse.json({ error: "Failed to create move", details: String(error) }, { status: 500 })
