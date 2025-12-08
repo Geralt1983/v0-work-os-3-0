@@ -1,10 +1,11 @@
 "use client"
 
 import { TargetIcon, BarChartIcon, PersonIcon, ExclamationTriangleIcon, LightningBoltIcon } from "@radix-ui/react-icons"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { PageHeader } from "@/components/page-header"
 import { useMetrics } from "@/hooks/use-metrics"
+import { Button } from "@/components/ui/button"
 
 function statusToneClasses(tone: "positive" | "neutral" | "negative") {
   switch (tone) {
@@ -40,6 +41,7 @@ function getMomentumLabel(score: number, trend: "rising" | "falling" | "steady")
 
 export default function MetricsDashboard() {
   const { today, clients, isLoading, error } = useMetrics()
+  const [notificationStatus, setNotificationStatus] = useState<string | null>(null)
 
   useEffect(() => {
     const errorHandler = (event: ErrorEvent) => {
@@ -85,6 +87,46 @@ export default function MetricsDashboard() {
   const staleClients = clients.filter((c) => c.isStale)
   const activeClients = clients.filter((c) => c.activeMoves > 0)
 
+  const sendTestNotification = async () => {
+    setNotificationStatus("Sending test...")
+    try {
+      const res = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Test notification from Work-OS Metrics page" }),
+      })
+      const data = await res.json()
+      setNotificationStatus(data.success ? "Test sent!" : `Failed: ${data.error}`)
+    } catch (err) {
+      setNotificationStatus(`Error: ${err}`)
+    }
+    setTimeout(() => setNotificationStatus(null), 3000)
+  }
+
+  const sendMorningSummary = async () => {
+    setNotificationStatus("Sending morning summary...")
+    try {
+      const res = await fetch("/api/notifications/morning-summary")
+      const data = await res.json()
+      setNotificationStatus(data.success ? "Morning summary sent!" : `Failed: ${data.error}`)
+    } catch (err) {
+      setNotificationStatus(`Error: ${err}`)
+    }
+    setTimeout(() => setNotificationStatus(null), 3000)
+  }
+
+  const sendAfternoonSummary = async () => {
+    setNotificationStatus("Sending afternoon summary...")
+    try {
+      const res = await fetch("/api/notifications/afternoon-summary")
+      const data = await res.json()
+      setNotificationStatus(data.success ? "Afternoon summary sent!" : `Failed: ${data.error}`)
+    } catch (err) {
+      setNotificationStatus(`Error: ${err}`)
+    }
+    setTimeout(() => setNotificationStatus(null), 3000)
+  }
+
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
@@ -96,14 +138,12 @@ export default function MetricsDashboard() {
         </div>
 
         <main className="mt-8 flex flex-col gap-8 pb-20">
-          {/* Loading state */}
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
             </div>
           )}
 
-          {/* Error state */}
           {error && (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300">
               Failed to load metrics. Please try again.
@@ -112,9 +152,7 @@ export default function MetricsDashboard() {
 
           {!isLoading && !error && (
             <>
-              {/* Top row - Today's Progress */}
               <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* Today pacing */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -188,7 +226,6 @@ export default function MetricsDashboard() {
                   </p>
                 </div>
 
-                {/* Daily Summary */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -231,30 +268,26 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              {/* Stale clients warning */}
-              {staleClients.length > 0 && (
-                <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
-                  <div className="flex items-center gap-2">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-amber-400" />
-                    <h2 className="text-lg font-semibold text-amber-300">
-                      {staleClients.length} Stale Client{staleClients.length > 1 ? "s" : ""}
-                    </h2>
-                  </div>
-                  <p className="mt-2 text-sm text-amber-200/70">These clients haven't had activity in over 2 days:</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {staleClients.map((client) => (
-                      <span
-                        key={client.clientId}
-                        className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm text-amber-200"
-                      >
-                        {client.clientName} ({client.daysSinceLastMove}d)
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              )}
+              <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
+                <div className="flex items-center gap-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-400" />
+                  <h2 className="text-lg font-semibold text-amber-300">
+                    {staleClients.length} Stale Client{staleClients.length > 1 ? "s" : ""}
+                  </h2>
+                </div>
+                <p className="mt-2 text-sm text-amber-200/70">These clients haven't had activity in over 2 days:</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {staleClients.map((client) => (
+                    <span
+                      key={client.clientId}
+                      className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm text-amber-200"
+                    >
+                      {client.clientName} ({client.daysSinceLastMove}d)
+                    </span>
+                  ))}
+                </div>
+              </section>
 
-              {/* Client Activity */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">
@@ -316,6 +349,40 @@ export default function MetricsDashboard() {
                     })
                   )}
                 </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-amber-500/15">
+                    <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-lg font-semibold">Notification Testing</h2>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="outline" size="sm" onClick={sendTestNotification}>
+                    Send Test
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={sendMorningSummary}>
+                    Morning Summary
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={sendAfternoonSummary}>
+                    Afternoon Summary
+                  </Button>
+                </div>
+                {notificationStatus && (
+                  <p
+                    className={`mt-3 text-sm ${notificationStatus.includes("Failed") || notificationStatus.includes("Error") ? "text-rose-400" : "text-emerald-400"}`}
+                  >
+                    {notificationStatus}
+                  </p>
+                )}
               </section>
             </>
           )}
