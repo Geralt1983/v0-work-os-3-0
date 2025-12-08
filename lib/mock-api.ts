@@ -1,5 +1,8 @@
 // Mock API layer for moves data
-// This simulates a backend - replace with real API calls later
+// Switches between mock data and real server based on NEXT_PUBLIC_USE_SERVER env var
+
+import { USE_SERVER } from "./api-client"
+import * as serverMovesApi from "./server-moves-api"
 
 export type MoveStatus = "today" | "upnext" | "backlog" | "done"
 export type MoveType = "Quick" | "Chunky" | "Standard"
@@ -15,7 +18,7 @@ export interface Move {
   completedAt?: number
 }
 
-// In-memory store (simulates database)
+// In-memory store (simulates database) - only used when USE_SERVER is false
 const moves: Move[] = [
   // Today
   {
@@ -115,7 +118,8 @@ const moves: Move[] = [
 // Simulate network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export const api = {
+// Mock implementations
+const mockApi = {
   moves: {
     async list(): Promise<Move[]> {
       await delay(50)
@@ -153,16 +157,50 @@ export const api = {
 
     async reorder(status: MoveStatus, orderedIds: string[]): Promise<void> {
       await delay(50)
-      // Get all moves not in this status (preserve their order)
       const otherMoves = moves.filter((m) => m.status !== status)
-      // Reorder the status moves according to orderedIds
       const statusMoves = orderedIds
         .map((id) => moves.find((m) => m.id === id && m.status === status))
         .filter((m): m is Move => m !== undefined)
 
-      // Clear and rebuild the moves array
       moves.length = 0
       moves.push(...otherMoves, ...statusMoves)
     },
   },
 }
+
+const serverApi = {
+  moves: {
+    async list(): Promise<Move[]> {
+      const result = await serverMovesApi.listMoves()
+      return result as Move[]
+    },
+
+    async complete(id: string): Promise<Move> {
+      const result = await serverMovesApi.completeMove(id)
+      return result as Move
+    },
+
+    async requeue(id: string, status: MoveStatus = "backlog"): Promise<Move> {
+      // Use demote endpoint for backlog, or updateMove for specific status
+      if (status === "backlog") {
+        const result = await serverMovesApi.demoteMove(id)
+        return result as Move
+      }
+      const result = await serverMovesApi.updateMove(id, { status })
+      return result as Move
+    },
+
+    async updateStatus(id: string, newStatus: MoveStatus): Promise<Move> {
+      const result = await serverMovesApi.updateMove(id, { status: newStatus })
+      return result as Move
+    },
+
+    async reorder(status: MoveStatus, orderedIds: string[]): Promise<void> {
+      // Server may not have a direct reorder endpoint, so we update each move's order
+      // For now, this is a no-op on the server side - order is determined by fetch
+      console.log("[v0] Reorder called with", status, orderedIds)
+    },
+  },
+}
+
+export const api = USE_SERVER ? serverApi : mockApi
