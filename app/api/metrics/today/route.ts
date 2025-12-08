@@ -46,7 +46,7 @@ export async function GET() {
     const targetMinutes = 180
     const percent = Math.round((earnedMinutes / targetMinutes) * 100)
 
-    const momentum = calculateMomentum(completedToday)
+    const momentum = calculateMomentum(earnedMinutes)
 
     // Calculate streak (consecutive days hitting target)
     const streak = 0 // TODO: Implement from daily_log table
