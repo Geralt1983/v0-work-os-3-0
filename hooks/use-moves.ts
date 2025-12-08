@@ -238,10 +238,13 @@ export function useMoves() {
     try {
       await apiFetch(`/api/moves/${id}/complete`, { method: "POST" })
 
+      console.log("[v0] completeMove: Move completed, triggering milestone check")
       try {
-        await fetch("/api/notifications/milestone", { method: "POST" })
+        const milestoneRes = await fetch("/api/notifications/milestone", { method: "POST" })
+        const milestoneData = await milestoneRes.json()
+        console.log("[v0] completeMove: Milestone check result", milestoneData)
       } catch (notifyErr) {
-        console.log("[v0] Milestone notification check failed (non-critical):", notifyErr)
+        console.log("[v0] completeMove: Milestone notification check failed:", notifyErr)
       }
 
       globalMutate("/api/metrics/today")

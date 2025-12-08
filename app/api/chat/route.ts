@@ -15,10 +15,13 @@ export async function POST(request: Request) {
     const db = getDb()
     const { sessionId: providedSessionId, message } = await request.json()
 
-    // Get or create session
-    let sessionId = providedSessionId
-    if (!sessionId) {
-      sessionId = randomUUID()
+    const sessionId = providedSessionId || randomUUID()
+
+    // Check if session exists
+    const existingSession = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1)
+
+    // Create session if it doesn't exist
+    if (existingSession.length === 0) {
       await db.insert(sessions).values({
         id: sessionId,
         createdAt: new Date(),

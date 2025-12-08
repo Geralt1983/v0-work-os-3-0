@@ -27,6 +27,14 @@ export interface TaskCard {
   dueDate?: string
 }
 
+export interface ChatSession {
+  id: string
+  createdAt: string
+  lastActiveAt: string
+  messageCount: number
+  preview: string | null
+}
+
 interface ChatResponse {
   sessionId: string
   userMessage: { id: string; role: "user"; content: string }
@@ -56,6 +64,24 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // =============================================================================
+// CHAT SESSIONS HOOK
+// =============================================================================
+export function useChatSessions() {
+  const { data, error, isLoading, mutate } = useSWR<ChatSession[]>(
+    "chat-sessions",
+    () => apiFetch<ChatSession[]>("/api/sessions"),
+    { revalidateOnFocus: false },
+  )
+
+  return {
+    sessions: data || [],
+    isLoading,
+    error: error?.message,
+    refresh: mutate,
+  }
+}
+
+// =============================================================================
 // CHAT HOOK
 // =============================================================================
 export function useChat() {
@@ -73,7 +99,7 @@ export function useChat() {
   }, [])
 
   // Fetch message history when sessionId is set
-  const { data: historyData } = useSWR<Message[]>(
+  const { data: historyData, mutate: mutateHistory } = useSWR<Message[]>(
     sessionId ? `session-${sessionId}-messages` : null,
     async () => {
       if (!sessionId) return []
@@ -93,6 +119,13 @@ export function useChat() {
       setMessages(historyData)
     }
   }, [historyData])
+
+  // Switch to a different session
+  const switchSession = useCallback((newSessionId: string) => {
+    setSessionId(newSessionId)
+    setMessages([])
+    localStorage.setItem("workos-chat-session", newSessionId)
+  }, [])
 
   // Send a message
   const sendMessage = useCallback(
@@ -171,6 +204,7 @@ export function useChat() {
     error,
     sendMessage,
     clearChat,
+    switchSession,
     sessionId,
   }
 }

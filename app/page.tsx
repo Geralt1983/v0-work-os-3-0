@@ -4,7 +4,8 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { WorkOSNav } from "@/components/work-os-nav"
-import { useChat, type Message, type TaskCard } from "@/hooks/use-chat"
+import { useChat, useChatSessions, type Message, type TaskCard, type ChatSession } from "@/hooks/use-chat"
+import { History, Plus } from "lucide-react"
 
 const ASSISTANT_NAME = "Synapse"
 
@@ -12,8 +13,10 @@ const ASSISTANT_NAME = "Synapse"
 const QUICK_ACTIONS = ["What should I work on next", "Show me stale clients", "Run triage", "Summarize today"]
 
 export default function ChatPage() {
-  const { messages, isLoading, error, sendMessage, clearChat } = useChat()
+  const { messages, isLoading, error, sendMessage, clearChat, switchSession, sessionId } = useChat()
+  const { sessions } = useChatSessions()
   const [input, setInput] = useState("")
+  const [showHistory, setShowHistory] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when messages change
@@ -35,14 +38,34 @@ export default function ChatPage() {
     await sendMessage(action)
   }
 
+  const handleSelectSession = (session: ChatSession) => {
+    switchSession(session.id)
+    setShowHistory(false)
+  }
+
+  const handleNewChat = () => {
+    clearChat()
+    setShowHistory(false)
+  }
+
   return (
     <div className="h-screen flex flex-col bg-black text-white overflow-hidden">
       {/* Header */}
       <div className="flex-none mx-auto w-full max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Chat</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">Talk to your work brain.</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Chat</h1>
+              <p className="hidden sm:block text-sm text-white/60 mt-1">Talk to your work brain.</p>
+            </div>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="ml-2 p-2 rounded-lg hover:bg-zinc-800 transition text-zinc-400 hover:text-zinc-200"
+              title="Chat history"
+              aria-label="Toggle chat history"
+            >
+              <History className="w-5 h-5" />
+            </button>
           </div>
           <div className="flex-shrink-0 pt-1">
             <WorkOSNav />
@@ -52,6 +75,42 @@ export default function ChatPage() {
 
       {/* Main chat area */}
       <main className="flex-1 min-h-0 mx-auto w-full max-w-xl px-3 pb-3 flex flex-col md:px-4 md:pb-4">
+        {showHistory && (
+          <div className="flex-none mb-3 rounded-xl border border-zinc-800 bg-zinc-900/90 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
+              <span className="text-xs font-medium text-zinc-400">Recent Conversations</span>
+              <button
+                onClick={handleNewChat}
+                className="flex items-center gap-1 text-xs text-fuchsia-400 hover:text-fuchsia-300"
+              >
+                <Plus className="w-3 h-3" />
+                New Chat
+              </button>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {sessions.length === 0 ? (
+                <div className="px-3 py-4 text-center text-xs text-zinc-500">No recent conversations</div>
+              ) : (
+                sessions.map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => handleSelectSession(session)}
+                    className={`w-full px-3 py-2 text-left hover:bg-zinc-800/50 transition ${
+                      session.id === sessionId ? "bg-zinc-800/80" : ""
+                    }`}
+                  >
+                    <div className="text-xs text-zinc-200 truncate">{session.preview || "New conversation"}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] text-zinc-500">{formatRelativeTime(session.lastActiveAt)}</span>
+                      <span className="text-[10px] text-zinc-600">{session.messageCount} messages</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Quick actions - show when no messages or few messages */}
         {messages.length < 2 && (
           <div className="flex-none grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2 mb-2 md:mb-3">
@@ -97,6 +156,22 @@ export default function ChatPage() {
       </main>
     </div>
   )
+}
+
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMins < 1) return "Just now"
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays === 1) return "Yesterday"
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
 }
 
 // =============================================================================

@@ -11,6 +11,8 @@ interface NotificationPayload {
 }
 
 export async function sendNtfyNotification({ title, message, priority = 3, tags = [] }: NotificationPayload) {
+  console.log("[v0] NTFY: Sending notification", { topic: NTFY_TOPIC, server: NTFY_SERVER, title, message })
+
   try {
     const response = await fetch(`${NTFY_SERVER}/${NTFY_TOPIC}`, {
       method: "POST",
@@ -22,14 +24,18 @@ export async function sendNtfyNotification({ title, message, priority = 3, tags 
       body: message,
     })
 
+    console.log("[v0] NTFY: Response status", response.status)
+
     if (!response.ok) {
-      console.error("[NTFY] Failed to send notification:", response.status)
+      const errorText = await response.text().catch(() => "")
+      console.error("[v0] NTFY: Failed to send notification:", response.status, errorText)
       return { success: false, error: response.statusText }
     }
 
+    console.log("[v0] NTFY: Notification sent successfully")
     return { success: true }
   } catch (error) {
-    console.error("[NTFY] Error sending notification:", error)
+    console.error("[v0] NTFY: Error sending notification:", error)
     return { success: false, error: String(error) }
   }
 }

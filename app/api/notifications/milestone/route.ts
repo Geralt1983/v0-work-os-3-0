@@ -6,18 +6,40 @@ import { sendNtfyNotification, getMilestoneEmoji, getMilestonePriority } from "@
 
 const MILESTONES = [25, 50, 75, 100, 125, 150]
 
+function getESTDate(): { dateStr: string; startOfDay: Date } {
+  const now = new Date()
+  // Convert to EST (UTC-5) or EDT (UTC-4)
+  const estOffset = -5 * 60 // EST is UTC-5
+  const utcOffset = now.getTimezoneOffset()
+  const estTime = new Date(now.getTime() + (utcOffset + estOffset) * 60 * 1000)
+
+  const dateStr = estTime.toISOString().split("T")[0]
+
+  // Start of day in EST, converted back to UTC for DB comparison
+  const startOfDay = new Date(`${dateStr}T00:00:00-05:00`)
+
+  return { dateStr, startOfDay }
+}
+
 export async function POST(request: Request) {
+  console.log("[v0] Milestone notification: Starting check")
+
   try {
     const db = getDb()
-    const today = new Date()
-    const dateStr = today.toISOString().split("T")[0]
-    today.setHours(0, 0, 0, 0)
+    const { dateStr, startOfDay } = getESTDate()
+
+    console.log("[v0] Milestone: Using date", { dateStr, startOfDay: startOfDay.toISOString() })
 
     // Get today's completed moves
     const completedToday = await db
       .select()
       .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, today)))
+      .where(and(eq(moves.status, "done"), gte(moves.completedAt, startOfDay)))
+
+    console.log("[v0] Milestone: Found completed moves", {
+      count: completedToday.length,
+      moves: completedToday.map((m) => ({ id: m.id, title: m.title, effort: m.effortEstimate })),
+    })
 
     const earnedMinutes = completedToday.reduce((sum, m) => {
       const effort = m.effortEstimate || 2
@@ -27,15 +49,27 @@ export async function POST(request: Request) {
     const targetMinutes = 180
     const currentPercent = Math.round((earnedMinutes / targetMinutes) * 100)
 
+    console.log("[v0] Milestone: Progress calculated", { earnedMinutes, targetMinutes, currentPercent })
+
     // Get today's log to check which notifications were already sent
-    const [todayLog] = await db.select().from(dailyLog).where(eq(dailyLog.date, dateStr))
+    let todayLog = null
+    try {
+      const logs = await db.select().from(dailyLog).where(eq(dailyLog.date, dateStr))
+      todayLog = logs[0] || null
+      console.log("[v0] Milestone: Today's log", todayLog)
+    } catch (logErr) {
+      console.log("[v0] Milestone: Error fetching daily log (table may not exist)", logErr)
+    }
 
     const sentNotifications: number[] = (todayLog?.notificationsSent as number[]) || []
 
     // Find the highest milestone we've reached that hasn't been notified
     const newMilestones = MILESTONES.filter((m) => currentPercent >= m && !sentNotifications.includes(m))
 
+    console.log("[v0] Milestone: Notification check", { sentNotifications, newMilestones, currentPercent })
+
     if (newMilestones.length === 0) {
+      console.log("[v0] Milestone: No new milestones to notify")
       return NextResponse.json({ message: "No new milestones reached", currentPercent, sentNotifications })
     }
 
@@ -51,27 +85,34 @@ export async function POST(request: Request) {
       150: `CRUSHING IT! ${earnedMinutes} min - 150% of target! Legendary day!`,
     }
 
-    await sendNtfyNotification({
-      title: `${highestMilestone}% Progress`,
+    console.log("[v0] Milestone: Sending notification for", highestMilestone)
+
+    const ntfyResult = await sendNtfyNotification({
+      title: `${getMilestoneEmoji(highestMilestone)} ${highestMilestone}% Progress`,
       message: milestoneMessages[highestMilestone] || `${highestMilestone}% complete`,
       priority: getMilestonePriority(highestMilestone),
       tags: [getMilestoneEmoji(highestMilestone), "workos"],
     })
 
+    console.log("[v0] Milestone: NTFY result", ntfyResult)
+
     // Update daily log with sent notifications
     const updatedNotifications = [...sentNotifications, ...newMilestones]
 
-    if (todayLog) {
-      // Update existing log - we need raw SQL for this since drizzle doesn't handle jsonb updates well
-      await db.update(dailyLog).set({ notificationsSent: updatedNotifications }).where(eq(dailyLog.id, todayLog.id))
-    } else {
-      // Create new log for today
-      await db.insert(dailyLog).values({
-        id: `log-${dateStr}`,
-        date: dateStr,
-        completedMoves: completedToday.map((m) => m.id),
-        notificationsSent: updatedNotifications,
-      })
+    try {
+      if (todayLog) {
+        await db.update(dailyLog).set({ notificationsSent: updatedNotifications }).where(eq(dailyLog.id, todayLog.id))
+      } else {
+        await db.insert(dailyLog).values({
+          id: `log-${dateStr}`,
+          date: dateStr,
+          completedMoves: completedToday.map((m) => m.id),
+          notificationsSent: updatedNotifications,
+        })
+      }
+      console.log("[v0] Milestone: Updated daily log with sent notifications", updatedNotifications)
+    } catch (dbErr) {
+      console.log("[v0] Milestone: Failed to update daily log (non-critical)", dbErr)
     }
 
     return NextResponse.json({
@@ -82,7 +123,7 @@ export async function POST(request: Request) {
       notificationsSent: updatedNotifications,
     })
   } catch (error) {
-    console.error("Milestone notification error:", error)
-    return NextResponse.json({ error: "Failed to process milestone" }, { status: 500 })
+    console.error("[v0] Milestone notification error:", error)
+    return NextResponse.json({ error: "Failed to process milestone", details: String(error) }, { status: 500 })
   }
 }
