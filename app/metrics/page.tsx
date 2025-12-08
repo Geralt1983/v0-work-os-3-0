@@ -26,17 +26,49 @@ function getDaysSinceLabel(days: number | null): { label: string; tone: "positiv
   return { label: `${days}d stale`, tone: "negative" }
 }
 
-function getMomentumColor(score: number): string {
-  if (score >= 70) return "text-emerald-400"
-  if (score >= 40) return "text-amber-400"
-  return "text-rose-400"
+function getMomentumStatusColor(status: string): string {
+  switch (status) {
+    case "crushing":
+      return "text-emerald-400"
+    case "on_track":
+      return "text-cyan-400"
+    case "behind":
+      return "text-amber-400"
+    case "stalled":
+      return "text-rose-400"
+    default:
+      return "text-zinc-400"
+  }
 }
 
-function getMomentumLabel(score: number, trend: "rising" | "falling" | "steady"): string {
-  const trendIcon = trend === "rising" ? "↑" : trend === "falling" ? "↓" : "→"
-  if (score >= 70) return `High ${trendIcon}`
-  if (score >= 40) return `Medium ${trendIcon}`
-  return `Low ${trendIcon}`
+function getMomentumGradient(status: string): string {
+  switch (status) {
+    case "crushing":
+      return "bg-gradient-to-r from-emerald-500 to-cyan-500"
+    case "on_track":
+      return "bg-gradient-to-r from-cyan-500 to-blue-500"
+    case "behind":
+      return "bg-gradient-to-r from-amber-500 to-yellow-500"
+    case "stalled":
+      return "bg-gradient-to-r from-rose-500 to-orange-500"
+    default:
+      return "bg-zinc-600"
+  }
+}
+
+function getMomentumAdvice(status: string): string {
+  switch (status) {
+    case "crushing":
+      return "Ahead of schedule! Keep the momentum going."
+    case "on_track":
+      return "Right on pace. Steady wins the race."
+    case "behind":
+      return "Falling behind. Focus on quick wins to catch up."
+    case "stalled":
+      return "Momentum stalled. Start with the easiest task."
+    default:
+      return ""
+  }
 }
 
 export default function MetricsDashboard() {
@@ -82,7 +114,15 @@ export default function MetricsDashboard() {
   const pacingWidth = `${pacingPercent}%`
   const completedCount = today?.completedCount || 0
   const paceStatus = today?.paceStatus || "behind"
-  const momentum = today?.momentum || { score: 0, trend: "steady" as const }
+
+  const momentum = today?.momentum || {
+    percent: 0,
+    status: "stalled" as const,
+    label: "Stalled",
+    expectedByNow: 0,
+    actualMinutes: 0,
+    dayProgress: 0,
+  }
 
   const staleClients = clients.filter((c) => c.isStale)
   const activeClients = clients.filter((c) => c.activeMoves > 0)
@@ -159,7 +199,7 @@ export default function MetricsDashboard() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-500/15">
                         <TargetIcon className="h-4 w-4 text-cyan-400" />
                       </div>
-                      <h2 className="text-lg font-semibold">Today's Pacing</h2>
+                      <h2 className="text-lg font-semibold">Today's Progress</h2>
                     </div>
                     <span
                       className={`text-xl font-semibold ${paceStatus === "on_track" ? "text-emerald-400" : "text-amber-400"}`}
@@ -199,33 +239,38 @@ export default function MetricsDashboard() {
                       </div>
                       <h2 className="text-lg font-semibold">Momentum</h2>
                     </div>
-                    <span className={`text-xl font-semibold ${getMomentumColor(momentum.score)}`}>
-                      {momentum.score}
-                      <span className="text-base align-middle">/100</span>
+                    <span className={`text-xl font-semibold ${getMomentumStatusColor(momentum.status)}`}>
+                      {momentum.percent}
+                      <span className="text-base align-middle">%</span>
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-zinc-300">{getMomentumLabel(momentum.score, momentum.trend)}</p>
-                  <div className="mt-3 h-2 rounded-full bg-zinc-800">
+                  <p className="mt-3 text-sm text-zinc-300">
+                    {momentum.label} ({momentum.dayProgress}% through work day)
+                  </p>
+                  <div className="mt-3 h-2 rounded-full bg-zinc-800 relative">
+                    {/* Expected progress marker */}
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        momentum.score >= 70
-                          ? "bg-gradient-to-r from-emerald-500 to-cyan-500"
-                          : momentum.score >= 40
-                            ? "bg-gradient-to-r from-amber-500 to-yellow-500"
-                            : "bg-gradient-to-r from-rose-500 to-orange-500"
-                      }`}
-                      style={{ width: `${momentum.score}%` }}
+                      className="absolute top-0 h-full w-0.5 bg-zinc-500 z-10"
+                      style={{ left: `${momentum.dayProgress}%` }}
+                    />
+                    {/* Actual progress */}
+                    <div
+                      className={`h-full rounded-full transition-all ${getMomentumGradient(momentum.status)}`}
+                      style={{ width: `${Math.min(momentum.percent, 150)}%` }}
                     />
                   </div>
-                  <p className="mt-3 text-xs text-zinc-500">
-                    {momentum.score >= 70
-                      ? "Great flow! Keep the energy going."
-                      : momentum.score >= 40
-                        ? "Decent pace. Try shorter tasks to build speed."
-                        : "Momentum is low. Start with an easy win."}
-                  </p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
+                    <span>
+                      <span className="text-zinc-100">{momentum.actualMinutes}</span> min earned
+                    </span>
+                    <span>
+                      <span className="text-zinc-100">{momentum.expectedByNow}</span> min expected
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-zinc-500">{getMomentumAdvice(momentum.status)}</p>
                 </div>
 
+                {/* Existing code for Daily Summary card */}
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -268,26 +313,30 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
-                <div className="flex items-center gap-2">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-400" />
-                  <h2 className="text-lg font-semibold text-amber-300">
-                    {staleClients.length} Stale Client{staleClients.length > 1 ? "s" : ""}
-                  </h2>
-                </div>
-                <p className="mt-2 text-sm text-amber-200/70">These clients haven't had activity in over 2 days:</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {staleClients.map((client) => (
-                    <span
-                      key={client.clientId}
-                      className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm text-amber-200"
-                    >
-                      {client.clientName} ({client.daysSinceLastMove}d)
-                    </span>
-                  ))}
-                </div>
-              </section>
+              {/* Existing code for stale clients section */}
+              {staleClients.length > 0 && (
+                <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
+                  <div className="flex items-center gap-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-amber-400" />
+                    <h2 className="text-lg font-semibold text-amber-300">
+                      {staleClients.length} Stale Client{staleClients.length !== 1 ? "s" : ""}
+                    </h2>
+                  </div>
+                  <p className="mt-2 text-sm text-amber-200/70">These clients haven't had activity in over 2 days:</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {staleClients.map((client) => (
+                      <span
+                        key={client.clientId}
+                        className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm text-amber-200"
+                      >
+                        {client.clientName} ({client.daysSinceLastMove}d)
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
 
+              {/* Existing code for Client Activity section */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">
@@ -351,6 +400,7 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
+              {/* Existing code for Notification Testing section */}
               <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-amber-500/15">
