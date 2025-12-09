@@ -5,7 +5,7 @@ import { useGroupedBacklog } from "@/hooks/use-grouped-backlog"
 import { useMoves } from "@/hooks/use-moves"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronRight, ArrowUp, Clock, AlertTriangle } from "lucide-react"
+import { ChevronDown, ChevronRight, ArrowUp, Clock, AlertTriangle, RefreshCw } from "lucide-react"
 
 function getDecayBadge(status: "normal" | "aging" | "stale" | "critical") {
   switch (status) {
@@ -33,9 +33,10 @@ function getDecayBadge(status: "normal" | "aging" | "stale" | "critical") {
 }
 
 export function GroupedBacklog() {
-  const { groups, totalTasks, isLoading, refresh } = useGroupedBacklog()
+  const { groups, totalTasks, isLoading, error, refresh } = useGroupedBacklog()
   const { updateMoveStatus, refresh: refreshMoves } = useMoves()
   const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set())
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const toggleClient = (clientId: number) => {
     setExpandedClients((prev) => {
@@ -50,10 +51,18 @@ export function GroupedBacklog() {
   }
 
   const handlePromote = async (taskId: number) => {
-    await updateMoveStatus(taskId.toString(), "upnext")
+    await updateMoveStatus(taskId.toString(), "queued")
     refresh()
     refreshMoves()
   }
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await refresh()
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
+
+  console.log("[v0] GroupedBacklog render:", { groups, totalTasks, isLoading, error })
 
   if (isLoading) {
     return (
@@ -61,6 +70,18 @@ export function GroupedBacklog() {
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-12 bg-zinc-800/50 rounded-lg" />
         ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-6 text-muted-foreground">
+        <p className="text-red-400 text-sm mb-2">Failed to load backlog</p>
+        <Button variant="outline" size="sm" onClick={handleRefresh}>
+          <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? "animate-spin" : ""}`} />
+          Retry
+        </Button>
       </div>
     )
   }
@@ -80,6 +101,9 @@ export function GroupedBacklog() {
         <span>
           {totalTasks} tasks across {groups.length} clients
         </span>
+        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={handleRefresh}>
+          <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       {groups.map((group) => {
@@ -128,8 +152,8 @@ export function GroupedBacklog() {
                     className="flex items-center justify-between px-3 py-2 border-b border-border/20 last:border-b-0"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-foreground leading-snug">{task.title}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-foreground leading-snug break-words">{task.title}</span>
                         {getDecayBadge(task.decayStatus)}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
@@ -148,6 +172,7 @@ export function GroupedBacklog() {
                         e.stopPropagation()
                         handlePromote(task.id)
                       }}
+                      title="Move to Queued"
                     >
                       <ArrowUp className="h-3 w-3" />
                     </Button>

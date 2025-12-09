@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { MessageSquare, ListTodo, BarChart3, Users, History } from "lucide-react"
+import { ListTodo, BarChart3, Users, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 
@@ -46,7 +46,6 @@ export function WorkOSNav() {
   }, [pathname, hasUnread])
 
   const items = [
-    { href: "/", icon: MessageSquare, label: "Chat", showDot: hasUnread },
     { href: "/moves", icon: ListTodo, label: "Moves" },
     { href: "/metrics", icon: BarChart3, label: "Metrics" },
     { href: "/clients", icon: Users, label: "Clients" },
@@ -55,8 +54,8 @@ export function WorkOSNav() {
 
   return (
     <div className="flex items-center gap-4">
-      {items.map(({ href, icon: Icon, label, showDot }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href)
+      {items.map(({ href, icon: Icon, label }) => {
+        const active = pathname.startsWith(href)
 
         return (
           <Link
@@ -72,9 +71,6 @@ export function WorkOSNav() {
           >
             <Icon className="h-5 w-5" aria-hidden="true" />
             <span className="sr-only">{label}</span>
-            {showDot && !active && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-fuchsia-500 border-2 border-black animate-pulse" />
-            )}
           </Link>
         )
       })}
