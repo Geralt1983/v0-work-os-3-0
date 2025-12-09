@@ -55,7 +55,7 @@ export function GroupedBacklog({ onEditMove }: GroupedBacklogProps = {}) {
   }
 
   const handlePromote = async (taskId: number) => {
-    await updateMoveStatus(taskId.toString(), "queued")
+    await updateMoveStatus(taskId.toString(), "upnext")
     refresh()
     refreshMoves()
   }
