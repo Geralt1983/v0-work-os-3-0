@@ -23,6 +23,8 @@ export async function POST() {
     const db = getDb()
     const { dateStr, startOfDay } = getESTDate()
 
+    console.log("[Milestone] Date check:", { dateStr, startOfDay: startOfDay.toISOString(), now: new Date().toISOString() })
+
     // Get today's completed moves
     const completedToday = await db
       .select()
@@ -33,7 +35,12 @@ export async function POST() {
     const targetMinutes = 180
     const currentPercent = Math.round((earnedMinutes / targetMinutes) * 100)
 
-    console.log("[Milestone] Progress:", { earnedMinutes, currentPercent, movesCount: completedToday.length })
+    console.log("[Milestone] Progress:", {
+      earnedMinutes,
+      currentPercent,
+      movesCount: completedToday.length,
+      moves: completedToday.map(m => ({ id: m.id, effort: m.effortEstimate, completedAt: m.completedAt }))
+    })
 
     // Get today's log to check which notifications were already sent
     let todayLog = null
