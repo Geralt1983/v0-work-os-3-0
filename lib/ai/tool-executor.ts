@@ -3,6 +3,7 @@ import { moves, clients } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
 import { generateAvoidanceReport } from "@/lib/ai/avoidance"
 import { getMoveHistory, logMoveEvent } from "@/lib/events"
+import { checkAndSendMilestone } from "@/lib/milestone-checker"
 
 export async function executeTool(name: string, args: Record<string, unknown>) {
   const db = getDb()
@@ -26,14 +27,55 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       return { pipelines }
     }
 
+    case "search_moves": {
+      const query = (args.query as string).toLowerCase()
+      const clientName = args.client_name as string | undefined
+      const status = args.status as string | undefined
+
+      // Get all moves with client info
+      const allMoves = await db
+        .select({
+          id: moves.id,
+          title: moves.title,
+          status: moves.status,
+          clientId: moves.clientId,
+          clientName: clients.name,
+          drainType: moves.drainType,
+          effortEstimate: moves.effortEstimate,
+        })
+        .from(moves)
+        .leftJoin(clients, eq(moves.clientId, clients.id))
+
+      // Filter by query, client, and status
+      const filtered = allMoves.filter((m) => {
+        const titleMatch = m.title.toLowerCase().includes(query)
+        const clientMatch =
+          !clientName || (m.clientName && m.clientName.toLowerCase().includes(clientName.toLowerCase()))
+        const statusMatch = !status || m.status === status
+        return titleMatch && clientMatch && statusMatch
+      })
+
+      return {
+        moves: filtered.slice(0, 10),
+        total: filtered.length,
+        message:
+          filtered.length === 0 ? "No moves found matching that query" : `Found ${filtered.length} matching moves`,
+      }
+    }
+
     case "create_move": {
       let clientId = null
       if (args.client_name) {
-        const [client] = await db
-          .select()
-          .from(clients)
-          .where(eq(clients.name, args.client_name as string))
-        clientId = client?.id || null
+        const clientNameLower = (args.client_name as string).toLowerCase()
+        const allClients = await db.select().from(clients)
+        const matchedClient = allClients.find(
+          (c) => c.name.toLowerCase().includes(clientNameLower) || clientNameLower.includes(c.name.toLowerCase()),
+        )
+        clientId = matchedClient?.id || null
+
+        if (!matchedClient) {
+          return { success: false, error: `No client found matching "${args.client_name}"` }
+        }
       }
 
       const [newMove] = await db
@@ -58,12 +100,35 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       return { success: true, move: newMove }
     }
 
+    case "update_move": {
+      const moveId = args.move_id as number
+      const updates: Record<string, unknown> = { updatedAt: new Date() }
+
+      if (args.title) updates.title = args.title
+      if (args.description !== undefined) updates.description = args.description
+      if (args.status) updates.status = args.status
+      if (args.effort_estimate) updates.effortEstimate = args.effort_estimate
+      if (args.drain_type) updates.drainType = args.drain_type
+
+      const [updated] = await db.update(moves).set(updates).where(eq(moves.id, moveId)).returning()
+
+      if (!updated) {
+        return { success: false, error: `Move ${moveId} not found` }
+      }
+
+      return { success: true, move: updated }
+    }
+
     case "complete_move": {
       const [currentMove] = await db
-        .select({ status: moves.status })
+        .select({ status: moves.status, title: moves.title })
         .from(moves)
         .where(eq(moves.id, args.move_id as number))
         .limit(1)
+
+      if (!currentMove) {
+        return { success: false, error: `Move ${args.move_id} not found` }
+      }
 
       const [updated] = await db
         .update(moves)
@@ -82,25 +147,48 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         toStatus: "done",
       })
 
-      // Trigger milestone notification check (same as direct API endpoint)
+      let milestoneResult = null
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : "http://localhost:3000"
-        await fetch(`${baseUrl}/api/notifications/milestone`, { method: "POST" })
+        milestoneResult = await checkAndSendMilestone()
+        console.log("[tool-executor] Milestone check result:", milestoneResult)
       } catch (notifyErr) {
-        console.log("[tool-executor] Milestone notification check failed:", notifyErr)
+        console.error("[tool-executor] Milestone notification check failed:", notifyErr)
       }
 
-      return { success: true, move: updated }
+      return {
+        success: true,
+        move: updated,
+        message: `Completed "${currentMove.title}"`,
+        milestone: milestoneResult,
+      }
+    }
+
+    case "delete_move": {
+      const [existingMove] = await db
+        .select({ id: moves.id, title: moves.title })
+        .from(moves)
+        .where(eq(moves.id, args.move_id as number))
+        .limit(1)
+
+      if (!existingMove) {
+        return { success: false, error: `Move ${args.move_id} not found` }
+      }
+
+      await db.delete(moves).where(eq(moves.id, args.move_id as number))
+
+      return { success: true, message: `Deleted "${existingMove.title}"` }
     }
 
     case "promote_move": {
       const [currentMove] = await db
-        .select({ status: moves.status })
+        .select({ status: moves.status, title: moves.title })
         .from(moves)
         .where(eq(moves.id, args.move_id as number))
         .limit(1)
+
+      if (!currentMove) {
+        return { success: false, error: `Move ${args.move_id} not found` }
+      }
 
       const [updated] = await db
         .update(moves)
@@ -118,7 +206,37 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         toStatus: args.target as string,
       })
 
-      return { success: true, move: updated }
+      return { success: true, move: updated, message: `Promoted "${currentMove.title}" to ${args.target}` }
+    }
+
+    case "demote_move": {
+      const [currentMove] = await db
+        .select({ status: moves.status, title: moves.title })
+        .from(moves)
+        .where(eq(moves.id, args.move_id as number))
+        .limit(1)
+
+      if (!currentMove) {
+        return { success: false, error: `Move ${args.move_id} not found` }
+      }
+
+      const [updated] = await db
+        .update(moves)
+        .set({
+          status: args.target as string,
+          updatedAt: new Date(),
+        })
+        .where(eq(moves.id, args.move_id as number))
+        .returning()
+
+      await logMoveEvent({
+        moveId: args.move_id as number,
+        eventType: "demoted",
+        fromStatus: currentMove?.status,
+        toStatus: args.target as string,
+      })
+
+      return { success: true, move: updated, message: `Demoted "${currentMove.title}" to ${args.target}` }
     }
 
     case "suggest_next_move": {

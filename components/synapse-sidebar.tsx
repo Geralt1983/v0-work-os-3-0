@@ -26,17 +26,30 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   })
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
+  }
 
   const updateCollapsed = (collapsed: boolean) => {
     setIsCollapsed(collapsed)
     localStorage.setItem("synapse-sidebar-collapsed", String(collapsed))
-    // Dispatch custom event so MovesLayout can update margin
     window.dispatchEvent(new Event("synapse-collapse-change"))
+
+    if (!collapsed) {
+      setTimeout(() => scrollToBottom("instant"), 50)
+    }
   }
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    scrollToBottom("instant")
+  }, []) // Initial mount
+
+  useEffect(() => {
+    scrollToBottom("smooth")
   }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,7 +123,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
       )}
 
       {/* Messages area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
         {messages.length === 0 ? (
           <div className="text-center text-zinc-500 py-8">
             <p className="text-sm">Ask {ASSISTANT_NAME} anything</p>
