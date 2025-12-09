@@ -32,7 +32,11 @@ function getDecayBadge(status: "normal" | "aging" | "stale" | "critical") {
   }
 }
 
-export function GroupedBacklog() {
+interface GroupedBacklogProps {
+  onEditMove?: (taskId: number) => void
+}
+
+export function GroupedBacklog({ onEditMove }: GroupedBacklogProps = {}) {
   const { groups, totalTasks, isLoading, error, refresh } = useGroupedBacklog()
   const { updateMoveStatus, refresh: refreshMoves } = useMoves()
   const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set())
@@ -149,7 +153,8 @@ export function GroupedBacklog() {
                 {group.tasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between px-3 py-2 border-b border-border/20 last:border-b-0"
+                    className={`flex items-center justify-between px-3 py-2 border-b border-border/20 last:border-b-0 ${onEditMove ? "cursor-pointer hover:bg-zinc-800/50" : ""}`}
+                    onClick={() => onEditMove?.(task.id)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

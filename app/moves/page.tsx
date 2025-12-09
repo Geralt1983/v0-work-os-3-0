@@ -3,8 +3,7 @@
 import type React from "react"
 
 import { useState, useMemo } from "react"
-import { useMoves, useClients } from "@/hooks/use-moves"
-import type { Move } from "@/lib/schema"
+import { useMoves, useClients, type Move } from "@/hooks/use-moves"
 import { NewMoveDialog } from "@/components/new-move-dialog"
 import { EditMoveDialog } from "@/components/edit-move-dialog"
 import { Button } from "@/components/ui/button"
@@ -25,25 +24,25 @@ type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
 type SortKey = "client" | "status" | "type"
 type SortDir = "asc" | "desc"
-type MoveStatus = "active" | "queued" | "backlog" | "done"
+type MoveStatus = "today" | "upnext" | "backlog" | "done"
 
 export default function MovesPage() {
-  const { moves, isLoading, completeMove, updateMoveStatus, reorderMoves, refresh } = useMoves()
+  const { moves, isLoading, completeMove, updateMoveStatus, reorderMoves, createMove, updateMove, updateSubtasks, setSubtasksFromTitles, refresh } = useMoves()
   const { clients } = useClients()
 
   const [view, setView] = useState<MovesView>("board")
   const [clientFilter, setClientFilter] = useState("all")
   const [showBacklog, setShowBacklog] = useState(true)
   const clientOptions = useMemo(() => {
-    const names = new Set(moves.map((m) => m.clientName).filter(Boolean))
+    const names = new Set(moves.map((m) => m.client).filter(Boolean))
     return Array.from(names).sort() as string[]
   }, [moves])
 
   const [statusFilter, setStatusFilter] = useState("all")
   const statusOptions = [
     { value: "all", label: "All Statuses" },
-    { value: "active", label: "Today" },
-    { value: "queued", label: "Queued" },
+    { value: "today", label: "Today" },
+    { value: "upnext", label: "Queued" },
   ]
 
   const [typeFilter, setTypeFilter] = useState("all")
@@ -55,12 +54,13 @@ export default function MovesPage() {
   ]
 
   const [editingMove, setEditingMove] = useState<Move | null>(null)
+  const [isNewMoveOpen, setIsNewMoveOpen] = useState(false)
   const [focusIndex, setFocusIndex] = useState(0)
   const isMobile = useIsMobile()
 
   const filteredMoves = useMemo(() => {
     return moves.filter((m) => {
-      if (clientFilter !== "all" && m.clientName !== clientFilter) return false
+      if (clientFilter !== "all" && m.client !== clientFilter) return false
       if (statusFilter !== "all" && m.status !== statusFilter) return false
       if (typeFilter !== "all" && m.drainType !== typeFilter) return false
       return true
@@ -68,8 +68,8 @@ export default function MovesPage() {
   }, [moves, clientFilter, statusFilter, typeFilter])
 
   const byStatus = useMemo(() => {
-    const today = filteredMoves.filter((m) => m.status === "active")
-    const upnext = filteredMoves.filter((m) => m.status === "queued")
+    const today = filteredMoves.filter((m) => m.status === "today")
+    const upnext = filteredMoves.filter((m) => m.status === "upnext")
     const backlog = filteredMoves.filter((m) => m.status === "backlog")
     const done = filteredMoves.filter((m) => m.status === "done")
     return { today, upnext, backlog, done }
@@ -131,12 +131,14 @@ export default function MovesPage() {
             {showBacklog ? "Hide Backlog" : "Show Backlog"}
           </Button>
 
-          <NewMoveDialog clients={clients} onMoveCreated={refresh}>
-            <Button size="sm" className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white h-9 px-3">
-              <Plus className="h-4 w-4 mr-1" />
-              New
-            </Button>
-          </NewMoveDialog>
+          <Button
+            size="sm"
+            className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white h-9 px-3"
+            onClick={() => setIsNewMoveOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New
+          </Button>
         </div>
 
         <div className="mt-4">
@@ -276,7 +278,12 @@ export default function MovesPage() {
               <div className="col-span-1">
                 <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
                 {showBacklog && (
-                  <GroupedBacklog moves={byStatus.backlog} onComplete={handleComplete} onEditMove={setEditingMove} />
+                  <GroupedBacklog
+                    onEditMove={(taskId) => {
+                      const move = moves.find((m) => m.id === taskId.toString())
+                      if (move) setEditingMove(move)
+                    }}
+                  />
                 )}
               </div>
             </div>
@@ -341,18 +348,32 @@ export default function MovesPage() {
         </div>
       </div>
 
-      {editingMove && (
-        <EditMoveDialog
-          move={editingMove}
-          clients={clients}
-          open={!!editingMove}
-          onOpenChange={(open) => !open && setEditingMove(null)}
-          onMoveUpdated={() => {
-            refresh()
-            setEditingMove(null)
-          }}
-        />
-      )}
+      <NewMoveDialog
+        open={isNewMoveOpen}
+        onClose={() => setIsNewMoveOpen(false)}
+        onSubmit={async (data) => {
+          await createMove(data)
+          refresh()
+        }}
+      />
+
+      <EditMoveDialog
+        open={!!editingMove}
+        move={editingMove}
+        onClose={() => setEditingMove(null)}
+        onSave={async (id, data) => {
+          await updateMove(id, data)
+          refresh()
+        }}
+        onUpdateSubtasks={async (id, subtasks) => {
+          await updateSubtasks(id, subtasks)
+          refresh()
+        }}
+        onSetSubtasksFromTitles={async (id, titles) => {
+          await setSubtasksFromTitles(id, titles)
+          refresh()
+        }}
+      />
     </div>
   )
 }
@@ -456,7 +477,7 @@ function MoveCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{move.clientName}</div>
+          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{move.client}</div>
           <h3
             className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
