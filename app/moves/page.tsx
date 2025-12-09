@@ -980,7 +980,9 @@ function MoveCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{move.client}</div>
-          <h3 className={`font-semibold text-zinc-100 truncate ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}>
+          <h3
+            className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
+          >
             {move.title}
           </h3>
         </div>

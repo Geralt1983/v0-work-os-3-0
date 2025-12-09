@@ -321,6 +321,8 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
+              <WeeklyGoals />
+
               {staleClients.length > 0 && (
                 <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
                   <div className="flex items-center gap-2">
@@ -551,8 +553,6 @@ export default function MetricsDashboard() {
                   move ID. 3) Check "View Event Log" to see all tracked events.
                 </p>
               </section>
-
-              <WeeklyGoals />
             </>
           )}
         </main>
