@@ -5,10 +5,8 @@ export async function GET(request: Request) {
 
   // Verify cron secret
   const authHeader = request.headers.get("authorization")
-  console.log("[Cron Afternoon] Auth header present:", !!authHeader)
-
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    console.log("[Cron Afternoon] Unauthorized - invalid or missing CRON_SECRET")
+    console.log("[Cron Afternoon] Unauthorized")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -16,13 +14,21 @@ export async function GET(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.VERCEL_URL
     const url = baseUrl?.startsWith("http") ? baseUrl : `https://${baseUrl}`
 
-    console.log("[Cron Afternoon] Calling:", `${url}/api/notifications/afternoon-summary`)
+    console.log("[Cron Afternoon] Running daily snapshot...")
+    try {
+      const snapshotResponse = await fetch(`${url}/api/cron/snapshot`)
+      const snapshotResult = await snapshotResponse.json()
+      console.log("[Cron Afternoon] Snapshot result:", snapshotResult)
+    } catch (snapshotError) {
+      console.error("[Cron Afternoon] Snapshot error (continuing):", snapshotError)
+    }
 
+    // Send afternoon summary notification
+    console.log("[Cron Afternoon] Sending afternoon summary...")
     const response = await fetch(`${url}/api/notifications/afternoon-summary`)
     const result = await response.json()
 
     console.log("[Cron Afternoon] Result:", result)
-
     return NextResponse.json(result)
   } catch (error) {
     console.error("[Cron Afternoon] Error:", error)

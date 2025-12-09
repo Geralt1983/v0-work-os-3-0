@@ -16,6 +16,13 @@ export async function GET(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.VERCEL_URL
     const url = baseUrl?.startsWith("http") ? baseUrl : `https://${baseUrl}`
 
+    console.log("[Cron Morning] Running daily snapshot first")
+    try {
+      await fetch(`${url}/api/cron/snapshot`)
+    } catch (e) {
+      console.log("[Cron Morning] Snapshot error (non-fatal):", e)
+    }
+
     console.log("[Cron Morning] Calling:", `${url}/api/notifications/morning-summary`)
 
     const response = await fetch(`${url}/api/notifications/morning-summary`)
