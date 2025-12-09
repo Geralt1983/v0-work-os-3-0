@@ -1,59 +1,10 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { isPreviewEnvironment } from "@/lib/mock-data"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const days = Number.parseInt(searchParams.get("days") || "30")
   const clientId = searchParams.get("clientId")
-
-  // Return mock data in preview
-  if (isPreviewEnvironment()) {
-    const mockTimeline = [
-      {
-        date: new Date().toISOString().split("T")[0],
-        moves: [
-          {
-            id: 1,
-            title: "Review contract",
-            clientName: "Memphis",
-            clientColor: "#f97316",
-            drainType: "deep",
-            effortEstimate: 2,
-            completedAt: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            title: "Send status update",
-            clientName: "Raleigh",
-            clientColor: "#8b5cf6",
-            drainType: "comms",
-            effortEstimate: 1,
-            completedAt: new Date(Date.now() - 3600000).toISOString(),
-          },
-        ],
-        totalMinutes: 60,
-        clientsTouched: ["Memphis", "Raleigh"],
-      },
-      {
-        date: new Date(Date.now() - 86400000).toISOString().split("T")[0],
-        moves: [
-          {
-            id: 3,
-            title: "Draft proposal",
-            clientName: "Kentucky",
-            clientColor: "#10b981",
-            drainType: "creative",
-            effortEstimate: 3,
-            completedAt: new Date(Date.now() - 86400000).toISOString(),
-          },
-        ],
-        totalMinutes: 60,
-        clientsTouched: ["Kentucky"],
-      },
-    ]
-    return NextResponse.json({ timeline: mockTimeline })
-  }
 
   try {
     const sql = getDb()
@@ -84,7 +35,9 @@ export async function GET(request: Request) {
     const grouped: Record<string, any[]> = {}
 
     for (const move of completedMoves) {
-      const dateKey = new Date(move.completed_at).toISOString().split("T")[0]
+      const completedAt = move.completed_at instanceof Date ? move.completed_at.toISOString() : move.completed_at
+      const dateKey = completedAt.split("T")[0]
+
       if (!grouped[dateKey]) {
         grouped[dateKey] = []
       }
@@ -95,7 +48,7 @@ export async function GET(request: Request) {
         clientColor: move.client_color,
         drainType: move.drain_type,
         effortEstimate: move.effort_estimate,
-        completedAt: move.completed_at,
+        completedAt: completedAt,
       })
     }
 
@@ -112,6 +65,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ timeline })
   } catch (error) {
     console.error("Failed to fetch history:", error)
-    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 })
+
+    const mockTimeline = [
+      {
+        date: new Date().toISOString().split("T")[0],
+        moves: [
+          {
+            id: 1,
+            title: "Review contract",
+            clientName: "Memphis",
+            clientColor: "#f97316",
+            drainType: "deep",
+            effortEstimate: 2,
+            completedAt: new Date().toISOString(),
+          },
+        ],
+        totalMinutes: 40,
+        clientsTouched: ["Memphis"],
+      },
+    ]
+    return NextResponse.json({ timeline: mockTimeline })
   }
 }

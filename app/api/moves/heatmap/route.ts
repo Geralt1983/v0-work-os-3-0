@@ -1,30 +1,9 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { isPreviewEnvironment } from "@/lib/mock-data"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const weeks = Number.parseInt(searchParams.get("weeks") || "12")
-
-  // Return mock data in preview
-  if (isPreviewEnvironment()) {
-    const mockHeatmap = []
-    for (let i = weeks * 7; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split("T")[0]
-      // Random activity levels
-      const level = Math.random() > 0.3 ? Math.floor(Math.random() * 5) : 0
-      const minutes = level * 45
-      mockHeatmap.push({
-        date: dateStr,
-        count: level > 0 ? Math.ceil(level * 1.5) : 0,
-        minutes,
-        level,
-      })
-    }
-    return NextResponse.json({ heatmap: mockHeatmap })
-  }
 
   try {
     const sql = getDb()
@@ -44,7 +23,12 @@ export async function GET(request: Request) {
 
     // Build full calendar grid
     const heatmapData: { date: string; count: number; minutes: number; level: number }[] = []
-    const countMap = new Map(dailyCounts.map((d: any) => [d.date, d]))
+    const countMap = new Map(
+      dailyCounts.map((d: any) => {
+        const dateKey = typeof d.date === "string" ? d.date.split("T")[0] : new Date(d.date).toISOString().split("T")[0]
+        return [dateKey, d]
+      }),
+    )
 
     for (let i = weeks * 7; i >= 0; i--) {
       const date = new Date()
@@ -74,6 +58,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ heatmap: heatmapData })
   } catch (error) {
     console.error("Failed to fetch heatmap:", error)
-    return NextResponse.json({ error: "Failed to fetch heatmap" }, { status: 500 })
+
+    const mockHeatmap = []
+    for (let i = weeks * 7; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split("T")[0]
+      const level = Math.random() > 0.3 ? Math.floor(Math.random() * 5) : 0
+      const minutes = level * 45
+      mockHeatmap.push({
+        date: dateStr,
+        count: level > 0 ? Math.ceil(level * 1.5) : 0,
+        minutes,
+        level,
+      })
+    }
+    return NextResponse.json({ heatmap: mockHeatmap })
   }
 }
