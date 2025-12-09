@@ -1,6 +1,8 @@
 import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
+import { generateAvoidanceReport } from "@/lib/ai/avoidance"
+import { getMoveHistory, logMoveEvent } from "@/lib/events"
 
 export async function executeTool(name: string, args: Record<string, unknown>) {
   const db = getDb()
@@ -47,10 +49,22 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         })
         .returning()
 
+      await logMoveEvent({
+        moveId: newMove.id,
+        eventType: "created",
+        toStatus: newMove.status,
+      })
+
       return { success: true, move: newMove }
     }
 
     case "complete_move": {
+      const [currentMove] = await db
+        .select({ status: moves.status })
+        .from(moves)
+        .where(eq(moves.id, args.move_id as number))
+        .limit(1)
+
       const [updated] = await db
         .update(moves)
         .set({
@@ -61,10 +75,23 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         .where(eq(moves.id, args.move_id as number))
         .returning()
 
+      await logMoveEvent({
+        moveId: args.move_id as number,
+        eventType: "completed",
+        fromStatus: currentMove?.status,
+        toStatus: "done",
+      })
+
       return { success: true, move: updated }
     }
 
     case "promote_move": {
+      const [currentMove] = await db
+        .select({ status: moves.status })
+        .from(moves)
+        .where(eq(moves.id, args.move_id as number))
+        .limit(1)
+
       const [updated] = await db
         .update(moves)
         .set({
@@ -73,6 +100,13 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         })
         .where(eq(moves.id, args.move_id as number))
         .returning()
+
+      await logMoveEvent({
+        moveId: args.move_id as number,
+        eventType: "promoted",
+        fromStatus: currentMove?.status,
+        toStatus: args.target as string,
+      })
 
       return { success: true, move: updated }
     }
@@ -95,6 +129,16 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
           : null,
         reason: "Based on current pipeline state",
       }
+    }
+
+    case "get_avoidance_report": {
+      const report = await generateAvoidanceReport()
+      return { report }
+    }
+
+    case "get_move_history": {
+      const history = await getMoveHistory(args.move_id as number)
+      return { history }
     }
 
     default:

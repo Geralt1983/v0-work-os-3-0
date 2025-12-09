@@ -7,6 +7,7 @@ import OpenAI from "openai"
 import { WORK_OS_PROMPT } from "@/lib/ai/prompts"
 import { chatTools } from "@/lib/ai/tools"
 import { executeTool } from "@/lib/ai/tool-executor"
+import { getAvoidanceSummary } from "@/lib/ai/avoidance"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -46,9 +47,20 @@ export async function POST(request: Request) {
       .where(eq(messages.sessionId, sessionId))
       .orderBy(asc(messages.timestamp))
 
+    let avoidanceContext = ""
+    try {
+      avoidanceContext = await getAvoidanceSummary()
+    } catch (err) {
+      console.log("[chat] Failed to get avoidance context:", err)
+    }
+
+    const enhancedPrompt = avoidanceContext
+      ? `${WORK_OS_PROMPT}\n\n## CURRENT AVOIDANCE AWARENESS\n${avoidanceContext}`
+      : WORK_OS_PROMPT
+
     // Build OpenAI messages
     const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: WORK_OS_PROMPT },
+      { role: "system", content: enhancedPrompt },
       ...history.slice(-20).map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,

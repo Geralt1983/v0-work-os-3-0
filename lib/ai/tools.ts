@@ -74,4 +74,28 @@ export const chatTools = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_avoidance_report",
+      description:
+        "Get a comprehensive avoidance behavior report. Shows stale clients, frequently deferred tasks, and behavioral patterns. Use this when asked about productivity issues, stale clients, or work avoidance.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_move_history",
+      description:
+        "Get the event history for a specific move. Shows all promotions, demotions, deferrals, and completions.",
+      parameters: {
+        type: "object",
+        properties: {
+          move_id: { type: "number", description: "The move ID to get history for" },
+        },
+        required: ["move_id"],
+      },
+    },
+  },
 ]

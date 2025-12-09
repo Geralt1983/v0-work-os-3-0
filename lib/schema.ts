@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date } from "drizzle-orm/pg-core"
 import type { InferSelectModel } from "drizzle-orm"
 
 // =============================================================================
@@ -93,12 +93,56 @@ export const dailyLog = pgTable("daily_log", {
 })
 
 // =============================================================================
+// =============================================================================
+export const moveEvents = pgTable("move_events", {
+  id: serial("id").primaryKey(),
+  moveId: integer("move_id")
+    .notNull()
+    .references(() => moves.id),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  fromStatus: varchar("from_status", { length: 50 }),
+  toStatus: varchar("to_status", { length: 50 }),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
+// =============================================================================
+export const behavioralPatterns = pgTable("behavioral_patterns", {
+  id: serial("id").primaryKey(),
+  patternType: varchar("pattern_type", { length: 50 }).notNull(),
+  patternKey: varchar("pattern_key", { length: 100 }).notNull(),
+  patternValue: jsonb("pattern_value").notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.5"),
+  sampleSize: integer("sample_size").default(0),
+  lastUpdated: timestamp("last_updated", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
+// =============================================================================
+export const dailySnapshots = pgTable("daily_snapshots", {
+  id: serial("id").primaryKey(),
+  snapshotDate: date("snapshot_date").notNull(),
+  movesCompleted: integer("moves_completed").default(0),
+  minutesEarned: integer("minutes_earned").default(0),
+  clientsTouched: text("clients_touched").array().default([]),
+  drainTypesUsed: text("drain_types_used").array().default([]),
+  avgMomentum: decimal("avg_momentum", { precision: 5, scale: 2 }),
+  staleClients: text("stale_clients").array().default([]),
+  avoidanceIncidents: integer("avoidance_incidents").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 export type Client = InferSelectModel<typeof clients>
 export type Move = InferSelectModel<typeof moves>
 export type Session = InferSelectModel<typeof sessions>
 export type Message = InferSelectModel<typeof messages>
+export type MoveEvent = InferSelectModel<typeof moveEvents>
+export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
+export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
 export type MoveStatus = "active" | "queued" | "backlog" | "done"
 export type DrainType = "deep" | "comms" | "admin" | "creative" | "easy"
 

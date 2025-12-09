@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq, and, ne, desc, asc } from "drizzle-orm"
+import { logMoveEvent } from "@/lib/events"
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,6 +94,13 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       })
       .returning()
+
+    await logMoveEvent({
+      moveId: newMove.id,
+      eventType: "created",
+      toStatus: targetStatus,
+      metadata: { effortEstimate: effortEstimate || 2, drainType: drainType || null },
+    })
 
     let clientName: string | null = null
     if (newMove.clientId) {

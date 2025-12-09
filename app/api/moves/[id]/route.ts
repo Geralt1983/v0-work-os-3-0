@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { moves, clients } from "@/lib/schema"
 import { eq } from "drizzle-orm"
+import { logMoveEvent, determineEventType } from "@/lib/events"
 
 // GET single move
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -45,21 +46,37 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const db = getDb()
     const { id } = await params
+    const moveId = Number.parseInt(id)
     const body = await request.json()
+
+    const [currentMove] = await db.select({ status: moves.status }).from(moves).where(eq(moves.id, moveId)).limit(1)
 
     const updateData = {
       ...body,
       updatedAt: new Date(),
     }
 
-    const [updated] = await db
-      .update(moves)
-      .set(updateData)
-      .where(eq(moves.id, Number.parseInt(id)))
-      .returning()
+    const [updated] = await db.update(moves).set(updateData).where(eq(moves.id, moveId)).returning()
 
     if (!updated) {
       return NextResponse.json({ error: "Move not found" }, { status: 404 })
+    }
+
+    if (body.status && currentMove && body.status !== currentMove.status) {
+      const eventType = determineEventType(currentMove.status, body.status)
+      await logMoveEvent({
+        moveId,
+        eventType,
+        fromStatus: currentMove.status,
+        toStatus: body.status,
+      })
+    } else if (body.title || body.description || body.effortEstimate || body.drainType) {
+      // Log edit event for non-status changes
+      await logMoveEvent({
+        moveId,
+        eventType: "edited",
+        metadata: { fields: Object.keys(body) },
+      })
     }
 
     return NextResponse.json(updated)
