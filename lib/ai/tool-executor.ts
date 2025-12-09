@@ -82,6 +82,16 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         toStatus: "done",
       })
 
+      // Trigger milestone notification check (same as direct API endpoint)
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "http://localhost:3000"
+        await fetch(`${baseUrl}/api/notifications/milestone`, { method: "POST" })
+      } catch (notifyErr) {
+        console.log("[tool-executor] Milestone notification check failed:", notifyErr)
+      }
+
       return { success: true, move: updated }
     }
 
