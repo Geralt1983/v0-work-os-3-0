@@ -12,13 +12,12 @@ export async function GET() {
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-    // Get sessions with message count and first message preview
     const recentSessions = await db
       .select({
         id: sessions.id,
         createdAt: sessions.createdAt,
         lastActiveAt: sessions.lastActiveAt,
-        messageCount: sql<number>`(SELECT COUNT(*) FROM messages WHERE messages.session_id = ${sessions.id})`,
+        messageCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM messages WHERE messages.session_id = ${sessions.id}), 0)`,
         preview: sql<string>`(SELECT content FROM messages WHERE messages.session_id = ${sessions.id} AND role = 'user' ORDER BY timestamp ASC LIMIT 1)`,
       })
       .from(sessions)

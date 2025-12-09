@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { useChat, useChatSessions, type Message, type TaskCard, type ChatSession } from "@/hooks/use-chat"
-import { History, Plus } from "lucide-react"
+import { MessageSquare, Plus } from "lucide-react"
 
 const ASSISTANT_NAME = "Synapse"
 
@@ -64,7 +64,7 @@ export default function ChatPage() {
               title="Chat history"
               aria-label="Toggle chat history"
             >
-              <History className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5" />
             </button>
           </div>
           <div className="flex-shrink-0 pt-1">

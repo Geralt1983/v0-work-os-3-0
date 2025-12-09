@@ -3,12 +3,16 @@
 import { useState } from "react"
 import { useMoveHistory } from "@/hooks/use-move-history"
 import { useClients } from "@/hooks/use-moves"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Filter } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Calendar, Filter, SlidersHorizontal } from "lucide-react"
 
 export function CompletionTimeline() {
+  const isMobile = useIsMobile()
   const [days, setDays] = useState(30)
   const [clientFilter, setClientFilter] = useState<string>("all")
 
@@ -17,6 +21,9 @@ export function CompletionTimeline() {
     days,
     clientFilter !== "all" ? Number.parseInt(clientFilter) : undefined,
   )
+
+  // Count active filters for badge
+  const activeFilterCount = (clientFilter !== "all" ? 1 : 0) + (days !== 30 ? 1 : 0)
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -43,41 +50,120 @@ export function CompletionTimeline() {
       .toLowerCase()
   }
 
+  const FilterControls = ({ className }: { className?: string }) => (
+    <div className={className}>
+      <Select value={clientFilter} onValueChange={setClientFilter}>
+        <SelectTrigger className="w-full">
+          <Filter className="h-4 w-4 mr-2" />
+          <SelectValue placeholder="All clients" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All clients</SelectItem>
+          {clients.map((client) => (
+            <SelectItem key={client.id} value={client.id.toString()}>
+              {client.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v))}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="7">Last 7 days</SelectItem>
+          <SelectItem value="14">Last 14 days</SelectItem>
+          <SelectItem value="30">Last 30 days</SelectItem>
+          <SelectItem value="90">Last 90 days</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+
+  const MobileMoveCard = ({ move }: { move: (typeof timeline)[0]["moves"][0] }) => (
+    <div className="bg-muted/20 rounded-lg p-3 space-y-2">
+      <p className="text-sm font-medium">{move.title}</p>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Badge
+          variant="outline"
+          className="text-xs"
+          style={{
+            borderColor: move.clientColor,
+            color: move.clientColor,
+          }}
+        >
+          {move.clientName}
+        </Badge>
+        {move.drainType && (
+          <Badge variant="secondary" className="text-xs">
+            {move.drainType}
+          </Badge>
+        )}
+        <span className="text-muted-foreground">{(move.effortEstimate || 1) * 20}m</span>
+        <span className="text-muted-foreground ml-auto">{formatTime(move.completedAt)}</span>
+      </div>
+    </div>
+  )
+
   return (
     <Card className="bg-card/50 border-border/50">
       <CardHeader>
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Completion History
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="w-[140px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="All clients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All clients</SelectItem>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id.toString()}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v))}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="14">Last 14 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
+          {isMobile ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="relative bg-transparent">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto">
+                <SheetHeader>
+                  <SheetTitle>Filter History</SheetTitle>
+                </SheetHeader>
+                <FilterControls className="space-y-3 mt-4 pb-4" />
+              </SheetContent>
+            </Sheet>
+          ) : (
+            /* Desktop: Inline filters */
+            <div className="flex items-center gap-2">
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="All clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All clients</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id.toString()}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v))}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="14">Last 14 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                  <SelectItem value="90">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -99,36 +185,45 @@ export function CompletionTimeline() {
                     <span>{day.clientsTouched.length} clients</span>
                   </div>
                 </div>
-                <div className="border-l-2 border-border pl-4 space-y-2">
-                  {day.moves.map((move) => (
-                    <div key={move.id} className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className="text-xs text-muted-foreground w-16 shrink-0">
-                          {formatTime(move.completedAt)}
-                        </span>
-                        <span className="truncate text-sm">{move.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            borderColor: move.clientColor,
-                            color: move.clientColor,
-                          }}
-                        >
-                          {move.clientName}
-                        </Badge>
-                        {move.drainType && (
-                          <Badge variant="secondary" className="text-xs">
-                            {move.drainType}
+
+                {isMobile ? (
+                  <div className="space-y-2">
+                    {day.moves.map((move) => (
+                      <MobileMoveCard key={move.id} move={move} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border-l-2 border-border pl-4 space-y-2">
+                    {day.moves.map((move) => (
+                      <div key={move.id} className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground w-16 shrink-0">
+                            {formatTime(move.completedAt)}
+                          </span>
+                          <span className="truncate text-sm">{move.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                            style={{
+                              borderColor: move.clientColor,
+                              color: move.clientColor,
+                            }}
+                          >
+                            {move.clientName}
                           </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">{(move.effortEstimate || 1) * 20}m</span>
+                          {move.drainType && (
+                            <Badge variant="secondary" className="text-xs">
+                              {move.drainType}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">{(move.effortEstimate || 1) * 20}m</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

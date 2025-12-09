@@ -6,6 +6,7 @@ import { WorkOSNav } from "@/components/work-os-nav"
 import { PageHeader } from "@/components/page-header"
 import { useMetrics } from "@/hooks/use-metrics"
 import { Button } from "@/components/ui/button"
+import { WeeklyGoals } from "@/components/weekly-goals"
 
 function statusToneClasses(tone: "positive" | "neutral" | "negative") {
   switch (tone) {
@@ -550,6 +551,8 @@ export default function MetricsDashboard() {
                   move ID. 3) Check "View Event Log" to see all tracked events.
                 </p>
               </section>
+
+              <WeeklyGoals />
             </>
           )}
         </main>
