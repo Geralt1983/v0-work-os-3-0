@@ -47,6 +47,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { SynapsePicks } from "@/components/synapse-picks"
 import { Graveyard } from "@/components/graveyard"
+import { DoneToday } from "@/components/done-today"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -298,6 +299,11 @@ export default function MovesPage() {
         {/* Graveyard button at the bottom */}
         <div className="hidden lg:flex justify-center mt-8">
           <Graveyard />
+        </div>
+
+        {/* DoneToday component */}
+        <div className="mt-8">
+          <DoneToday />
         </div>
       </div>
       <UndoToast undoState={undoState} onUndo={handleUndo} />
