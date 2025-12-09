@@ -516,6 +516,10 @@ export function useMoves() {
     await updateSubtasks(id, subtasks)
   }
 
+  const promoteMove = async (id: string) => {
+    return updateMoveStatus(id, "upnext")
+  }
+
   return {
     moves,
     loading: isLoading,
@@ -531,8 +535,9 @@ export function useMoves() {
     reorderMoves,
     createMove,
     updateMove,
-    updateSubtasks, // Export updateSubtasks
-    setSubtasksFromTitles, // Export setSubtasksFromTitles
+    updateSubtasks,
+    setSubtasksFromTitles,
+    promoteMove, // Export promoteMove
     refresh: () => mutate(),
   }
 }

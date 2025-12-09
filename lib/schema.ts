@@ -93,32 +93,7 @@ export const dailyLog = pgTable("daily_log", {
 })
 
 // =============================================================================
-// =============================================================================
-export const moveEvents = pgTable("move_events", {
-  id: serial("id").primaryKey(),
-  moveId: integer("move_id")
-    .notNull()
-    .references(() => moves.id),
-  eventType: varchar("event_type", { length: 50 }).notNull(),
-  fromStatus: varchar("from_status", { length: 50 }),
-  toStatus: varchar("to_status", { length: 50 }),
-  metadata: jsonb("metadata").default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-})
-
-// =============================================================================
-// =============================================================================
-export const behavioralPatterns = pgTable("behavioral_patterns", {
-  id: serial("id").primaryKey(),
-  patternType: varchar("pattern_type", { length: 50 }).notNull(),
-  patternKey: varchar("pattern_key", { length: 100 }).notNull(),
-  patternValue: jsonb("pattern_value").notNull(),
-  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.5"),
-  sampleSize: integer("sample_size").default(0),
-  lastUpdated: timestamp("last_updated", { withTimezone: true }).defaultNow(),
-})
-
-// =============================================================================
+// DAILY SNAPSHOTS
 // =============================================================================
 export const dailySnapshots = pgTable("daily_snapshots", {
   id: serial("id").primaryKey(),
@@ -134,6 +109,51 @@ export const dailySnapshots = pgTable("daily_snapshots", {
 })
 
 // =============================================================================
+// MOVE GRAVEYARD
+// =============================================================================
+export const moveGraveyard = pgTable("move_graveyard", {
+  id: serial("id").primaryKey(),
+  originalMoveId: integer("original_move_id"),
+  clientId: integer("client_id").references(() => clients.id),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  effortEstimate: integer("effort_estimate"),
+  drainType: varchar("drain_type", { length: 50 }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }).defaultNow(),
+  archiveReason: varchar("archive_reason", { length: 50 }).default("auto_decay"),
+  originalCreatedAt: timestamp("original_created_at", { withTimezone: true }),
+  daysInBacklog: integer("days_in_backlog"),
+})
+
+// =============================================================================
+// MOVE EVENTS
+// =============================================================================
+export const moveEvents = pgTable("move_events", {
+  id: serial("id").primaryKey(),
+  moveId: integer("move_id")
+    .notNull()
+    .references(() => moves.id),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  fromStatus: varchar("from_status", { length: 50 }),
+  toStatus: varchar("to_status", { length: 50 }),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
+// BEHAVIORAL PATTERNS
+// =============================================================================
+export const behavioralPatterns = pgTable("behavioral_patterns", {
+  id: serial("id").primaryKey(),
+  patternType: varchar("pattern_type", { length: 50 }).notNull(),
+  patternKey: varchar("pattern_key", { length: 100 }).notNull(),
+  patternValue: jsonb("pattern_value").notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.5"),
+  sampleSize: integer("sample_size").default(0),
+  lastUpdated: timestamp("last_updated", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 export type Client = InferSelectModel<typeof clients>
@@ -143,6 +163,7 @@ export type Message = InferSelectModel<typeof messages>
 export type MoveEvent = InferSelectModel<typeof moveEvents>
 export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
+export type GraveyardMove = InferSelectModel<typeof moveGraveyard>
 export type MoveStatus = "active" | "queued" | "backlog" | "done"
 export type DrainType = "deep" | "comms" | "admin" | "creative" | "easy"
 

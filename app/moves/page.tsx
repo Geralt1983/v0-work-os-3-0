@@ -45,6 +45,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { SynapsePicks } from "@/components/synapse-picks"
+import { Graveyard } from "@/components/graveyard"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -259,6 +261,11 @@ export default function MovesPage() {
           </div>
         </div>
 
+        {/* Synapse Picks always visible above the board */}
+        <div className="hidden lg:block mt-6">
+          <SynapsePicks />
+        </div>
+
         <div className="lg:hidden mt-4">
           <MovesListMobile
             moves={byStatus[activeTab] || []}
@@ -286,6 +293,11 @@ export default function MovesPage() {
             <MovesList moves={filteredMoves} onComplete={handleComplete} onEditMove={setEditingMove} />
           )}
           {view === "focus" && <FocusView moves={byStatus.today} onComplete={handleComplete} />}
+        </div>
+
+        {/* Graveyard button at the bottom */}
+        <div className="hidden lg:flex justify-center mt-8">
+          <Graveyard />
         </div>
       </div>
       <UndoToast undoState={undoState} onUndo={handleUndo} />

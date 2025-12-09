@@ -4,6 +4,16 @@
 import { USE_SERVER } from "./api-client"
 import * as serverMovesApi from "./server-moves-api"
 
+export function isPreviewEnvironment(): boolean {
+  if (typeof window === "undefined") {
+    // Server-side: check for DATABASE_URL
+    return !process.env.DATABASE_URL
+  }
+  // Client-side: check if running in v0 preview
+  const hostname = window.location.hostname
+  return hostname.includes("vfs.cloud") || hostname.includes("v0.dev") || hostname === "localhost"
+}
+
 export type MoveStatus = "today" | "upnext" | "backlog" | "done"
 export type MoveType = "Quick" | "Chunky" | "Standard"
 
