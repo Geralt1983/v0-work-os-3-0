@@ -496,9 +496,58 @@ export default function MetricsDashboard() {
                   >
                     Run Daily Snapshot
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      setNotificationStatus("Fetching event log...")
+                      try {
+                        const res = await fetch("/api/test/simulate-deferral")
+                        const data = await res.json()
+                        console.log("[v0] Event Log:", data.events)
+                        const summary = data.events
+                          ?.slice(0, 5)
+                          .map((e: any) => `${e.eventType}: ${e.moveTitle || "Unknown"}`)
+                          .join(", ")
+                        setNotificationStatus(
+                          `${data.events?.length || 0} events logged. Recent: ${summary || "None"}. Check console.`,
+                        )
+                      } catch (err) {
+                        setNotificationStatus(`Error: ${err}`)
+                      }
+                      setTimeout(() => setNotificationStatus(null), 8000)
+                    }}
+                  >
+                    View Event Log
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const moveId = prompt("Enter Move ID to simulate deferral:")
+                      if (!moveId) return
+                      setNotificationStatus("Simulating deferral...")
+                      try {
+                        const res = await fetch("/api/test/simulate-deferral", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ moveId: Number.parseInt(moveId) }),
+                        })
+                        const data = await res.json()
+                        console.log("[v0] Deferral Simulation:", data)
+                        setNotificationStatus(data.message || data.error)
+                      } catch (err) {
+                        setNotificationStatus(`Error: ${err}`)
+                      }
+                      setTimeout(() => setNotificationStatus(null), 5000)
+                    }}
+                  >
+                    Simulate Deferral
+                  </Button>
                 </div>
                 <p className="mt-3 text-xs text-zinc-500">
-                  You can also ask Synapse: "Show me my avoidance patterns" or "What am I avoiding?"
+                  Test by: 1) Drag tasks backward (Active → Backlog) to log demotions. 2) Use "Simulate Deferral" with a
+                  move ID. 3) Check "View Event Log" to see all tracked events.
                 </p>
               </section>
             </>

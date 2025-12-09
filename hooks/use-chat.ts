@@ -180,6 +180,11 @@ export function useChat() {
             },
           ]
         })
+
+        localStorage.setItem("chat-last-message-time", new Date().toISOString())
+        // Mark as seen since user is actively chatting
+        localStorage.setItem("chat-last-seen", new Date().toISOString())
+        window.dispatchEvent(new Event("chat-message-received"))
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to send message")
         // Remove optimistic message on error
