@@ -19,6 +19,26 @@ import { FileText, Layers, CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -67,6 +87,82 @@ export default function MovesPage() {
   const [isNewMoveOpen, setIsNewMoveOpen] = useState(false)
   const [focusIndex, setFocusIndex] = useState(0)
   const isMobile = useIsMobile()
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // DND sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const activeMove = activeId ? moves.find((m) => m.id === activeId) : null
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (!over) return
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    // Determine the target column/status from the overId
+    let targetStatus: MoveStatus | null = null
+    let targetIndex = 0
+
+    // Check if dropped over a column
+    if (overId === "today-column") {
+      targetStatus = "today"
+      targetIndex = byStatus.today.length
+    } else if (overId === "upnext-column") {
+      targetStatus = "upnext"
+      targetIndex = byStatus.upnext.length
+    } else {
+      // Dropped over another card - find its status and index
+      const overMove = moves.find((m) => m.id === overId)
+      if (overMove) {
+        targetStatus = overMove.status as MoveStatus
+        const columnMoves = targetStatus === "today" ? byStatus.today : byStatus.upnext
+        targetIndex = columnMoves.findIndex((m) => m.id === overId)
+      }
+    }
+
+    if (!targetStatus) return
+
+    const draggedMove = moves.find((m) => m.id === activeId)
+    if (!draggedMove) return
+
+    // If same column, reorder
+    if (draggedMove.status === targetStatus) {
+      const columnMoves = targetStatus === "today" ? byStatus.today : byStatus.upnext
+      const oldIndex = columnMoves.findIndex((m) => m.id === activeId)
+      if (oldIndex !== targetIndex && oldIndex !== -1) {
+        const newOrder = [...columnMoves]
+        const [removed] = newOrder.splice(oldIndex, 1)
+        newOrder.splice(targetIndex > oldIndex ? targetIndex - 1 : targetIndex, 0, removed)
+        await reorderMoves(targetStatus, newOrder.map((m) => m.id))
+      }
+    } else {
+      // Move to different column
+      await updateMoveStatus(activeId, targetStatus, targetIndex)
+    }
+
+    refresh()
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    // Optional: visual feedback during drag
+  }
 
   const filteredMoves = useMemo(() => {
     return moves.filter((m) => {
@@ -256,44 +352,58 @@ export default function MovesPage() {
 
         <div className="hidden lg:block mt-6">
           {view === "board" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Today</h2>
-                {byStatus.today.length === 0 ? (
-                  <p className="text-zinc-500 text-sm">No tasks for today</p>
-                ) : (
-                  byStatus.today.map((move) => (
-                    <MoveCard
-                      key={move.id}
-                      move={move}
-                      variant="primary"
-                      onComplete={handleComplete}
-                      onEdit={() => setEditingMove(move)}
-                    />
-                  ))
-                )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <DroppableColumn id="today-column" title="Today" isEmpty={byStatus.today.length === 0}>
+                  <SortableContext items={byStatus.today.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                    {byStatus.today.map((move) => (
+                      <SortableMoveCard
+                        key={move.id}
+                        move={move}
+                        variant="primary"
+                        onComplete={handleComplete}
+                        onEdit={() => setEditingMove(move)}
+                        isDragging={activeId === move.id}
+                      />
+                    ))}
+                  </SortableContext>
+                </DroppableColumn>
+                <DroppableColumn id="upnext-column" title="Queued" isEmpty={byStatus.upnext.length === 0}>
+                  <SortableContext items={byStatus.upnext.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                    {byStatus.upnext.map((move) => (
+                      <SortableMoveCard
+                        key={move.id}
+                        move={move}
+                        variant="primary"
+                        onComplete={handleComplete}
+                        onEdit={() => setEditingMove(move)}
+                        isDragging={activeId === move.id}
+                      />
+                    ))}
+                  </SortableContext>
+                </DroppableColumn>
+                <div className="col-span-1">
+                  <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                  <GroupedBacklog onEditMove={handleEditFromBacklog} />
+                </div>
               </div>
-              <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Queued</h2>
-                {byStatus.upnext.length === 0 ? (
-                  <p className="text-zinc-500 text-sm">No queued tasks</p>
-                ) : (
-                  byStatus.upnext.map((move) => (
-                    <MoveCard
-                      key={move.id}
-                      move={move}
-                      variant="primary"
-                      onComplete={handleComplete}
-                      onEdit={() => setEditingMove(move)}
-                    />
-                  ))
-                )}
-              </div>
-              <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
-                <GroupedBacklog onEditMove={handleEditFromBacklog} />
-              </div>
-            </div>
+              <DragOverlay>
+                {activeMove ? (
+                  <MoveCard
+                    move={activeMove}
+                    variant="primary"
+                    onComplete={handleComplete}
+                    isDragging={true}
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
 
           {view === "list" && (
@@ -602,5 +712,84 @@ function UndoToast({
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+function DroppableColumn({
+  id,
+  title,
+  isEmpty,
+  children,
+}: {
+  id: string
+  title: string
+  isEmpty: boolean
+  children: React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: { type: "column" },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`col-span-1 min-h-[200px] rounded-xl transition-colors ${
+        isOver ? "bg-fuchsia-500/5 ring-2 ring-fuchsia-500/30" : ""
+      }`}
+    >
+      <h2 className="text-xl font-bold text-zinc-100 mb-3">{title}</h2>
+      {isEmpty && !isOver ? (
+        <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-xl">
+          <p className="text-zinc-500 text-sm">Drop tasks here</p>
+        </div>
+      ) : (
+        <div className="space-y-3">{children}</div>
+      )}
+    </div>
+  )
+}
+
+function SortableMoveCard({
+  move,
+  variant,
+  onComplete,
+  onEdit,
+  isDragging: isActiveDragging = false,
+}: {
+  move: Move
+  variant: MoveVariant
+  onComplete: (id: string) => Promise<void>
+  onEdit?: () => void
+  isDragging?: boolean
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: move.id,
+    data: { type: "move", move },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <MoveCard
+        move={move}
+        variant={variant}
+        onComplete={onComplete}
+        onEdit={onEdit}
+        isDragging={isDragging || isActiveDragging}
+      />
+    </div>
   )
 }
