@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DAILY_TARGET_MINUTES } from "@/lib/constants"
 
 export function CompletionHeatmap() {
   const isMobile = useIsMobile()
-  const { heatmap, isLoading } = useHeatmap(isMobile ? 2 : 12) // 14 days on mobile, 84 on desktop
+  const { heatmap, isLoading } = useHeatmap(isMobile ? 2 : 12)
 
   if (isLoading) {
     return (
@@ -19,7 +20,6 @@ export function CompletionHeatmap() {
     )
   }
 
-  // Calculate streak
   let currentStreak = 0
   for (let i = heatmap.length - 1; i >= 0; i--) {
     if (heatmap[i].count > 0) {
@@ -29,18 +29,11 @@ export function CompletionHeatmap() {
     }
   }
 
-  // Total stats
   const totalMoves = heatmap.reduce((sum, d) => sum + d.count, 0)
   const totalMinutes = heatmap.reduce((sum, d) => sum + d.minutes, 0)
   const activeDays = heatmap.filter((d) => d.count > 0).length
 
-  const levelColors = [
-    "bg-muted/50", // 0 - no activity
-    "bg-emerald-900", // 1 - <50%
-    "bg-emerald-700", // 2 - 50-75%
-    "bg-emerald-500", // 3 - 75-100%
-    "bg-emerald-400", // 4 - 100%+
-  ]
+  const levelColors = ["bg-muted/50", "bg-emerald-900", "bg-emerald-700", "bg-emerald-500", "bg-emerald-400"]
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -63,8 +56,8 @@ export function CompletionHeatmap() {
   }
 
   if (isMobile) {
-    const DAILY_GOAL = 180
-    const last14Days = heatmap.slice(-14).reverse() // Most recent first
+    const DAILY_GOAL = DAILY_TARGET_MINUTES
+    const last14Days = heatmap.slice(-14).reverse()
 
     return (
       <Card className="bg-card/50 border-border/50">
@@ -73,7 +66,6 @@ export function CompletionHeatmap() {
             <Flame className="h-5 w-5 text-orange-500" />
             Activity
           </CardTitle>
-          {/* Stats stacked below title on mobile */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
             <span>{totalMoves} moves</span>
             <span>{Math.round(totalMinutes / 60)}h total</span>
@@ -106,7 +98,6 @@ export function CompletionHeatmap() {
     )
   }
 
-  // Desktop variant - GitHub-style grid
   const weeks: (typeof heatmap)[] = []
   for (let i = 0; i < heatmap.length; i += 7) {
     weeks.push(heatmap.slice(i, i + 7))
@@ -155,7 +146,6 @@ export function CompletionHeatmap() {
           </div>
         </TooltipProvider>
 
-        {/* Legend */}
         <div className="flex items-center justify-end gap-2 mt-3 text-xs text-muted-foreground">
           <span>Less</span>
           {levelColors.map((color, i) => (

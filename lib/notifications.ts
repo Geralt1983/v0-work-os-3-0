@@ -1,4 +1,5 @@
 // Notification service with ntfy.sh integration for progress milestones and summaries
+import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES } from "@/lib/constants"
 
 const TOPIC = "Jeremys-Impressive-Work-Updates"
 
@@ -47,23 +48,45 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 }
 
-export async function sendMilestoneAlert(percent: number, movesCount: number) {
-  const messages: Record<number, string> = {
-    25: `🚀 25% Complete (${movesCount} moves)`,
-    50: `🔥 50% Done. Halfway there!`,
-    75: `😤 75% Done. Crushing it.`,
-    100: `✅ 100% FINISHED. Day complete!`,
-    125: `🌟 125% - Above and beyond!`,
-    150: `🏆 150% - Legendary performance!`,
+export async function sendMilestoneAlert(percent: number, movesCount: number, earnedMinutes?: number) {
+  const minutes = earnedMinutes || 0
+  const minimumMet = minutes >= DAILY_MINIMUM_MINUTES
+  const targetMet = minutes >= DAILY_TARGET_MINUTES
+  const toMinimum = Math.max(0, DAILY_MINIMUM_MINUTES - minutes)
+  const toTarget = Math.max(0, DAILY_TARGET_MINUTES - minutes)
+
+  let message: string
+  let priority: "min" | "low" | "default" | "high" | "urgent" = "default"
+
+  if (targetMet || percent >= 100) {
+    message = `🎯 TARGET HIT! ${minutes} min earned (4 hour goal complete!)`
+    priority = "high"
+  } else if (minimumMet) {
+    message = `✅ MINIMUM MET! ${minutes} min earned. ${toTarget} more for target.`
+    priority = "high"
+  } else if (percent >= 75) {
+    message = `🔥 75% to target! ${minutes} min earned. ${toMinimum} to minimum, ${toTarget} to target.`
+  } else if (percent >= 50) {
+    message = `⚡ Halfway to target! ${minutes} min earned. ${toMinimum} to minimum.`
+  } else if (percent >= 25) {
+    message = `🚀 25% to target! ${minutes} min earned (${movesCount} moves). Keep going!`
+  } else {
+    message = `📊 Progress: ${minutes} min earned (${movesCount} moves).`
   }
 
-  const message = messages[percent]
-  if (!message) return { success: false, error: "Invalid milestone" }
+  // Also check for exceeding target
+  if (percent >= 150) {
+    message = `🏆 150% - Legendary! ${minutes} min earned!`
+    priority = "high"
+  } else if (percent >= 125) {
+    message = `🌟 125% - Above and beyond! ${minutes} min earned!`
+    priority = "high"
+  }
 
   return sendNotification(message, {
     title: "Work OS Update",
     tags: "tada,chart_with_upwards_trend",
-    priority: percent >= 100 ? "high" : "default",
+    priority,
   })
 }
 
@@ -76,17 +99,20 @@ export function formatMorningSummary(stats: {
   staleClients: string[]
 }) {
   const pct = Math.round((stats.weekMinutes / stats.weekTarget) * 100)
-  let msg = `📊 Week So Far: ${stats.weekMoves} moves (${stats.weekMinutes}/${stats.weekTarget} min = ${pct}%)\n`
+  let msg = `☀️ Good morning!\n\n`
+  msg += `📊 Week so far: ${stats.weekMoves} moves (${stats.weekMinutes}/${stats.weekTarget} min = ${pct}%)\n\n`
+  msg += `🎯 Today's goals:\n`
+  msg += `   • Minimum: ${DAILY_MINIMUM_MINUTES} min (3 hours)\n`
+  msg += `   • Target: ${DAILY_TARGET_MINUTES} min (4 hours)\n`
 
   if (stats.bestDay) {
-    msg += `🏆 Best: ${stats.bestDay.day} (${stats.bestDay.moves} moves)\n`
-  }
-  if (stats.worstDay) {
-    msg += `📉 Lowest: ${stats.worstDay.day} (${stats.worstDay.moves} moves)\n`
+    msg += `\n🏆 Best day: ${stats.bestDay.day} (${stats.bestDay.moves} moves)`
   }
   if (stats.staleClients.length > 0) {
-    msg += `⚠️ Stale: ${stats.staleClients.join(", ")}`
+    msg += `\n\n⚠️ Stale clients: ${stats.staleClients.join(", ")}`
   }
+
+  msg += `\n\nLet's get after it! 💪`
 
   return msg
 }
@@ -98,15 +124,29 @@ export function formatAfternoonSummary(stats: {
   clientsTouched: string[]
   remainingActive: number
 }) {
-  const pct = Math.round((stats.todayMinutes / stats.targetMinutes) * 100)
-  let msg = `⏰ Day So Far: ${stats.todayMoves} moves (${pct}%)\n`
-  msg += `📈 ${stats.todayMinutes}/${stats.targetMinutes} min earned\n`
+  const minimumMet = stats.todayMinutes >= DAILY_MINIMUM_MINUTES
+  const targetMet = stats.todayMinutes >= DAILY_TARGET_MINUTES
+  const percentOfTarget = Math.round((stats.todayMinutes / DAILY_TARGET_MINUTES) * 100)
 
-  if (stats.clientsTouched.length > 0) {
-    msg += `✅ Touched: ${stats.clientsTouched.join(", ")}\n`
+  let msg = `🌤️ Afternoon Check-in\n\n`
+  msg += `📊 Today: ${stats.todayMinutes} min earned (${stats.todayMoves} moves) - ${percentOfTarget}%\n`
+
+  if (targetMet) {
+    msg += `🎯 TARGET HIT! You've crushed today.\n`
+  } else if (minimumMet) {
+    const remaining = DAILY_TARGET_MINUTES - stats.todayMinutes
+    msg += `✅ Minimum met! ${remaining} min more for target.\n`
+  } else {
+    const toMinimum = DAILY_MINIMUM_MINUTES - stats.todayMinutes
+    const toTarget = DAILY_TARGET_MINUTES - stats.todayMinutes
+    msg += `⏳ ${toMinimum} min to minimum, ${toTarget} min to target\n`
   }
 
-  msg += `📋 ${stats.remainingActive} active moves remaining`
+  if (stats.clientsTouched.length > 0) {
+    msg += `\n✅ Touched: ${stats.clientsTouched.join(", ")}`
+  }
+
+  msg += `\n📋 ${stats.remainingActive} active moves remaining`
 
   return msg
 }

@@ -88,6 +88,11 @@ export default function MovesPage() {
   const [focusIndex, setFocusIndex] = useState(0)
   const isMobile = useIsMobile()
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [draggedItems, setDraggedItems] = useState<{
+    today: Move[]
+    upnext: Move[]
+  } | null>(null)
+  const [recentlyDropped, setRecentlyDropped] = useState<string | null>(null)
 
   // DND sensors
   const sensors = useSensors(
@@ -98,23 +103,33 @@ export default function MovesPage() {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   )
 
   const activeMove = activeId ? moves.find((m) => m.id === activeId) : null
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
+    setDraggedItems({
+      today: moves.filter((m) => m.status === "today"),
+      upnext: moves.filter((m) => m.status === "upnext"),
+    })
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
 
-    if (!over) return
+    const finalItems = draggedItems
+    setDraggedItems(null)
+
+    if (!over || !finalItems) return
 
     const activeId = active.id as string
     const overId = over.id as string
+
+    const draggedMove = moves.find((m) => m.id === activeId)
+    if (!draggedMove) return
 
     // Determine the target column/status from the overId
     let targetStatus: MoveStatus | null = null
@@ -123,45 +138,121 @@ export default function MovesPage() {
     // Check if dropped over a column
     if (overId === "today-column") {
       targetStatus = "today"
-      targetIndex = byStatus.today.length
+      targetIndex = finalItems.today.length
     } else if (overId === "upnext-column") {
       targetStatus = "upnext"
-      targetIndex = byStatus.upnext.length
+      targetIndex = finalItems.upnext.length
     } else {
-      // Dropped over another card - find its status and index
-      const overMove = moves.find((m) => m.id === overId)
-      if (overMove) {
-        targetStatus = overMove.status as MoveStatus
-        const columnMoves = targetStatus === "today" ? byStatus.today : byStatus.upnext
-        targetIndex = columnMoves.findIndex((m) => m.id === overId)
+      // Dropped over another card - find its status and index in the dragged state
+      const overMoveInToday = finalItems.today.find((m) => m.id === overId)
+      const overMoveInUpnext = finalItems.upnext.find((m) => m.id === overId)
+
+      if (overMoveInToday) {
+        targetStatus = "today"
+        targetIndex = finalItems.today.findIndex((m) => m.id === overId)
+      } else if (overMoveInUpnext) {
+        targetStatus = "upnext"
+        targetIndex = finalItems.upnext.findIndex((m) => m.id === overId)
       }
     }
 
     if (!targetStatus) return
 
-    const draggedMove = moves.find((m) => m.id === activeId)
-    if (!draggedMove) return
+    // Get the final order from draggedItems for the target column
+    const targetColumnItems = targetStatus === "today" ? finalItems.today : finalItems.upnext
+    const newOrder = targetColumnItems.map((m) => m.id)
 
-    // If same column, reorder
-    if (draggedMove.status === targetStatus) {
-      const columnMoves = targetStatus === "today" ? byStatus.today : byStatus.upnext
-      const oldIndex = columnMoves.findIndex((m) => m.id === activeId)
-      if (oldIndex !== targetIndex && oldIndex !== -1) {
-        const newOrder = [...columnMoves]
-        const [removed] = newOrder.splice(oldIndex, 1)
-        newOrder.splice(targetIndex > oldIndex ? targetIndex - 1 : targetIndex, 0, removed)
-        await reorderMoves(targetStatus, newOrder.map((m) => m.id))
-      }
-    } else {
-      // Move to different column
+    // If moving to a different column, update status first then reorder
+    if (draggedMove.status !== targetStatus) {
+      // Update status AND provide the full new order for the target column
       await updateMoveStatus(activeId, targetStatus, targetIndex)
+      // Wait a bit for the status update to propagate, then reorder
+      await reorderMoves(targetStatus, newOrder)
+    } else {
+      // Same column - just reorder
+      await reorderMoves(targetStatus, newOrder)
     }
 
-    refresh()
+    setRecentlyDropped(activeId)
+    setTimeout(() => {
+      setRecentlyDropped(null)
+    }, 400)
   }
 
   const handleDragOver = (event: DragOverEvent) => {
-    // Optional: visual feedback during drag
+    const { active, over } = event
+    if (!over || !draggedItems) return
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    // Find which column the active item is currently in (in draggedItems state)
+    const activeInToday = draggedItems.today.some((m) => m.id === activeId)
+    const activeInUpnext = draggedItems.upnext.some((m) => m.id === activeId)
+    const activeColumn = activeInToday ? "today" : activeInUpnext ? "upnext" : null
+
+    if (!activeColumn) return
+
+    // Find the active move
+    const activeMove = draggedItems[activeColumn].find((m) => m.id === activeId)
+    if (!activeMove) return
+
+    // Determine target column
+    let targetColumn: "today" | "upnext" | null = null
+
+    if (overId === "today-column") {
+      targetColumn = "today"
+    } else if (overId === "upnext-column") {
+      targetColumn = "upnext"
+    } else {
+      // Over a card - find which column it's in
+      if (draggedItems.today.some((m) => m.id === overId)) {
+        targetColumn = "today"
+      } else if (draggedItems.upnext.some((m) => m.id === overId)) {
+        targetColumn = "upnext"
+      }
+    }
+
+    if (!targetColumn) return
+
+    // If moving within the same column - use insert logic
+    if (activeColumn === targetColumn) {
+      const items = [...draggedItems[targetColumn]]
+      const activeIndex = items.findIndex((m) => m.id === activeId)
+      const overIndex = overId.endsWith("-column") ? items.length - 1 : items.findIndex((m) => m.id === overId)
+
+      if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
+        // Remove from old position
+        items.splice(activeIndex, 1)
+        // Insert at new position
+        items.splice(overIndex, 0, activeMove)
+
+        setDraggedItems({
+          ...draggedItems,
+          [targetColumn]: items,
+        })
+      }
+    } else {
+      // Moving between columns - remove from source, insert in target
+      const sourceItems = draggedItems[activeColumn].filter((m) => m.id !== activeId)
+      const targetItems = [...draggedItems[targetColumn]]
+
+      // Find insertion index
+      const overIndex = overId.endsWith("-column") ? targetItems.length : targetItems.findIndex((m) => m.id === overId)
+
+      // Insert at the target position
+      if (overIndex === -1) {
+        targetItems.push(activeMove)
+      } else {
+        targetItems.splice(overIndex, 0, activeMove)
+      }
+
+      setDraggedItems({
+        ...draggedItems,
+        [activeColumn]: sourceItems,
+        [targetColumn]: targetItems,
+      })
+    }
   }
 
   const filteredMoves = useMemo(() => {
@@ -202,6 +293,8 @@ export default function MovesPage() {
   ] as const
 
   const [activeTab, setActiveTab] = useState<"today" | "upnext" | "backlog">("today")
+
+  const displayItems = draggedItems || byStatus
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -360,9 +453,9 @@ export default function MovesPage() {
               onDragOver={handleDragOver}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DroppableColumn id="today-column" title="Today" isEmpty={byStatus.today.length === 0}>
-                  <SortableContext items={byStatus.today.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-                    {byStatus.today.map((move) => (
+                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0}>
+                  <SortableContext items={displayItems.today.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                    {displayItems.today.map((move) => (
                       <SortableMoveCard
                         key={move.id}
                         move={move}
@@ -370,13 +463,14 @@ export default function MovesPage() {
                         onComplete={handleComplete}
                         onEdit={() => setEditingMove(move)}
                         isDragging={activeId === move.id}
+                        justDropped={recentlyDropped === move.id}
                       />
                     ))}
                   </SortableContext>
                 </DroppableColumn>
-                <DroppableColumn id="upnext-column" title="Queued" isEmpty={byStatus.upnext.length === 0}>
-                  <SortableContext items={byStatus.upnext.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-                    {byStatus.upnext.map((move) => (
+                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0}>
+                  <SortableContext items={displayItems.upnext.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                    {displayItems.upnext.map((move) => (
                       <SortableMoveCard
                         key={move.id}
                         move={move}
@@ -384,6 +478,7 @@ export default function MovesPage() {
                         onComplete={handleComplete}
                         onEdit={() => setEditingMove(move)}
                         isDragging={activeId === move.id}
+                        justDropped={recentlyDropped === move.id}
                       />
                     ))}
                   </SortableContext>
@@ -393,14 +488,16 @@ export default function MovesPage() {
                   <GroupedBacklog onEditMove={handleEditFromBacklog} />
                 </div>
               </div>
-              <DragOverlay>
+              <DragOverlay
+                dropAnimation={{
+                  duration: 300,
+                  easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
+              >
                 {activeMove ? (
-                  <MoveCard
-                    move={activeMove}
-                    variant="primary"
-                    onComplete={handleComplete}
-                    isDragging={true}
-                  />
+                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-fuchsia-500/50 rounded-2xl">
+                    <MoveCard move={activeMove} variant="primary" onComplete={handleComplete} isDragging={true} />
+                  </div>
                 ) : null}
               </DragOverlay>
             </DndContext>
@@ -458,10 +555,10 @@ export default function MovesPage() {
         <div className="lg:hidden mt-4">
           <div className="flex flex-col gap-4">
             {activeTab === "today" &&
-              (byStatus.today.length === 0 ? (
+              (displayItems.today.length === 0 ? (
                 <p className="text-zinc-500 text-sm text-center py-4">No tasks for today</p>
               ) : (
-                byStatus.today.map((move) => (
+                displayItems.today.map((move) => (
                   <MoveCard
                     key={move.id}
                     move={move}
@@ -472,10 +569,10 @@ export default function MovesPage() {
                 ))
               ))}
             {activeTab === "upnext" &&
-              (byStatus.upnext.length === 0 ? (
+              (displayItems.upnext.length === 0 ? (
                 <p className="text-zinc-500 text-sm text-center py-4">No queued tasks</p>
               ) : (
-                byStatus.upnext.map((move) => (
+                displayItems.upnext.map((move) => (
                   <MoveCard
                     key={move.id}
                     move={move}
@@ -755,40 +852,45 @@ function SortableMoveCard({
   variant,
   onComplete,
   onEdit,
-  isDragging: isActiveDragging = false,
+  isDragging: isDraggingProp,
+  justDropped,
 }: {
   move: Move
-  variant: MoveVariant
-  onComplete: (id: string) => Promise<void>
-  onEdit?: () => void
+  variant: "primary" | "secondary"
+  onComplete: (id: string) => void
+  onEdit: () => void
   isDragging?: boolean
+  justDropped?: boolean
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: move.id,
     data: { type: "move", move },
   })
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    // When just dropped, use spring animation for "thud" effect
+    transition: justDropped
+      ? "transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease"
+      : transition || "transform 200ms ease",
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : "auto",
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`touch-none ${justDropped ? "animate-thud" : ""}`}
+    >
       <MoveCard
         move={move}
         variant={variant}
         onComplete={onComplete}
         onEdit={onEdit}
-        isDragging={isDragging || isActiveDragging}
+        isDragging={isDragging || isDraggingProp}
       />
     </div>
   )

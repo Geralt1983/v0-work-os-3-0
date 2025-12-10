@@ -293,24 +293,36 @@ export function useMoves() {
       updateLocalMove(id, { status: newStatus })
     }
 
+    // Calculate the new sortOrder based on insertAtIndex
+    let newSortOrder: number | undefined
+    if (insertAtIndex !== undefined) {
+      const targetMoves = moves
+        .filter((m) => m.status === newStatus)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+      if (targetMoves.length === 0) {
+        newSortOrder = 0
+      } else if (insertAtIndex === 0) {
+        // Insert at beginning - use sortOrder less than the first item
+        newSortOrder = (targetMoves[0]?.sortOrder ?? 0) - 1
+      } else if (insertAtIndex >= targetMoves.length) {
+        // Insert at end - use sortOrder greater than the last item
+        newSortOrder = (targetMoves[targetMoves.length - 1]?.sortOrder ?? 0) + 1
+      } else {
+        // Insert in middle - use average of surrounding items
+        const before = targetMoves[insertAtIndex - 1]?.sortOrder ?? 0
+        const after = targetMoves[insertAtIndex]?.sortOrder ?? 0
+        newSortOrder = (before + after) / 2
+      }
+    }
+
     mutate((current: Move[] | undefined) => {
       if (!current) return current
       const moveToUpdate = current.find((m) => m.id === id)
       if (!moveToUpdate) return current
 
       const withoutMove = current.filter((m) => m.id !== id)
-      const updatedMove = { ...moveToUpdate, status: newStatus }
-
-      if (insertAtIndex !== undefined) {
-        const targetMoves = withoutMove.filter((m) => m.status === newStatus)
-        const otherMoves = withoutMove.filter((m) => m.status !== newStatus)
-        const newTargetMoves = [
-          ...targetMoves.slice(0, insertAtIndex),
-          updatedMove,
-          ...targetMoves.slice(insertAtIndex),
-        ]
-        return [...otherMoves, ...newTargetMoves]
-      }
+      const updatedMove = { ...moveToUpdate, status: newStatus, sortOrder: newSortOrder }
 
       return [...withoutMove, updatedMove]
     }, false)
@@ -320,10 +332,10 @@ export function useMoves() {
         method: "PATCH",
         body: JSON.stringify({
           status: statusToBackend[newStatus],
-          ...(insertAtIndex !== undefined && { sortOrder: insertAtIndex }),
+          sortOrder: newSortOrder,
         }),
       })
-      mutate()
+      // Don't call mutate() here - let reorderMoves handle the final state
     } catch (err) {
       if (!shouldUseMockMode()) throw err
       console.log("[v0] updateMoveStatus: API failed in preview, using local state")
@@ -331,13 +343,23 @@ export function useMoves() {
   }
 
   const reorderMoves = async (status: MoveStatus, orderedIds: string[]) => {
+    // Optimistically update local state with new order
     mutate((current: Move[] | undefined) => {
       if (!current) return current
       const statusMoves = current.filter((m) => m.status === status)
       const otherMoves = current.filter((m) => m.status !== status)
+
+      // Reorder and assign new sortOrder values
       const reordered = orderedIds
-        .map((id) => statusMoves.find((m) => m.id === id))
-        .filter((m): m is Move => m !== undefined)
+        .map((id, index) => {
+          const move = statusMoves.find((m) => m.id === id)
+          if (move) {
+            return { ...move, sortOrder: index }
+          }
+          return null
+        })
+        .filter((m): m is Move => m !== null)
+
       return [...otherMoves, ...reordered]
     }, false)
 
@@ -349,6 +371,7 @@ export function useMoves() {
           orderedIds: orderedIds.map((id) => Number.parseInt(id, 10)),
         }),
       })
+      // Revalidate after successful API call to get confirmed state
       mutate()
     } catch (err) {
       if (!shouldUseMockMode()) throw err
