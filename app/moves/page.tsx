@@ -8,7 +8,7 @@ import { NewMoveDialog } from "@/components/new-move-dialog"
 import { EditMoveDialog } from "@/components/edit-move-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair, EyeOff, Eye } from "lucide-react"
+import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -27,12 +27,22 @@ type SortDir = "asc" | "desc"
 type MoveStatus = "today" | "upnext" | "backlog" | "done"
 
 export default function MovesPage() {
-  const { moves, isLoading, completeMove, updateMoveStatus, reorderMoves, createMove, updateMove, updateSubtasks, setSubtasksFromTitles, refresh } = useMoves()
+  const {
+    moves,
+    isLoading,
+    completeMove,
+    updateMoveStatus,
+    reorderMoves,
+    createMove,
+    updateMove,
+    updateSubtasks,
+    setSubtasksFromTitles,
+    refresh,
+  } = useMoves()
   const { clients } = useClients()
 
   const [view, setView] = useState<MovesView>("board")
   const [clientFilter, setClientFilter] = useState("all")
-  const [showBacklog, setShowBacklog] = useState(true)
   const clientOptions = useMemo(() => {
     const names = new Set(moves.map((m) => m.client).filter(Boolean))
     return Array.from(names).sort() as string[]
@@ -84,12 +94,18 @@ export default function MovesPage() {
     refresh()
   }
 
+  const handleEditFromBacklog = (taskId: number) => {
+    const move = moves.find((m) => m.id === taskId.toString())
+    if (move) setEditingMove(move)
+  }
+
   const mobileTabs = [
     { key: "today", label: "Today", count: byStatus.today.length },
     { key: "upnext", label: "Queued", count: byStatus.upnext.length },
+    { key: "backlog", label: "Backlog", count: byStatus.backlog.length },
   ] as const
 
-  const [activeTab, setActiveTab] = useState<"today" | "upnext">("today")
+  const [activeTab, setActiveTab] = useState<"today" | "upnext" | "backlog">("today")
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -120,16 +136,6 @@ export default function MovesPage() {
               ))}
             </SelectContent>
           </Select>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowBacklog(!showBacklog)}
-            className="border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 h-9"
-          >
-            {showBacklog ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-            {showBacklog ? "Hide Backlog" : "Show Backlog"}
-          </Button>
 
           <Button
             size="sm"
@@ -194,7 +200,7 @@ export default function MovesPage() {
 
           <div className="flex items-center gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-700 text-zinc-100">
+              <SelectTrigger className="w-[130px] bg-zinc-900 border-zinc-700 text-zinc-100">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -252,68 +258,89 @@ export default function MovesPage() {
           {view === "board" && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100">Today</h2>
-                {byStatus.today.map((move) => (
-                  <MoveCard
-                    key={move.id}
-                    move={move}
-                    variant="primary"
-                    onComplete={handleComplete}
-                    onEdit={() => setEditingMove(move)}
-                  />
-                ))}
-              </div>
-              <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100">Queued</h2>
-                {byStatus.upnext.map((move) => (
-                  <MoveCard
-                    key={move.id}
-                    move={move}
-                    variant="primary"
-                    onComplete={handleComplete}
-                    onEdit={() => setEditingMove(move)}
-                  />
-                ))}
-              </div>
-              <div className="col-span-1">
-                <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
-                {showBacklog && (
-                  <GroupedBacklog
-                    onEditMove={(taskId) => {
-                      const move = moves.find((m) => m.id === taskId.toString())
-                      if (move) setEditingMove(move)
-                    }}
-                  />
+                <h2 className="text-xl font-bold text-zinc-100 mb-3">Today</h2>
+                {byStatus.today.length === 0 ? (
+                  <p className="text-zinc-500 text-sm">No tasks for today</p>
+                ) : (
+                  byStatus.today.map((move) => (
+                    <MoveCard
+                      key={move.id}
+                      move={move}
+                      variant="primary"
+                      onComplete={handleComplete}
+                      onEdit={() => setEditingMove(move)}
+                    />
+                  ))
                 )}
               </div>
+              <div className="col-span-1">
+                <h2 className="text-xl font-bold text-zinc-100 mb-3">Queued</h2>
+                {byStatus.upnext.length === 0 ? (
+                  <p className="text-zinc-500 text-sm">No queued tasks</p>
+                ) : (
+                  byStatus.upnext.map((move) => (
+                    <MoveCard
+                      key={move.id}
+                      move={move}
+                      variant="primary"
+                      onComplete={handleComplete}
+                      onEdit={() => setEditingMove(move)}
+                    />
+                  ))
+                )}
+              </div>
+              <div className="col-span-1">
+                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <GroupedBacklog onEditMove={handleEditFromBacklog} />
+              </div>
             </div>
           )}
+
           {view === "list" && (
-            <div className="flex flex-col gap-4">
-              {filteredMoves.map((move) => (
-                <MoveCard
-                  key={move.id}
-                  move={move}
-                  variant="compact"
-                  onComplete={handleComplete}
-                  onEdit={() => setEditingMove(move)}
-                />
-              ))}
+            <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                {filteredMoves
+                  .filter((m) => m.status === "today" || m.status === "upnext")
+                  .map((move) => (
+                    <MoveCard
+                      key={move.id}
+                      move={move}
+                      variant="compact"
+                      onComplete={handleComplete}
+                      onEdit={() => setEditingMove(move)}
+                    />
+                  ))}
+              </div>
+              <div className="pt-4 border-t border-zinc-800">
+                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <GroupedBacklog onEditMove={handleEditFromBacklog} />
+              </div>
             </div>
           )}
+
           {view === "focus" && (
-            <div className="flex flex-col gap-4">
-              {activeMoves.map((move, index) => (
-                <MoveCard
-                  key={move.id}
-                  move={move}
-                  variant="primary"
-                  onComplete={handleComplete}
-                  onEdit={() => setEditingMove(move)}
-                  isDragging={focusIndex === index}
-                  onClick={() => setFocusIndex(index)}
-                />
-              ))}
+            <div className="space-y-6">
+              <div className="flex flex-col gap-4">
+                {activeMoves.length === 0 ? (
+                  <p className="text-zinc-500 text-center py-8">No active tasks. Promote something from backlog!</p>
+                ) : (
+                  activeMoves.map((move, index) => (
+                    <MoveCard
+                      key={move.id}
+                      move={move}
+                      variant="primary"
+                      onComplete={handleComplete}
+                      onEdit={() => setEditingMove(move)}
+                      isDragging={focusIndex === index}
+                      onClick={() => setFocusIndex(index)}
+                    />
+                  ))
+                )}
+              </div>
+              <div className="pt-4 border-t border-zinc-800">
+                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <GroupedBacklog onEditMove={handleEditFromBacklog} />
+              </div>
             </div>
           )}
         </div>
@@ -321,25 +348,34 @@ export default function MovesPage() {
         <div className="lg:hidden mt-4">
           <div className="flex flex-col gap-4">
             {activeTab === "today" &&
-              byStatus.today.map((move) => (
-                <MoveCard
-                  key={move.id}
-                  move={move}
-                  variant="compact"
-                  onComplete={handleComplete}
-                  onEdit={() => setEditingMove(move)}
-                />
+              (byStatus.today.length === 0 ? (
+                <p className="text-zinc-500 text-sm text-center py-4">No tasks for today</p>
+              ) : (
+                byStatus.today.map((move) => (
+                  <MoveCard
+                    key={move.id}
+                    move={move}
+                    variant="compact"
+                    onComplete={handleComplete}
+                    onEdit={() => setEditingMove(move)}
+                  />
+                ))
               ))}
             {activeTab === "upnext" &&
-              byStatus.upnext.map((move) => (
-                <MoveCard
-                  key={move.id}
-                  move={move}
-                  variant="compact"
-                  onComplete={handleComplete}
-                  onEdit={() => setEditingMove(move)}
-                />
+              (byStatus.upnext.length === 0 ? (
+                <p className="text-zinc-500 text-sm text-center py-4">No queued tasks</p>
+              ) : (
+                byStatus.upnext.map((move) => (
+                  <MoveCard
+                    key={move.id}
+                    move={move}
+                    variant="compact"
+                    onComplete={handleComplete}
+                    onEdit={() => setEditingMove(move)}
+                  />
+                ))
               ))}
+            {activeTab === "backlog" && <GroupedBacklog onEditMove={handleEditFromBacklog} />}
           </div>
         </div>
 
