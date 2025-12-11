@@ -30,6 +30,7 @@ export const moves = pgTable("moves", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
+  backlogEnteredAt: timestamp("backlog_entered_at", { withTimezone: true }),
 })
 
 // =============================================================================
