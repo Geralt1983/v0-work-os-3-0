@@ -314,20 +314,47 @@ export default function MovesPage() {
   const displayItems = draggedItems || byStatus
 
   function BacklogDropZone({ children }: { children: React.ReactNode }) {
-    const { setNodeRef, isOver } = useDroppable({
+    const { setNodeRef, isOver, active } = useDroppable({
       id: "backlog-column",
-      data: { type: "column" },
+      data: { type: "column", status: "backlog" },
     })
+
+    // Show drop target when any drag is active
+    const showDropTarget = !!active
 
     return (
       <div
         ref={setNodeRef}
-        className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
-          isOver ? "bg-fuchsia-500/10 ring-2 ring-fuchsia-500/30 scale-[1.01]" : ""
+        className={`col-span-1 rounded-xl transition-all duration-200 relative ${
+          isOver
+            ? "bg-fuchsia-500/20 ring-2 ring-fuchsia-500/50 scale-[1.01]"
+            : showDropTarget
+              ? "ring-1 ring-dashed ring-zinc-600"
+              : ""
         }`}
       >
-        <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
-        {children}
+        {showDropTarget && (
+          <div
+            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${
+              isOver ? "bg-fuchsia-500/10" : "bg-transparent"
+            }`}
+          />
+        )}
+        <h2 className="text-xl font-bold text-zinc-100 mb-3 relative z-20">Backlog</h2>
+        <div className="relative z-0">{children}</div>
+        {showDropTarget && (
+          <div
+            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${
+              isOver
+                ? "bg-fuchsia-500/20 border-2 border-dashed border-fuchsia-500/50"
+                : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
+            }`}
+          >
+            <span className={`text-sm ${isOver ? "text-fuchsia-400" : "text-zinc-500"}`}>
+              {isOver ? "Release to move to backlog" : "Drop here to send to backlog"}
+            </span>
+          </div>
+        )}
       </div>
     )
   }

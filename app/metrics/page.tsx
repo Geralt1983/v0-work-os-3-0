@@ -177,11 +177,15 @@ export default function MetricsDashboard() {
         body: JSON.stringify({ message: "Test notification from Work-OS Metrics page" }),
       })
       const data = await res.json()
-      setNotificationStatus(data.success ? "Test sent!" : `Failed: ${data.error}`)
+      if (!res.ok) {
+        setNotificationStatus(`Failed: HTTP ${res.status} - ${data.error || "Unknown error"}`)
+      } else {
+        setNotificationStatus(data.success ? "Test sent!" : `Failed: ${data.error || "Unknown error"}`)
+      }
     } catch (err) {
       setNotificationStatus(`Error: ${err}`)
     }
-    setTimeout(() => setNotificationStatus(null), 3000)
+    setTimeout(() => setNotificationStatus(null), 5000)
   }
 
   const sendMorningSummary = async () => {
@@ -189,11 +193,15 @@ export default function MetricsDashboard() {
     try {
       const res = await fetch("/api/notifications/morning-summary")
       const data = await res.json()
-      setNotificationStatus(data.success ? "Morning summary sent!" : `Failed: ${data.error}`)
+      if (!res.ok) {
+        setNotificationStatus(`Failed: HTTP ${res.status} - ${data.error || data.details || "Unknown error"}`)
+      } else {
+        setNotificationStatus(data.success ? "Morning summary sent!" : `Failed: ${data.error || "Unknown error"}`)
+      }
     } catch (err) {
       setNotificationStatus(`Error: ${err}`)
     }
-    setTimeout(() => setNotificationStatus(null), 3000)
+    setTimeout(() => setNotificationStatus(null), 5000)
   }
 
   const sendAfternoonSummary = async () => {
@@ -201,11 +209,15 @@ export default function MetricsDashboard() {
     try {
       const res = await fetch("/api/notifications/afternoon-summary")
       const data = await res.json()
-      setNotificationStatus(data.success ? "Afternoon summary sent!" : `Failed: ${data.error}`)
+      if (!res.ok) {
+        setNotificationStatus(`Failed: HTTP ${res.status} - ${data.error || data.details || "Unknown error"}`)
+      } else {
+        setNotificationStatus(data.success ? "Afternoon summary sent!" : `Failed: ${data.error || "Unknown error"}`)
+      }
     } catch (err) {
       setNotificationStatus(`Error: ${err}`)
     }
-    setTimeout(() => setNotificationStatus(null), 3000)
+    setTimeout(() => setNotificationStatus(null), 5000)
   }
 
   return (
