@@ -33,6 +33,7 @@ interface EditMoveDialogProps {
   ) => Promise<void>
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => Promise<void>
   onSetSubtasksFromTitles?: (id: string, titles: string[]) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
 }
 
 const effortOptions = [
@@ -76,6 +77,7 @@ export function EditMoveDialog({
   onSave,
   onUpdateSubtasks,
   onSetSubtasksFromTitles,
+  onDelete,
 }: EditMoveDialogProps) {
   const { clients, isLoading: clientsLoading } = useClients()
 
@@ -98,6 +100,24 @@ export function EditMoveDialog({
   const [isBreakingDown, setIsBreakingDown] = useState(false)
   const [subtaskSuggestions, setSubtaskSuggestions] = useState<string[]>([])
   const [showSubtaskConfirm, setShowSubtaskConfirm] = useState(false)
+
+  // Delete state and handler
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!move || !onDelete) return
+    setIsDeleting(true)
+    try {
+      await onDelete(move.id)
+      setShowDeleteConfirm(false)
+      onClose()
+    } catch (error) {
+      console.error("Failed to delete move:", error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   // Populate form when move changes
   useEffect(() => {
@@ -482,27 +502,63 @@ export function EditMoveDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-zinc-800 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!title.trim() || isSubmitting}
-                    className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    {isSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
+                <div className="px-6 py-4 border-t border-zinc-800 flex justify-between gap-3">
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition flex items-center gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  )}
+                  <div className="flex gap-3 ml-auto">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!title.trim() || isSubmitting}
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      {isSubmitting ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
               </form>
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete this move?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will permanently delete "{move?.title}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Rewrite Confirmation Dialog */}
       <AlertDialog open={showRewriteConfirm} onOpenChange={setShowRewriteConfirm}>

@@ -551,6 +551,29 @@ export function useMoves() {
     return updateMoveStatus(id, "upnext")
   }
 
+  const deleteMove = async (id: string) => {
+    // Optimistic update - remove from list
+    mutate((current: Move[] | undefined) => {
+      if (!current) return current
+      return current.filter((m) => m.id !== id)
+    }, false)
+
+    try {
+      await apiFetch(`/api/moves/${id}`, { method: "DELETE" })
+      // Refresh related data
+      globalMutate("/api/backlog/grouped")
+      globalMutate("/api/backlog/recommendations")
+    } catch (err) {
+      if (!shouldUseMockMode()) {
+        // Revert on error
+        mutate()
+        throw err
+      }
+      console.log("[v0] deleteMove: API failed in preview, using local state")
+      removeLocalMove(id)
+    }
+  }
+
   return {
     moves,
     loading: isLoading,
@@ -568,7 +591,8 @@ export function useMoves() {
     updateMove,
     updateSubtasks,
     setSubtasksFromTitles,
-    promoteMove, // Export promoteMove
+    promoteMove,
+    deleteMove,
     refresh: () => mutate(),
   }
 }

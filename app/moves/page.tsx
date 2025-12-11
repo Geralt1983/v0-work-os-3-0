@@ -39,6 +39,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useSWRConfig } from "swr"
 
 type MoveVariant = "primary" | "compact"
 type MovesView = "board" | "list" | "focus"
@@ -57,9 +58,11 @@ export default function MovesPage() {
     updateMove,
     updateSubtasks,
     setSubtasksFromTitles,
+    deleteMove,
     refresh,
   } = useMoves()
   const { clients } = useClients()
+  const { mutate: globalMutate } = useSWRConfig()
 
   const [view, setView] = useState<MovesView>("board")
   const [clientFilter, setClientFilter] = useState("all")
@@ -142,6 +145,9 @@ export default function MovesPage() {
     } else if (overId === "upnext-column") {
       targetStatus = "upnext"
       targetIndex = finalItems.upnext.length
+    } else if (overId === "backlog-column") {
+      targetStatus = "backlog"
+      targetIndex = 0
     } else {
       // Dropped over another card - find its status and index in the dragged state
       const overMoveInToday = finalItems.today.find((m) => m.id === overId)
@@ -157,6 +163,15 @@ export default function MovesPage() {
     }
 
     if (!targetStatus) return
+
+    if (targetStatus === "backlog") {
+      await updateMoveStatus(activeId, "backlog")
+      // Refresh the grouped backlog view
+      globalMutate("/api/backlog/grouped")
+      setRecentlyDropped(activeId)
+      setTimeout(() => setRecentlyDropped(null), 400)
+      return
+    }
 
     // Get the final order from draggedItems for the target column
     const targetColumnItems = targetStatus === "today" ? finalItems.today : finalItems.upnext
@@ -185,6 +200,8 @@ export default function MovesPage() {
 
     const activeId = active.id as string
     const overId = over.id as string
+
+    if (overId === "backlog-column") return
 
     // Find which column the active item is currently in (in draggedItems state)
     const activeInToday = draggedItems.today.some((m) => m.id === activeId)
@@ -295,6 +312,25 @@ export default function MovesPage() {
   const [activeTab, setActiveTab] = useState<"today" | "upnext" | "backlog">("today")
 
   const displayItems = draggedItems || byStatus
+
+  function BacklogDropZone({ children }: { children: React.ReactNode }) {
+    const { setNodeRef, isOver } = useDroppable({
+      id: "backlog-column",
+      data: { type: "column" },
+    })
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
+          isOver ? "bg-fuchsia-500/10 ring-2 ring-fuchsia-500/30 scale-[1.01]" : ""
+        }`}
+      >
+        <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+        {children}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -483,10 +519,9 @@ export default function MovesPage() {
                     ))}
                   </SortableContext>
                 </DroppableColumn>
-                <div className="col-span-1">
-                  <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <BacklogDropZone>
                   <GroupedBacklog onEditMove={handleEditFromBacklog} />
-                </div>
+                </BacklogDropZone>
               </div>
               <DragOverlay
                 dropAnimation={{
@@ -659,6 +694,10 @@ export default function MovesPage() {
         }}
         onSetSubtasksFromTitles={async (id, titles) => {
           await setSubtasksFromTitles(id, titles)
+          refresh()
+        }}
+        onDelete={async (id) => {
+          await deleteMove(id)
           refresh()
         }}
       />
