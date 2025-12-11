@@ -152,6 +152,8 @@ export default function MetricsDashboard() {
   const pacingWidth = `${pacingPercent}%`
   const completedCount = today?.completedCount || 0
   const paceStatus = today?.paceStatus || "behind"
+  const clientsTouchedToday = (today as any)?.clientsTouchedToday || 0
+  const totalExternalClients = (today as any)?.totalExternalClients || 4
 
   const momentum = today?.momentum || {
     score: 0,
@@ -307,8 +309,10 @@ export default function MetricsDashboard() {
                       <div className="text-xs text-zinc-500 mt-1">moves today</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
-                      <div className="text-3xl font-semibold text-zinc-100">{clients.length}</div>
-                      <div className="text-xs text-zinc-500 mt-1">total clients</div>
+                      <div className="text-3xl font-semibold text-zinc-100">
+                        {clientsTouchedToday} <span className="text-lg text-zinc-500">of {totalExternalClients}</span>
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">clients today</div>
                     </div>
                   </div>
                   {paceStatus === "on_track" ? (
@@ -440,118 +444,6 @@ export default function MetricsDashboard() {
                     {notificationStatus}
                   </p>
                 )}
-              </section>
-
-              <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-violet-500/15">
-                    <svg className="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                      />
-                    </svg>
-                  </div>
-                  <h2 className="text-lg font-semibold">Behavioral AI Testing</h2>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      setNotificationStatus("Fetching avoidance report...")
-                      try {
-                        const res = await fetch("/api/avoidance")
-                        const data = await res.json()
-                        console.log("[v0] Avoidance Report:", data)
-                        setNotificationStatus(
-                          `Report: ${data.staleClients?.length || 0} stale, ${data.deferredTasks?.length || 0} deferred, ${data.recommendations?.length || 0} recommendations. Check console for full data.`,
-                        )
-                      } catch (err) {
-                        setNotificationStatus(`Error: ${err}`)
-                      }
-                      setTimeout(() => setNotificationStatus(null), 5000)
-                    }}
-                  >
-                    Get Avoidance Report
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      setNotificationStatus("Running daily snapshot...")
-                      try {
-                        const res = await fetch("/api/cron/snapshot")
-                        const data = await res.json()
-                        console.log("[v0] Snapshot Result:", data)
-                        setNotificationStatus(
-                          data.success
-                            ? `Snapshot saved: ${data.snapshot?.moves_completed || 0} moves, ${data.snapshot?.minutes_earned || 0} min`
-                            : `Failed: ${data.error}`,
-                        )
-                      } catch (err) {
-                        setNotificationStatus(`Error: ${err}`)
-                      }
-                      setTimeout(() => setNotificationStatus(null), 5000)
-                    }}
-                  >
-                    Run Daily Snapshot
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      setNotificationStatus("Fetching event log...")
-                      try {
-                        const res = await fetch("/api/test/simulate-deferral")
-                        const data = await res.json()
-                        console.log("[v0] Event Log:", data.events)
-                        const summary = data.events
-                          ?.slice(0, 5)
-                          .map((e: any) => `${e.eventType}: ${e.moveTitle || "Unknown"}`)
-                          .join(", ")
-                        setNotificationStatus(
-                          `${data.events?.length || 0} events logged. Recent: ${summary || "None"}. Check console.`,
-                        )
-                      } catch (err) {
-                        setNotificationStatus(`Error: ${err}`)
-                      }
-                      setTimeout(() => setNotificationStatus(null), 8000)
-                    }}
-                  >
-                    View Event Log
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const moveId = prompt("Enter Move ID to simulate deferral:")
-                      if (!moveId) return
-                      setNotificationStatus("Simulating deferral...")
-                      try {
-                        const res = await fetch("/api/test/simulate-deferral", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ moveId: Number.parseInt(moveId) }),
-                        })
-                        const data = await res.json()
-                        console.log("[v0] Deferral Simulation:", data)
-                        setNotificationStatus(data.message || data.error)
-                      } catch (err) {
-                        setNotificationStatus(`Error: ${err}`)
-                      }
-                      setTimeout(() => setNotificationStatus(null), 5000)
-                    }}
-                  >
-                    Simulate Deferral
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs text-zinc-500">
-                  Test by: 1) Drag tasks backward (Active → Backlog) to log demotions. 2) Use "Simulate Deferral" with a
-                  move ID. 3) Check "View Event Log" to see all tracked events.
-                </p>
               </section>
             </>
           )}

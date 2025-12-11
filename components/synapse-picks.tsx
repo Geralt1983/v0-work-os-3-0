@@ -6,15 +6,33 @@ import { useMoves } from "@/hooks/use-moves"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, ArrowUp, Zap, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
+import { Sparkles, ArrowUp, Zap, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Clock, Check } from "lucide-react"
+import useSWR, { mutate as globalMutate } from "swr"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+interface AvoidanceData {
+  staleClients: Array<{ name: string; daysSinceTouch: number }>
+  frequentlyDeferred: Array<{ moveId: number; title: string; clientName: string; deferCount: number }>
+}
 
 export function SynapsePicks() {
   const { recommendations, isLoading, error, refresh } = useBacklogRecommendations()
   const { updateMoveStatus, refresh: refreshMoves } = useMoves()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [promotingIds, setPromotingIds] = useState<Set<number>>(new Set())
+  const [promotedIds, setPromotedIds] = useState<Set<number>>(new Set())
 
-  // Load collapsed state from localStorage on mount
+  const { data: avoidanceData } = useSWR<AvoidanceData>("/api/avoidance", fetcher, {
+    refreshInterval: 60000,
+    revalidateOnFocus: false,
+  })
+
+  const hasStaleClients = avoidanceData?.staleClients && avoidanceData.staleClients.length > 0
+  const hasDeferredTasks = avoidanceData?.frequentlyDeferred && avoidanceData.frequentlyDeferred.length > 0
+  const hasAvoidanceIssues = hasStaleClients || hasDeferredTasks
+
   useEffect(() => {
     const stored = localStorage.getItem("synapse-picks-collapsed")
     if (stored === "true") {
@@ -26,7 +44,6 @@ export function SynapsePicks() {
     setIsRefreshing(true)
     const startTime = Date.now()
     await refresh()
-    // Ensure spinner shows for at least 500ms
     const elapsed = Date.now() - startTime
     if (elapsed < 500) {
       await new Promise((resolve) => setTimeout(resolve, 500 - elapsed))
@@ -41,9 +58,34 @@ export function SynapsePicks() {
   }
 
   const handlePromote = async (moveId: number) => {
-    await updateMoveStatus(moveId.toString(), "upnext")
-    refresh()
-    refreshMoves()
+    setPromotingIds((prev) => new Set(prev).add(moveId))
+
+    try {
+      await updateMoveStatus(moveId.toString(), "upnext")
+
+      // Mark as promoted for success feedback
+      setPromotedIds((prev) => new Set(prev).add(moveId))
+
+      // Refresh moves list, recommendations, and grouped backlog
+      await Promise.all([refreshMoves(), refresh(), globalMutate("/api/backlog/grouped")])
+
+      // Clear promoted state after delay
+      setTimeout(() => {
+        setPromotedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(moveId)
+          return next
+        })
+      }, 2000)
+    } catch (err) {
+      console.error("[v0] SynapsePicks: Failed to promote move", err)
+    } finally {
+      setPromotingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(moveId)
+        return next
+      })
+    }
   }
 
   if (isCollapsed) {
@@ -58,6 +100,12 @@ export function SynapsePicks() {
           {recommendations.length > 0 && (
             <Badge variant="secondary" className="text-xs bg-fuchsia-900/50 text-fuchsia-300">
               {recommendations.length}
+            </Badge>
+          )}
+          {hasAvoidanceIssues && (
+            <Badge variant="secondary" className="text-xs bg-amber-900/50 text-amber-400 border-amber-500/30">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Attention
             </Badge>
           )}
         </div>
@@ -86,6 +134,31 @@ export function SynapsePicks() {
         <p className="text-sm text-muted-foreground">AI-suggested tasks based on client health and your patterns</p>
       </CardHeader>
       <CardContent>
+        {hasStaleClients && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-900/30 border border-amber-700/50">
+            <div className="flex items-start gap-2 text-amber-400 text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">{avoidanceData!.staleClients.map((c) => c.name).join(", ")}</span>{" "}
+                {avoidanceData!.staleClients.length === 1 ? "hasn't" : "haven't"} been touched in{" "}
+                {Math.max(...avoidanceData!.staleClients.map((c) => c.daysSinceTouch))}+ days
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasDeferredTasks && (
+          <div className="mb-4 p-3 rounded-lg bg-orange-900/30 border border-orange-700/50">
+            <div className="flex items-start gap-2 text-orange-400 text-sm">
+              <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">"{avoidanceData!.frequentlyDeferred[0].title}"</span> has been deferred{" "}
+                {avoidanceData!.frequentlyDeferred[0].deferCount}x - do it, break it down, or delete it
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading && (
           <div className="animate-pulse flex items-center gap-2 py-4">
             <span className="text-fuchsia-300">Analyzing backlog...</span>
@@ -110,50 +183,69 @@ export function SynapsePicks() {
 
         {!isLoading && recommendations.length > 0 && (
           <div className="space-y-3">
-            {recommendations.map((rec) => (
-              <div
-                key={rec.id}
-                className="flex items-start justify-between gap-4 p-3 bg-card/50 rounded-lg border border-border/50 shadow-sm"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-foreground leading-snug">{rec.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge
-                      variant="outline"
-                      style={{
-                        borderColor: rec.clientColor,
-                        color: rec.clientColor,
-                      }}
-                    >
-                      {rec.clientName}
-                    </Badge>
-                    {rec.drainType && (
-                      <Badge variant="secondary" className="text-xs">
-                        {rec.drainType}
-                      </Badge>
-                    )}
-                    {rec.effortEstimate === 1 && (
-                      <Badge variant="secondary" className="text-xs bg-green-900/50 text-green-400 border-green-500/30">
-                        <Zap className="h-3 w-3 mr-1" />
-                        Quick
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">{rec.reason}</p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 hover:bg-fuchsia-950/50 hover:border-fuchsia-500/50 bg-transparent"
-                  onClick={() => handlePromote(rec.id)}
+            {recommendations.map((rec) => {
+              const isPromoting = promotingIds.has(rec.id)
+              const wasPromoted = promotedIds.has(rec.id)
+
+              return (
+                <div
+                  key={rec.id}
+                  className={`flex items-start justify-between gap-4 p-3 bg-card/50 rounded-lg border border-border/50 shadow-sm transition-opacity ${wasPromoted ? "opacity-50" : ""}`}
                 >
-                  <ArrowUp className="h-4 w-4 mr-1" />
-                  Promote
-                </Button>
-              </div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-foreground leading-snug">{rec.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant="outline"
+                        style={{
+                          borderColor: rec.clientColor,
+                          color: rec.clientColor,
+                        }}
+                      >
+                        {rec.clientName}
+                      </Badge>
+                      {rec.drainType && (
+                        <Badge variant="secondary" className="text-xs">
+                          {rec.drainType}
+                        </Badge>
+                      )}
+                      {rec.effortEstimate === 1 && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-900/50 text-green-400 border-green-500/30"
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          Quick
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5">{rec.reason}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`shrink-0 transition-colors ${
+                      wasPromoted
+                        ? "bg-green-950/50 border-green-500/50 text-green-400"
+                        : "hover:bg-fuchsia-950/50 hover:border-fuchsia-500/50 bg-transparent"
+                    }`}
+                    onClick={() => handlePromote(rec.id)}
+                    disabled={isPromoting || wasPromoted}
+                  >
+                    {isPromoting ? (
+                      <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    ) : wasPromoted ? (
+                      <Check className="h-4 w-4 mr-1" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4 mr-1" />
+                    )}
+                    {wasPromoted ? "Promoted" : "Promote"}
+                  </Button>
+                </div>
+              )
+            })}
           </div>
         )}
 

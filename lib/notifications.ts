@@ -97,6 +97,7 @@ export function formatMorningSummary(stats: {
   bestDay: { day: string; moves: number } | null
   worstDay: { day: string; moves: number } | null
   staleClients: string[]
+  deferredTasks?: Array<{ title: string; deferCount: number }>
 }) {
   const pct = Math.round((stats.weekMinutes / stats.weekTarget) * 100)
   let msg = `☀️ Good morning!\n\n`
@@ -108,8 +109,16 @@ export function formatMorningSummary(stats: {
   if (stats.bestDay) {
     msg += `\n🏆 Best day: ${stats.bestDay.day} (${stats.bestDay.moves} moves)`
   }
+
   if (stats.staleClients.length > 0) {
-    msg += `\n\n⚠️ Stale clients: ${stats.staleClients.join(", ")}`
+    msg += `\n\n⚠️ STALE CLIENTS: ${stats.staleClients.join(", ")}`
+    msg += `\n   → Touch these first today!`
+  }
+
+  if (stats.deferredTasks && stats.deferredTasks.length > 0) {
+    const worst = stats.deferredTasks[0]
+    msg += `\n\n🔄 DEFERRED ${worst.deferCount}x: "${worst.title}"`
+    msg += `\n   → Do it, break it down, or delete it`
   }
 
   msg += `\n\nLet's get after it! 💪`

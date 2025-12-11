@@ -23,7 +23,7 @@ export function DoneToday() {
       return bTime - aTime // Most recent first
     })
 
-  const totalMinutes = doneTodayMoves.reduce((sum, m) => sum + (m.effortEstimate || 1) * 20, 0)
+  const totalMinutes = doneTodayMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
 
   if (doneTodayMoves.length === 0) {
     return (
@@ -38,7 +38,7 @@ export function DoneToday() {
     )
   }
 
-  const formatTime = (date: string) => {
+  const formatTime = (date: number) => {
     return new Date(date)
       .toLocaleTimeString("en-US", {
         hour: "numeric",
@@ -83,14 +83,14 @@ export function DoneToday() {
                     variant="outline"
                     className="text-xs"
                     style={{
-                      borderColor: move.client?.color || move.clientColor,
-                      color: move.client?.color || move.clientColor,
+                      borderColor: move.clientColor,
+                      color: move.clientColor,
                     }}
                   >
-                    {move.client?.name || move.client}
+                    {move.client}
                   </Badge>
                   <span className="text-xs text-muted-foreground w-8 text-right">
-                    {(move.effortEstimate || 1) * 20}m
+                    {(move.effortEstimate || 2) * 20}m
                   </span>
                 </div>
               </div>

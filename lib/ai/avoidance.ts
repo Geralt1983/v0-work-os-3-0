@@ -173,7 +173,7 @@ async function detectAvoidancePatterns(): Promise<AvoidancePattern[]> {
       .where(and(eq(moves.status, "done"), gte(moves.completedAt, sevenDaysAgo)))
       .groupBy(moves.drainType)
 
-    const drainTypes = ["deep", "comms", "admin", "creative", "easy"]
+    const drainTypes = ["deep", "shallow", "admin"]
     const usedDrainTypes = drainDistribution.map((d) => d.drainType)
     const avoidedDrainTypes = drainTypes.filter((dt) => !usedDrainTypes.includes(dt))
 

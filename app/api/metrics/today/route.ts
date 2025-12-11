@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves } from "@/lib/schema"
-import { eq, and, gte } from "drizzle-orm"
+import { moves, clients } from "@/lib/schema"
+import { eq, and, gte, ne } from "drizzle-orm"
 import { calculateMomentum } from "@/lib/metrics"
 import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES } from "@/lib/constants"
 
@@ -27,6 +27,17 @@ export async function GET() {
       const effort = m.effortEstimate || 2
       return sum + effort * 20
     }, 0)
+
+    // Get all external clients (type != 'internal')
+    const externalClients = await db.select({ id: clients.id }).from(clients).where(ne(clients.type, "internal"))
+
+    const externalClientIds = new Set(externalClients.map((c) => c.id))
+    const totalExternalClients = externalClientIds.size
+
+    // Count unique external clients touched today
+    const clientsTouchedToday = new Set(
+      completedToday.filter((m) => m.clientId && externalClientIds.has(m.clientId)).map((m) => m.clientId),
+    ).size
 
     const minimumMinutes = DAILY_MINIMUM_MINUTES // 180
     const targetMinutes = DAILY_TARGET_MINUTES // 240
@@ -56,14 +67,16 @@ export async function GET() {
     return NextResponse.json({
       completedCount: completedToday.length,
       earnedMinutes,
-      minimumMinutes, // NEW
+      minimumMinutes,
       targetMinutes,
-      percentOfMinimum, // NEW
-      percentOfTarget, // NEW (replaces old 'percent')
+      percentOfMinimum,
+      percentOfTarget,
       percent: percentOfTarget, // Keep for backwards compat
       paceStatus,
       momentum,
       streak,
+      clientsTouchedToday,
+      totalExternalClients,
     })
   } catch (error) {
     console.error("Failed to fetch metrics:", error)

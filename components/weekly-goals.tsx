@@ -125,11 +125,16 @@ export function WeeklyGoals() {
         </div>
 
         {/* Projection */}
-        {data.daysRemaining > 0 && (
+        {data.daysRemaining > 0 ? (
           <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border/30">
-            Projected: {formatHours(data.projectedTotal)} by week end ({data.daysRemaining} days left)
+            Projected: {formatHours(data.projectedTotal)} by Friday ({data.daysRemaining} day
+            {data.daysRemaining !== 1 ? "s" : ""} left)
           </div>
-        )}
+        ) : data.status === "week_complete" || !data.isWorkday ? (
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border/30">
+            Week complete - resets Monday
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

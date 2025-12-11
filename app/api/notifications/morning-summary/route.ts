@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { sendNotification, formatMorningSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
-import { eq, gte, and, desc } from "drizzle-orm"
+import { moves, clients, moveEvents } from "@/lib/schema"
+import { eq, gte, and, desc, sql } from "drizzle-orm"
 
 export async function GET() {
   console.log("[Morning Summary] Starting")
@@ -60,6 +60,33 @@ export async function GET() {
       }
     }
 
+    const deferredMoves = await db
+      .select({
+        moveId: moveEvents.moveId,
+        deferCount: sql<number>`COUNT(*)`.as("defer_count"),
+      })
+      .from(moveEvents)
+      .where(sql`event_type IN ('deferred', 'demoted')`)
+      .groupBy(moveEvents.moveId)
+      .having(sql`COUNT(*) >= 2`)
+
+    const deferredTasks: Array<{ title: string; deferCount: number }> = []
+
+    for (const dm of deferredMoves.slice(0, 3)) {
+      const [move] = await db
+        .select({ title: moves.title, status: moves.status })
+        .from(moves)
+        .where(eq(moves.id, dm.moveId))
+        .limit(1)
+
+      if (move && move.status !== "done") {
+        deferredTasks.push({ title: move.title, deferCount: dm.deferCount })
+      }
+    }
+
+    // Sort by defer count descending
+    deferredTasks.sort((a, b) => b.deferCount - a.deferCount)
+
     const message = formatMorningSummary({
       weekMoves: weekMoves.length,
       weekMinutes,
@@ -67,6 +94,7 @@ export async function GET() {
       bestDay: null,
       worstDay: null,
       staleClients,
+      deferredTasks,
     })
 
     console.log("[Morning Summary] Message:", message)

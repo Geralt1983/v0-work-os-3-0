@@ -30,16 +30,18 @@ interface BackendMove {
   updatedAt: string
   completedAt: string | null
   clientName?: string
-  client?: { id: number; name: string }
+  client?: { id: number; name: string; color: string | null }
 }
 
 export interface Move {
   id: string
   client: string
   clientId?: number
+  clientColor?: string // Add clientColor for display
   title: string
   description?: string
   type: "Quick" | "Standard" | "Chunky" | "Deep"
+  effortEstimate?: number // Preserve effortEstimate for calculations
   status: MoveStatus
   subtasks?: Subtask[] // Add subtasks
   movesCount?: number
@@ -184,11 +186,13 @@ export function useMoves() {
         id: move.id.toString(),
         client: move.clientName ?? (move.client ? move.client.name : ""),
         clientId: move.clientId ?? undefined,
+        clientColor: move.client?.color ?? undefined, // Include client color
         title: move.title,
         description: move.description ?? undefined,
         type: effortToType(move.effortEstimate),
+        effortEstimate: move.effortEstimate ?? 2, // Preserve effort estimate
         status: statusToFrontend[move.status],
-        subtasks: (move.subtasks as Subtask[]) ?? [], // Map subtasks
+        subtasks: (move.subtasks as Subtask[]) ?? [],
         movesCount: undefined,
         ageLabel: getAgeLabel(move.createdAt),
         completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
@@ -396,9 +400,11 @@ export function useMoves() {
       id: optimisticId,
       client: moveData.clientName || "",
       clientId: moveData.clientId,
+      clientColor: undefined, // Initialize clientColor
       title: moveData.title,
       description: moveData.description,
       type: effortToType(moveData.effortEstimate || 2),
+      effortEstimate: moveData.effortEstimate || 2, // Preserve effort estimate
       status: targetStatus,
       ageLabel: "today",
       sortOrder: -1,
@@ -434,6 +440,7 @@ export function useMoves() {
                   ...m,
                   id: response.id.toString(),
                   client: response.clientName || moveData.clientName || "",
+                  clientColor: response.client?.color ?? undefined, // Include client color
                 }
               : m,
           )
@@ -488,6 +495,7 @@ export function useMoves() {
           description: moveData.description ?? m.description,
           status: moveData.status ?? m.status,
           type: moveData.effortEstimate ? effortToType(moveData.effortEstimate) : m.type,
+          effortEstimate: moveData.effortEstimate ?? m.effortEstimate, // Preserve effort estimate
         }
       })
     }, false)

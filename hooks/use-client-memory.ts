@@ -10,6 +10,9 @@ export interface ClientMemory {
   notes: string
   avoidanceScore: number
   preferredWorkTime: string | null
+  movesThisWeek: number
+  lastCompletedAt: string | null
+  daysSinceActivity: number | null
 }
 
 const fetcher = async (url: string) => {

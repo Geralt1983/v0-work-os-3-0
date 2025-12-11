@@ -5,6 +5,8 @@ interface WeeklyGoals {
   movesCompleted: number
   daysElapsed: number
   daysRemaining: number
+  workdaysPassed: number
+  workdaysRemaining: number
   dailyAverage: number
   projectedTotal: number
   minimumGoal: number
@@ -13,7 +15,8 @@ interface WeeklyGoals {
   idealPercent: number
   paceForMinimum: number
   paceForIdeal: number
-  status: "behind" | "on_track" | "minimum_met" | "ideal_hit"
+  status: "behind" | "on_track" | "minimum_met" | "ideal_hit" | "week_complete"
+  isWorkday: boolean
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())

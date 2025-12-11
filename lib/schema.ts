@@ -165,7 +165,7 @@ export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
 export type GraveyardMove = InferSelectModel<typeof moveGraveyard>
 export type MoveStatus = "active" | "queued" | "backlog" | "done"
-export type DrainType = "deep" | "comms" | "admin" | "creative" | "easy"
+export type DrainType = "deep" | "shallow" | "admin"
 
 export type Subtask = {
   id: string

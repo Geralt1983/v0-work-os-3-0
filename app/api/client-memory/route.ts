@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { clientMemory, clients } from "@/lib/schema"
-import { eq } from "drizzle-orm"
+import { clientMemory, clients, moves } from "@/lib/schema"
+import { eq, and, gte, sql } from "drizzle-orm"
 
 export async function GET() {
   try {
     const db = getDb()
+
+    // Get current time in EST
+    const now = new Date()
+    const estOffset = -5 * 60
+    const estNow = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60000)
+
+    // Week start (Monday)
+    const weekStart = new Date(estNow)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1))
+    weekStart.setHours(0, 0, 0, 0)
 
     // Get all active clients
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
@@ -13,9 +23,40 @@ export async function GET() {
     // Get all client memory entries
     const allMemory = await db.select().from(clientMemory)
 
-    // Merge clients with their memory settings
+    const weeklyMoves = await db
+      .select({
+        clientId: moves.clientId,
+        count: sql<number>`COUNT(*)`.as("count"),
+      })
+      .from(moves)
+      .where(and(eq(moves.status, "done"), gte(moves.completedAt, weekStart)))
+      .groupBy(moves.clientId)
+
+    const weeklyMovesMap = new Map(weeklyMoves.map((w) => [w.clientId, Number(w.count)]))
+
+    const lastActivity = await db
+      .select({
+        clientId: moves.clientId,
+        lastCompletion: sql<Date>`MAX(${moves.completedAt})`.as("lastCompletion"),
+      })
+      .from(moves)
+      .where(eq(moves.status, "done"))
+      .groupBy(moves.clientId)
+
+    const lastActivityMap = new Map(lastActivity.map((l) => [l.clientId, l.lastCompletion]))
+
+    // Merge clients with their memory settings and stats
     const clientsWithMemory = allClients.map((client) => {
       const memory = allMemory.find((m) => m.clientName === client.name)
+      const movesThisWeek = weeklyMovesMap.get(client.id) || 0
+      const lastCompletedAt = lastActivityMap.get(client.id)
+
+      // Calculate days since last activity
+      let daysSinceActivity: number | null = null
+      if (lastCompletedAt) {
+        daysSinceActivity = Math.floor((Date.now() - new Date(lastCompletedAt).getTime()) / (1000 * 60 * 60 * 24))
+      }
+
       return {
         clientId: client.id,
         clientName: client.name,
@@ -27,6 +68,9 @@ export async function GET() {
         notes: memory?.notes || "",
         avoidanceScore: memory?.avoidanceScore || 0,
         preferredWorkTime: memory?.preferredWorkTime || null,
+        movesThisWeek,
+        lastCompletedAt: lastCompletedAt ? new Date(lastCompletedAt).toISOString() : null,
+        daysSinceActivity,
       }
     })
 

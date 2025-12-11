@@ -3,11 +3,19 @@ import { NextResponse } from "next/server"
 export async function GET(request: Request) {
   console.log("[Cron Morning] Starting at", new Date().toISOString())
 
-  const isVercelCron = request.headers.get("x-vercel-cron") === "true"
+  const vercelCronHeader = request.headers.get("x-vercel-cron")
+  const isVercelCron = vercelCronHeader === "1" || vercelCronHeader === "true"
   const authHeader = request.headers.get("authorization")
   const isAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
 
-  console.log("[Cron Morning] isVercelCron:", isVercelCron, "isAuthorized:", isAuthorized)
+  console.log(
+    "[Cron Morning] x-vercel-cron header:",
+    vercelCronHeader,
+    "isVercelCron:",
+    isVercelCron,
+    "isAuthorized:",
+    isAuthorized,
+  )
 
   if (!isVercelCron && !isAuthorized) {
     console.log("[Cron Morning] Unauthorized - not a Vercel cron and invalid CRON_SECRET")

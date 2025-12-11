@@ -505,19 +505,64 @@ export default function MovesPage() {
 
           {view === "list" && (
             <div className="space-y-6">
-              <div className="flex flex-col gap-2">
-                {filteredMoves
-                  .filter((m) => m.status === "today" || m.status === "upnext")
-                  .map((move) => (
-                    <MoveCard
-                      key={move.id}
-                      move={move}
-                      variant="compact"
-                      onComplete={handleComplete}
-                      onEdit={() => setEditingMove(move)}
-                    />
-                  ))}
+              {/* Active & Queued - compact rows */}
+              <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
+                <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900">
+                  <h3 className="text-sm font-medium text-zinc-400">Active & Queued</h3>
+                </div>
+                <div className="divide-y divide-zinc-800/50">
+                  {filteredMoves
+                    .filter((m) => m.status === "today" || m.status === "upnext")
+                    .map((move) => (
+                      <div
+                        key={move.id}
+                        className="flex items-center gap-3 py-2 px-4 hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                        onClick={() => setEditingMove(move)}
+                      >
+                        {/* Client badge - fixed width */}
+                        <Badge
+                          variant="outline"
+                          className="w-24 justify-center text-xs shrink-0 truncate"
+                          style={{
+                            borderColor: move.clientColor || "#6b7280",
+                            color: move.clientColor || "#6b7280",
+                          }}
+                        >
+                          {move.client}
+                        </Badge>
+
+                        {/* Title - grows to fill space, truncate with ellipsis */}
+                        <span className="flex-1 text-sm text-zinc-100 truncate">{move.title}</span>
+
+                        {/* Drain type */}
+                        <span className="text-xs text-zinc-500 w-16 shrink-0 capitalize">{move.drainType || "—"}</span>
+
+                        {/* Effort */}
+                        <span className="text-xs text-zinc-500 w-10 shrink-0 text-right">
+                          {(move.effortEstimate || 2) * 20}m
+                        </span>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            className="p-1.5 hover:bg-zinc-700 rounded transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleComplete(move.id)
+                            }}
+                          >
+                            <Check className="h-4 w-4 text-zinc-500 hover:text-emerald-400" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  {filteredMoves.filter((m) => m.status === "today" || m.status === "upnext").length === 0 && (
+                    <div className="py-4 px-4 text-sm text-zinc-500 text-center">No active or queued tasks</div>
+                  )}
+                </div>
               </div>
+
+              {/* Backlog section */}
               <div className="pt-4 border-t border-zinc-800">
                 <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
                 <GroupedBacklog onEditMove={handleEditFromBacklog} />

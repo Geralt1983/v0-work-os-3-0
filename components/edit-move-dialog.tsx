@@ -43,11 +43,9 @@ const effortOptions = [
 ]
 
 const drainOptions = [
-  { value: "easy", label: "Easy", color: "bg-emerald-500" },
-  { value: "admin", label: "Admin", color: "bg-blue-500" },
-  { value: "comms", label: "Comms", color: "bg-amber-500" },
-  { value: "creative", label: "Creative", color: "bg-purple-500" },
   { value: "deep", label: "Deep", color: "bg-rose-500" },
+  { value: "shallow", label: "Shallow", color: "bg-amber-500" },
+  { value: "admin", label: "Admin", color: "bg-blue-500" },
 ]
 
 const statusOptions: { value: MoveStatus; label: string }[] = [
@@ -86,7 +84,7 @@ export function EditMoveDialog({
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<MoveStatus>("backlog")
   const [effortEstimate, setEffortEstimate] = useState(2)
-  const [drainType, setDrainType] = useState<string>("easy")
+  const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -109,7 +107,7 @@ export function EditMoveDialog({
       setDescription(move.description || "")
       setStatus(move.status === "done" ? "today" : move.status)
       setEffortEstimate(typeToEffort(move.type))
-      setDrainType("easy")
+      setDrainType("shallow")
       setSubtasks(move.subtasks || [])
     }
   }, [move])

@@ -29,11 +29,9 @@ const effortOptions = [
 ]
 
 const drainOptions = [
-  { value: "easy", label: "Easy", color: "bg-emerald-500" },
-  { value: "admin", label: "Admin", color: "bg-blue-500" },
-  { value: "comms", label: "Comms", color: "bg-amber-500" },
-  { value: "creative", label: "Creative", color: "bg-purple-500" },
-  { value: "deep", label: "Deep", color: "bg-rose-500" },
+  { value: "deep", label: "Deep", color: "bg-rose-500", description: "Focused technical work" },
+  { value: "shallow", label: "Shallow", color: "bg-amber-500", description: "Emails, calls, coordination" },
+  { value: "admin", label: "Admin", color: "bg-blue-500", description: "Paperwork, documentation" },
 ]
 
 const statusOptions: { value: MoveStatus; label: string }[] = [
@@ -51,7 +49,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<MoveStatus>("backlog")
   const [effortEstimate, setEffortEstimate] = useState(2)
-  const [drainType, setDrainType] = useState<string>("easy")
+  const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -91,7 +89,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
       setDescription("")
       setStatus("backlog")
       setEffortEstimate(2)
-      setDrainType("easy")
+      setDrainType("shallow")
       onClose()
     } catch (error) {
       console.error("[v0] NewMoveDialog: submit error", error)
@@ -252,6 +250,7 @@ export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
                       >
                         <span className={`w-2 h-2 rounded-full ${opt.color}`} />
                         {opt.label}
+                        <span className="text-xs opacity-70">{opt.description}</span>
                       </button>
                     ))}
                   </div>

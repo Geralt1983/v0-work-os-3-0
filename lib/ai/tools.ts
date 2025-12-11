@@ -32,7 +32,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "create_move",
-      description: "Create a new move for a client. ALWAYS infer drain_type based on task content.",
+      description:
+        "Create a new move for a client. Infer drain_type: deep=focused technical work, shallow=emails/calls/coordination, admin=paperwork/documentation.",
       parameters: {
         type: "object",
         properties: {
@@ -49,7 +50,11 @@ export const chatTools = [
             enum: [1, 2, 3, 4],
             description: "1=quick, 2=standard, 3=chunky, 4=draining",
           },
-          drain_type: { type: "string", enum: ["deep", "comms", "admin", "creative", "easy"] },
+          drain_type: {
+            type: "string",
+            enum: ["deep", "shallow", "admin"],
+            description: "deep=focused work, shallow=comms/emails, admin=paperwork",
+          },
         },
         required: ["title"],
       },
@@ -68,7 +73,7 @@ export const chatTools = [
           description: { type: "string", description: "New description" },
           status: { type: "string", enum: ["active", "queued", "backlog"], description: "New status" },
           effort_estimate: { type: "number", enum: [1, 2, 3, 4] },
-          drain_type: { type: "string", enum: ["deep", "comms", "admin", "creative", "easy"] },
+          drain_type: { type: "string", enum: ["deep", "shallow", "admin"] },
         },
         required: ["move_id"],
       },
