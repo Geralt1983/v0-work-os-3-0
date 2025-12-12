@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves } from "@/lib/schema"
+import { moves, clients } from "@/lib/schema"
 import { eq, desc, gte, and } from "drizzle-orm"
 
 interface CompletedMove {
@@ -10,11 +10,9 @@ interface CompletedMove {
   effortActual: number | null
   effortEstimate: number | null
   drainType: string | null
-  client: {
-    id: number
-    name: string
-    color: string
-  } | null
+  clientId: number | null
+  clientName: string | null
+  clientColor: string | null
 }
 
 interface DayGroup {
@@ -38,12 +36,22 @@ export async function GET(request: Request) {
     cutoffDate.setDate(cutoffDate.getDate() - daysBack)
     cutoffDate.setHours(0, 0, 0, 0)
 
-    // Get all completed moves
-    const completedMoves = await db.query.moves.findMany({
-      where: and(eq(moves.status, "done"), gte(moves.completedAt, cutoffDate)),
-      with: { client: true },
-      orderBy: desc(moves.completedAt),
-    })
+    const completedMoves = await db
+      .select({
+        id: moves.id,
+        title: moves.title,
+        completedAt: moves.completedAt,
+        effortActual: moves.effortActual,
+        effortEstimate: moves.effortEstimate,
+        drainType: moves.drainType,
+        clientId: moves.clientId,
+        clientName: clients.name,
+        clientColor: clients.color,
+      })
+      .from(moves)
+      .leftJoin(clients, eq(moves.clientId, clients.id))
+      .where(and(eq(moves.status, "done"), gte(moves.completedAt, cutoffDate)))
+      .orderBy(desc(moves.completedAt))
 
     // Group by date in user's timezone
     const grouped = new Map<string, DayGroup>()
@@ -96,7 +104,7 @@ export async function GET(request: Request) {
       }
 
       const group = grouped.get(dateKey)!
-      group.moves.push(move as CompletedMove)
+      group.moves.push(move)
 
       const minutes = (move.effortActual || move.effortEstimate || 1) * 20
       group.totalMinutes += minutes
@@ -104,7 +112,7 @@ export async function GET(request: Request) {
 
     // Calculate unique clients per day
     for (const group of grouped.values()) {
-      const clientNames = new Set(group.moves.map((m) => m.client?.name).filter(Boolean))
+      const clientNames = new Set(group.moves.map((m) => m.clientName).filter(Boolean))
       group.uniqueClients = clientNames.size
     }
 

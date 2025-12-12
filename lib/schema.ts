@@ -1,5 +1,6 @@
 import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date } from "drizzle-orm/pg-core"
 import type { InferSelectModel } from "drizzle-orm"
+import { relations } from "drizzle-orm"
 
 // =============================================================================
 // CLIENTS
@@ -173,3 +174,17 @@ export type Subtask = {
   title: string
   completed: boolean
 }
+
+// =============================================================================
+// RELATIONS
+// =============================================================================
+export const movesRelations = relations(moves, ({ one }) => ({
+  client: one(clients, {
+    fields: [moves.clientId],
+    references: [clients.id],
+  }),
+}))
+
+export const clientsRelations = relations(clients, ({ many }) => ({
+  moves: many(moves),
+}))
