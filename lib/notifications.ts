@@ -12,7 +12,11 @@ interface NotificationOptions {
 export async function sendNotification(message: string, options: NotificationOptions = {}) {
   const accessToken = process.env.NTFY_ACCESS_TOKEN
   const topic = process.env.NTFY_TOPIC
-  const server = process.env.NTFY_SERVER || "https://ntfy.sh"
+  let server = process.env.NTFY_SERVER || "https://ntfy.sh"
+
+  if (server && !server.startsWith("http://") && !server.startsWith("https://")) {
+    server = `https://${server}`
+  }
 
   console.log("[Notification] Config:", {
     hasToken: !!accessToken,
@@ -32,18 +36,19 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   try {
-    // Ensure server doesn't end with slash and topic is encoded
     const cleanServer = server.replace(/\/+$/, "")
-    const encodedTopic = encodeURIComponent(topic)
-    const baseUrl = `${cleanServer}/${encodedTopic}`
+    const cleanTopic = topic.replace(/^\/+/, "").replace(/\/+$/, "")
+    const fullUrl = `${cleanServer}/${cleanTopic}`
+
+    console.log("[Notification] Building URL:", { cleanServer, cleanTopic, fullUrl })
 
     // Validate the URL before proceeding
     let url: URL
     try {
-      url = new URL(baseUrl)
+      url = new URL(fullUrl)
     } catch (urlError) {
-      console.error("[Notification] Invalid URL:", baseUrl, urlError)
-      return { success: false, error: `Invalid URL: ${baseUrl}` }
+      console.error("[Notification] Invalid URL:", fullUrl, urlError)
+      return { success: false, error: `Invalid URL: ${fullUrl}` }
     }
 
     // Add query parameters
