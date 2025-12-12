@@ -21,14 +21,18 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   const accessToken = process.env.NTFY_ACCESS_TOKEN
-  const topic = process.env.NTFY_TOPIC || process.env.NEXT_PUBLIC_NTFY_TOPIC
-  const server = process.env.NTFY_SERVER || process.env.NEXT_PUBLIC_NTFY_SERVER || "ntfy.sh"
+  const topic = process.env.NTFY_TOPIC || process.env.NEXT_PUBLIC_NTFY_TOPIC || TOPIC
+  const server = process.env.NTFY_SERVER || process.env.NEXT_PUBLIC_NTFY_SERVER
+
+  const ntfyServer = server?.startsWith("http") ? server : `https://ntfy.sh`
+  const ntfyTopic = (topic || TOPIC).replace(/^\/+/, "").replace(/\s+/g, "-")
+  const fullUrl = `${ntfyServer.replace(/\/+$/, "")}/${ntfyTopic}`
 
   console.log("[Notification] Config:", {
     hasToken: !!accessToken,
-    tokenLength: accessToken?.length,
-    topic,
-    server,
+    topic: ntfyTopic,
+    server: ntfyServer,
+    fullUrl,
     messageLength: message.length,
   })
 
@@ -37,19 +41,12 @@ export async function sendNotification(message: string, options: NotificationOpt
     return { success: false, error: "No access token configured" }
   }
 
-  if (!topic) {
+  if (!ntfyTopic) {
     console.error("[Notification] NTFY_TOPIC not configured")
     return { success: false, error: "No topic configured" }
   }
 
   try {
-    const baseUrl = server.startsWith("http") ? server : `https://${server}`
-    const cleanBase = baseUrl.replace(/\/+$/, "")
-    const cleanTopic = topic.replace(/^\/+/, "")
-    const fullUrl = `${cleanBase}/${cleanTopic}`
-
-    console.log("[Notification] Sending to:", fullUrl)
-
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "text/plain; charset=utf-8",
@@ -65,6 +62,7 @@ export async function sendNotification(message: string, options: NotificationOpt
     if (options.tags) headers["Tags"] = options.tags
     if (options.priority) headers["Priority"] = options.priority
 
+    console.log("[Notification] Sending to:", fullUrl)
     console.log("[Notification] Headers:", Object.keys(headers))
 
     const controller = new AbortController()
