@@ -12,14 +12,18 @@ interface NotificationOptions {
 export async function sendNotification(message: string, options: NotificationOptions = {}) {
   const accessToken = process.env.NTFY_ACCESS_TOKEN
   const topic = process.env.NTFY_TOPIC
-  let server = process.env.NTFY_SERVER || "https://ntfy.sh"
+  let server = process.env.NTFY_SERVER || "ntfy.sh"
 
-  if (server && !server.startsWith("http://") && !server.startsWith("https://")) {
+  server = server.trim()
+  if (server.startsWith("http://") || server.startsWith("https://")) {
+    // Already has protocol
+  } else {
     server = `https://${server}`
   }
 
   console.log("[Notification] Config:", {
     hasToken: !!accessToken,
+    tokenPrefix: accessToken ? accessToken.substring(0, 8) + "..." : "(none)",
     topic: topic || "(missing)",
     server,
     messageLength: message.length,
@@ -37,35 +41,35 @@ export async function sendNotification(message: string, options: NotificationOpt
 
   try {
     const cleanServer = server.replace(/\/+$/, "")
-    const cleanTopic = topic.replace(/^\/+/, "").replace(/\/+$/, "")
+    const cleanTopic = encodeURIComponent(topic.trim())
     const fullUrl = `${cleanServer}/${cleanTopic}`
 
     console.log("[Notification] Building URL:", { cleanServer, cleanTopic, fullUrl })
 
-    // Validate the URL before proceeding
-    let url: URL
-    try {
-      url = new URL(fullUrl)
-    } catch (urlError) {
-      console.error("[Notification] Invalid URL:", fullUrl, urlError)
-      return { success: false, error: `Invalid URL: ${fullUrl}` }
-    }
+    // Build URL with query params manually to avoid encoding issues
+    const params = new URLSearchParams()
+    if (options.title) params.set("title", options.title)
+    if (options.tags) params.set("tags", options.tags)
+    if (options.priority) params.set("priority", options.priority)
 
-    // Add query parameters
-    if (options.title) url.searchParams.set("title", options.title)
-    if (options.tags) url.searchParams.set("tags", options.tags)
-    if (options.priority) url.searchParams.set("priority", options.priority)
+    const finalUrl = params.toString() ? `${fullUrl}?${params.toString()}` : fullUrl
 
-    console.log("[Notification] Sending to:", url.toString())
+    console.log("[Notification] Final URL:", finalUrl)
 
-    const response = await fetch(url.toString(), {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+    const response = await fetch(finalUrl, {
       method: "POST",
       body: message,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "text/plain; charset=utf-8",
       },
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     const responseText = await response.text()
     console.log(`[Notification] HTTP ${response.status}: ${responseText || "(empty)"}`)
@@ -77,7 +81,16 @@ export async function sendNotification(message: string, options: NotificationOpt
     return { success: true }
   } catch (error) {
     console.error("[Notification] Error:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        return { success: false, error: "Request timeout (10s)" }
+      }
+      if (error.message.includes("fetch")) {
+        return { success: false, error: `Network error: ${error.message}` }
+      }
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Unknown error" }
   }
 }
 
