@@ -10,6 +10,16 @@ interface NotificationOptions {
 }
 
 export async function sendNotification(message: string, options: NotificationOptions = {}) {
+  const isPreview =
+    typeof window !== "undefined"
+      ? window.location.hostname.includes("vusercontent.net")
+      : process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "development"
+
+  if (isPreview) {
+    console.log("[Notification] Preview environment detected, returning mock success")
+    return { success: true, preview: true, message: "Notification simulated in preview" }
+  }
+
   const accessToken = process.env.NTFY_ACCESS_TOKEN
   const topic = process.env.NTFY_TOPIC || process.env.NEXT_PUBLIC_NTFY_TOPIC
   const server = process.env.NTFY_SERVER || process.env.NEXT_PUBLIC_NTFY_SERVER || "ntfy.sh"
@@ -34,25 +44,30 @@ export async function sendNotification(message: string, options: NotificationOpt
 
   try {
     const baseUrl = server.startsWith("http") ? server : `https://${server}`
-    const url = new URL(topic, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`)
+    const cleanBase = baseUrl.replace(/\/+$/, "")
+    const cleanTopic = topic.replace(/^\/+/, "")
+    const fullUrl = `${cleanBase}/${cleanTopic}`
 
-    // Add query parameters
-    if (options.title) url.searchParams.set("title", options.title)
-    if (options.tags) url.searchParams.set("tags", options.tags)
-    if (options.priority) url.searchParams.set("priority", options.priority)
+    console.log("[Notification] Sending to:", fullUrl)
 
-    console.log("[Notification] Sending to:", url.toString())
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${accessToken}`,
+    }
+
+    // ntfy.sh accepts these as headers, not query params
+    if (options.title) headers["Title"] = options.title
+    if (options.tags) headers["Tags"] = options.tags
+    if (options.priority) headers["Priority"] = options.priority
+
+    console.log("[Notification] Headers:", Object.keys(headers))
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
 
-    const response = await fetch(url.toString(), {
+    const response = await fetch(fullUrl, {
       method: "POST",
       body: message,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "text/plain; charset=utf-8",
-      },
+      headers,
       signal: controller.signal,
     })
 

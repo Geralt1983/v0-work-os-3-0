@@ -327,8 +327,16 @@ export default function MetricsDashboard() {
                       <div className="text-xs text-zinc-500 mt-1">clients today</div>
                     </div>
                   </div>
-                  {paceStatus === "on_track" ? (
-                    <p className="mt-4 text-center text-sm text-emerald-400">Target reached! Great work today.</p>
+                  {paceStatus === "ahead" || paceStatus === "minimum_only" ? (
+                    <p className="mt-4 text-center text-sm text-emerald-400">
+                      {paceStatus === "ahead"
+                        ? "Target exceeded! Excellent work."
+                        : "Target reached! Great work today."}
+                    </p>
+                  ) : earnedMinutes === 0 ? (
+                    <p className="mt-4 text-center text-sm text-zinc-400">No moves completed yet today.</p>
+                  ) : paceStatus === "on_track" ? (
+                    <p className="mt-4 text-center text-sm text-emerald-400">On track to reach target!</p>
                   ) : (
                     <p className="mt-4 text-center text-sm text-amber-400">
                       {Math.ceil((targetMinutes - earnedMinutes) / 20)} more moves to hit target

@@ -52,6 +52,8 @@ export async function GET() {
       paceStatus = "ahead" // Hit target (4 hours)
     } else if (percentOfMinimum >= 100) {
       paceStatus = "minimum_only" // Hit minimum but not target
+    } else if (earnedMinutes === 0) {
+      paceStatus = "behind" // No progress yet
     } else {
       // Calculate day progress
       const estHour = estNow.getHours() + estNow.getMinutes() / 60
