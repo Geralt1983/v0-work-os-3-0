@@ -32,10 +32,24 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   try {
-    const url = new URL(`${server}/${topic}`)
-    url.searchParams.set("title", options.title || "Work OS")
-    url.searchParams.set("tags", options.tags || "briefcase")
-    url.searchParams.set("priority", options.priority || "default")
+    // Ensure server doesn't end with slash and topic is encoded
+    const cleanServer = server.replace(/\/+$/, "")
+    const encodedTopic = encodeURIComponent(topic)
+    const baseUrl = `${cleanServer}/${encodedTopic}`
+
+    // Validate the URL before proceeding
+    let url: URL
+    try {
+      url = new URL(baseUrl)
+    } catch (urlError) {
+      console.error("[Notification] Invalid URL:", baseUrl, urlError)
+      return { success: false, error: `Invalid URL: ${baseUrl}` }
+    }
+
+    // Add query parameters
+    if (options.title) url.searchParams.set("title", options.title)
+    if (options.tags) url.searchParams.set("tags", options.tags)
+    if (options.priority) url.searchParams.set("priority", options.priority)
 
     console.log("[Notification] Sending to:", url.toString())
 
