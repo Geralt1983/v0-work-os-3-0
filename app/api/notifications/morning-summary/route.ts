@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import { NextResponse } from "next/server"
 import { sendNotification, formatMorningSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
@@ -32,6 +34,7 @@ export async function GET() {
       .select()
       .from(moves)
       .where(and(eq(moves.status, "done"), gte(moves.completedAt, weekStartUTC)))
+      .timeout(maxDuration * 1000)
 
     const weekMinutes = weekMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
     const daysInWeek = Math.min(dayOfWeek === 0 ? 7 : dayOfWeek, 5)
@@ -54,6 +57,7 @@ export async function GET() {
         .where(and(eq(moves.clientId, client.id), eq(moves.status, "done")))
         .orderBy(desc(moves.completedAt))
         .limit(1)
+        .timeout(maxDuration * 1000)
 
       if (!lastMove[0]?.completedAt || lastMove[0].completedAt < twoDaysAgo) {
         staleClients.push(client.name)
@@ -69,6 +73,7 @@ export async function GET() {
       .where(sql`event_type IN ('deferred', 'demoted')`)
       .groupBy(moveEvents.moveId)
       .having(sql`COUNT(*) >= 2`)
+      .timeout(maxDuration * 1000)
 
     const deferredTasks: Array<{ title: string; deferCount: number }> = []
 
@@ -78,6 +83,7 @@ export async function GET() {
         .from(moves)
         .where(eq(moves.id, dm.moveId))
         .limit(1)
+        .timeout(maxDuration * 1000)
 
       if (move && move.status !== "done") {
         deferredTasks.push({ title: move.title, deferCount: dm.deferCount })
@@ -103,7 +109,7 @@ export async function GET() {
       title: "📅 Morning Briefing",
       tags: "sunrise,calendar",
       priority: "default",
-    })
+    }).timeout(maxDuration * 1000)
 
     return NextResponse.json({ ...result, message })
   } catch (error) {

@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import { NextResponse } from "next/server"
 import { sendNotification, formatAfternoonSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
@@ -25,6 +27,7 @@ export async function GET() {
       .select()
       .from(moves)
       .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
+      .limit(maxDuration)
 
     const todayMinutes = todayMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
 
@@ -40,6 +43,7 @@ export async function GET() {
       .select()
       .from(moves)
       .where(and(eq(moves.status, "active"), ne(moves.status, "done")))
+      .limit(maxDuration)
 
     const message = formatAfternoonSummary({
       todayMoves: todayMoves.length,
