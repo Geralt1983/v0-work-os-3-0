@@ -11,27 +11,20 @@ interface NotificationOptions {
 
 export async function sendNotification(message: string, options: NotificationOptions = {}) {
   const accessToken = process.env.NTFY_ACCESS_TOKEN
-  const topic = process.env.NTFY_TOPIC
-  let server = process.env.NTFY_SERVER || "ntfy.sh"
-
-  server = server.trim()
-  if (server.startsWith("http://") || server.startsWith("https://")) {
-    // Already has protocol
-  } else {
-    server = `https://${server}`
-  }
+  const topic = process.env.NTFY_TOPIC || process.env.NEXT_PUBLIC_NTFY_TOPIC
+  const server = process.env.NTFY_SERVER || process.env.NEXT_PUBLIC_NTFY_SERVER || "ntfy.sh"
 
   console.log("[Notification] Config:", {
     hasToken: !!accessToken,
-    tokenPrefix: accessToken ? accessToken.substring(0, 8) + "..." : "(none)",
-    topic: topic || "(missing)",
+    tokenLength: accessToken?.length,
+    topic,
     server,
     messageLength: message.length,
   })
 
   if (!accessToken) {
     console.error("[Notification] NTFY_ACCESS_TOKEN not configured")
-    return { success: false, error: "No access token" }
+    return { success: false, error: "No access token configured" }
   }
 
   if (!topic) {
@@ -40,26 +33,20 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 
   try {
-    const cleanServer = server.replace(/\/+$/, "")
-    const cleanTopic = encodeURIComponent(topic.trim())
-    const fullUrl = `${cleanServer}/${cleanTopic}`
+    const baseUrl = server.startsWith("http") ? server : `https://${server}`
+    const url = new URL(topic, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`)
 
-    console.log("[Notification] Building URL:", { cleanServer, cleanTopic, fullUrl })
+    // Add query parameters
+    if (options.title) url.searchParams.set("title", options.title)
+    if (options.tags) url.searchParams.set("tags", options.tags)
+    if (options.priority) url.searchParams.set("priority", options.priority)
 
-    // Build URL with query params manually to avoid encoding issues
-    const params = new URLSearchParams()
-    if (options.title) params.set("title", options.title)
-    if (options.tags) params.set("tags", options.tags)
-    if (options.priority) params.set("priority", options.priority)
-
-    const finalUrl = params.toString() ? `${fullUrl}?${params.toString()}` : fullUrl
-
-    console.log("[Notification] Final URL:", finalUrl)
+    console.log("[Notification] Sending to:", url.toString())
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-    const response = await fetch(finalUrl, {
+    const response = await fetch(url.toString(), {
       method: "POST",
       body: message,
       headers: {
@@ -72,25 +59,26 @@ export async function sendNotification(message: string, options: NotificationOpt
     clearTimeout(timeoutId)
 
     const responseText = await response.text()
-    console.log(`[Notification] HTTP ${response.status}: ${responseText || "(empty)"}`)
+    console.log(`[Notification] Response: ${response.status} ${responseText.substring(0, 200)}`)
 
     if (!response.ok) {
-      return { success: false, error: `HTTP ${response.status}: ${responseText || "Unknown error"}` }
+      return {
+        success: false,
+        error: `HTTP ${response.status}`,
+        details: responseText.substring(0, 100),
+      }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[Notification] Error:", error)
+    console.error("[Notification] Exception:", error)
     if (error instanceof Error) {
       if (error.name === "AbortError") {
-        return { success: false, error: "Request timeout (10s)" }
-      }
-      if (error.message.includes("fetch")) {
-        return { success: false, error: `Network error: ${error.message}` }
+        return { success: false, error: "Timeout after 15s" }
       }
       return { success: false, error: error.message }
     }
-    return { success: false, error: "Unknown error" }
+    return { success: false, error: String(error) }
   }
 }
 
