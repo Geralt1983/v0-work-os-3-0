@@ -40,9 +40,9 @@ export async function GET() {
     // On weekends, all 5 workdays have passed
     const workdaysPassed = isWorkday ? dayOfWeek : 5
 
-    // Workdays remaining (including today if it's a workday)
-    // On Mon (day 1): 5 remaining, Tue: 4, Wed: 3, Thu: 2, Fri: 1, Sat/Sun: 0
-    const workdaysRemaining = isWorkday ? 6 - dayOfWeek : 0
+    // Workdays remaining (NOT including today)
+    // On Mon (day 1): 4 remaining, Tue: 3, Wed: 2, Thu: 1, Fri: 0, Sat/Sun: 0
+    const workdaysRemaining = isWorkday ? 5 - dayOfWeek : 0
 
     // Get completed moves this work week (Mon-Fri only)
     const completedThisWeek = await db
@@ -90,6 +90,13 @@ export async function GET() {
       status = "ideal_hit"
     } else if (totalMinutes >= MINIMUM_WEEKLY_GOAL) {
       status = "minimum_met"
+    } else if (workdaysRemaining === 0) {
+      // It's Friday - if at 90%+ of minimum, consider it on track
+      if (totalMinutes >= MINIMUM_WEEKLY_GOAL * 0.9) {
+        status = "on_track"
+      } else {
+        status = "behind"
+      }
     } else if (projectedTotal >= MINIMUM_WEEKLY_GOAL) {
       status = "on_track"
     } else {
@@ -116,7 +123,7 @@ export async function GET() {
       paceForMinimum,
       paceForIdeal,
       status,
-      isWorkday, // Let UI know if it's a workday
+      isWorkday: true, // Let UI know if it's a workday
     })
   } catch (error) {
     console.error("Failed to fetch weekly metrics:", error)

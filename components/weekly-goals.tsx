@@ -134,7 +134,15 @@ export function WeeklyGoals() {
           <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border/30">
             Week complete - resets Monday
           </div>
-        ) : null}
+        ) : data.totalMinutes >= data.minimumGoal ? (
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border/30">
+            Minimum reached - {formatHours(data.totalMinutes)} this week
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border/30">
+            Last day - {formatHours(data.minimumGoal - data.totalMinutes)} needed for minimum
+          </div>
+        )}
       </CardContent>
     </Card>
   )
