@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header"
 import { useMetrics } from "@/hooks/use-metrics"
 import { Button } from "@/components/ui/button"
 import { WeeklyGoals } from "@/components/weekly-goals"
+import { CompletionHistory } from "@/components/completion-history"
 
 function statusToneClasses(tone: "positive" | "neutral" | "negative") {
   switch (tone) {
@@ -346,6 +347,8 @@ export default function MetricsDashboard() {
               </section>
 
               <WeeklyGoals />
+
+              <CompletionHistory />
 
               {staleClients.length > 0 && (
                 <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">

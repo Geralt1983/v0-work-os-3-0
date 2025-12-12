@@ -1,0 +1,91 @@
+"use client"
+
+import { useCompletionHistory } from "@/hooks/use-completion-history"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Calendar } from "lucide-react"
+
+export function CompletionHistory() {
+  const { days, isLoading } = useCompletionHistory(30)
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">Loading history...</CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="h-5 w-5" />
+          Completion History
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">Track your progress and patterns over time.</p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {days.map((day) => (
+          <div key={day.date} className="space-y-2">
+            {/* Day Header */}
+            <div className="flex items-center justify-between pb-2 border-b">
+              <h3 className="font-semibold text-lg">{day.displayLabel}</h3>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{day.moves.length} moves</span>
+                <span>•</span>
+                <span>{day.totalMinutes} min</span>
+                <span>•</span>
+                <span>{day.uniqueClients} clients</span>
+              </div>
+            </div>
+
+            {/* Moves List */}
+            <div className="space-y-1">
+              {day.moves.map((move) => {
+                const completedTime = new Date(move.completedAt).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+                const minutes = (move.effortActual || move.effortEstimate || 1) * 20
+
+                return (
+                  <div key={move.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground w-16 shrink-0">{completedTime}</span>
+                      <span className="truncate">{move.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {move.client && (
+                        <Badge
+                          variant="outline"
+                          style={{
+                            borderColor: move.client.color,
+                            color: move.client.color,
+                          }}
+                        >
+                          {move.client.name}
+                        </Badge>
+                      )}
+                      {move.drainType && (
+                        <Badge variant="secondary" className="text-xs">
+                          {move.drainType}
+                        </Badge>
+                      )}
+                      <span className="text-sm text-muted-foreground w-12 text-right">{minutes}m</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        {days.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No completed moves in the past 30 days.</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

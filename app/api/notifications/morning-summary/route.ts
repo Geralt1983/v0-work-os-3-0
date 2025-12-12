@@ -12,7 +12,6 @@ export async function GET() {
   try {
     const db = getDb()
 
-    // Get start of week (Monday) in EST
     const now = new Date()
     const estOffset = -5 * 60
     const utcOffset = now.getTimezoneOffset()
