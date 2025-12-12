@@ -52,10 +52,16 @@ export async function sendNotification(message: string, options: NotificationOpt
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "text/plain; charset=utf-8",
     }
 
-    // ntfy.sh accepts these as headers, not query params
-    if (options.title) headers["Title"] = options.title
+    // ntfy.sh accepts these as headers - must be ASCII only, so strip emojis
+    if (options.title) {
+      // Remove emojis from title (headers must be ASCII)
+      headers["Title"] = options.title
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, "")
+        .trim()
+    }
     if (options.tags) headers["Tags"] = options.tags
     if (options.priority) headers["Priority"] = options.priority
 
@@ -64,9 +70,12 @@ export async function sendNotification(message: string, options: NotificationOpt
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 15000)
 
+    const encoder = new TextEncoder()
+    const bodyBytes = encoder.encode(message)
+
     const response = await fetch(fullUrl, {
       method: "POST",
-      body: message,
+      body: bodyBytes,
       headers,
       signal: controller.signal,
     })
