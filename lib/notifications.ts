@@ -11,19 +11,33 @@ interface NotificationOptions {
 
 export async function sendNotification(message: string, options: NotificationOptions = {}) {
   const accessToken = process.env.NTFY_ACCESS_TOKEN
+  const topic = process.env.NTFY_TOPIC
+  const server = process.env.NTFY_SERVER || "https://ntfy.sh"
 
-  console.log("[Notification] Attempting to send:", { message, options, hasToken: !!accessToken })
+  console.log("[Notification] Config:", {
+    hasToken: !!accessToken,
+    topic: topic || "(missing)",
+    server,
+    messageLength: message.length,
+  })
 
   if (!accessToken) {
     console.error("[Notification] NTFY_ACCESS_TOKEN not configured")
     return { success: false, error: "No access token" }
   }
 
+  if (!topic) {
+    console.error("[Notification] NTFY_TOPIC not configured")
+    return { success: false, error: "No topic configured" }
+  }
+
   try {
-    const url = new URL(`https://ntfy.sh/${TOPIC}`)
+    const url = new URL(`${server}/${topic}`)
     url.searchParams.set("title", options.title || "Work OS")
     url.searchParams.set("tags", options.tags || "briefcase")
     url.searchParams.set("priority", options.priority || "default")
+
+    console.log("[Notification] Sending to:", url.toString())
 
     const response = await fetch(url.toString(), {
       method: "POST",
@@ -38,7 +52,7 @@ export async function sendNotification(message: string, options: NotificationOpt
     console.log(`[Notification] HTTP ${response.status}: ${responseText || "(empty)"}`)
 
     if (!response.ok) {
-      return { success: false, error: `HTTP ${response.status}` }
+      return { success: false, error: `HTTP ${response.status}: ${responseText || "Unknown error"}` }
     }
 
     return { success: true }
