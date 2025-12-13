@@ -23,11 +23,18 @@ export async function GET() {
 
     console.log("[Afternoon Summary] Today start:", todayStart.toISOString())
 
-    const todayMoves = await db
-      .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
-      .limit(maxDuration)
+    const todayMovesTimeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Database query timeout")), 10000),
+    )
+
+    const todayMoves = await Promise.race([
+      db
+        .select()
+        .from(moves)
+        .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
+        .limit(maxDuration),
+      todayMovesTimeoutPromise,
+    ])
 
     const todayMinutes = todayMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
 
@@ -35,15 +42,26 @@ export async function GET() {
     const clientsTouched: string[] = []
 
     for (const id of clientIds) {
-      const [client] = await db.select().from(clients).where(eq(clients.id, id!))
+      const clientTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Database query timeout")), 10000),
+      )
+
+      const [client] = await Promise.race([db.select().from(clients).where(eq(clients.id, id!)), clientTimeoutPromise])
       if (client) clientsTouched.push(client.name)
     }
 
-    const activeMoves = await db
-      .select()
-      .from(moves)
-      .where(and(eq(moves.status, "active"), ne(moves.status, "done")))
-      .limit(maxDuration)
+    const activeMoveTimeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Database query timeout")), 10000),
+    )
+
+    const activeMoves = await Promise.race([
+      db
+        .select()
+        .from(moves)
+        .where(and(eq(moves.status, "active"), ne(moves.status, "done")))
+        .limit(maxDuration),
+      activeMoveTimeoutPromise,
+    ])
 
     const message = formatAfternoonSummary({
       todayMoves: todayMoves.length,
@@ -56,7 +74,7 @@ export async function GET() {
     console.log("[Afternoon Summary] Message:", message)
 
     const result = await sendNotification(message, {
-      title: "⏰ Afternoon Check-in",
+      title: "Afternoon Check-in",
       tags: "clock4,chart_with_upwards_trend",
       priority: "default",
     })
