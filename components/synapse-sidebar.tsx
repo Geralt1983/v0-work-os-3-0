@@ -2,8 +2,9 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ChevronRight, AlertTriangle, Zap } from "lucide-react"
+import { ChevronRight, AlertTriangle, Zap, Send } from "lucide-react"
 import { useChat, type Message, type TaskCard } from "@/hooks/use-chat"
+import { VoiceRecorder } from "@/components/voice-recorder"
 import { cn } from "@/lib/utils"
 
 const ASSISTANT_NAME = "Synapse"
@@ -25,6 +26,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     return localStorage.getItem("synapse-sidebar-collapsed") === "true"
   })
   const [input, setInput] = useState("")
+  const [isVoiceMode, setIsVoiceMode] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -63,6 +65,17 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   const handleQuickAction = async (prompt: string) => {
     if (isLoading) return
     await sendMessage(prompt)
+  }
+
+  const handleTranscription = (text: string) => {
+    setIsVoiceMode(false)
+    // Send directly for natural voice experience
+    sendMessage(text)
+  }
+
+  const handleVoiceError = (error: string) => {
+    setIsVoiceMode(false)
+    console.error("Voice error:", error)
   }
 
   // Collapsed state - floating button
@@ -155,6 +168,18 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
 
       {/* Input area */}
       <div className="flex-none px-3 py-3 border-t border-zinc-800">
+        {isVoiceMode && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" />
+            <VoiceRecorder
+              onTranscription={handleTranscription}
+              onError={handleVoiceError}
+              disabled={isLoading}
+              className="relative z-20"
+            />
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
@@ -162,15 +187,26 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
             className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-fuchsia-500 disabled:opacity-50"
-            placeholder="Ask anything..."
+            placeholder="Type or tap mic..."
           />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="px-4 py-2 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-fuchsia-500 transition"
-          >
-            Send
-          </button>
+
+          {input.trim() ? (
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="px-4 py-2 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-fuchsia-500 transition flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Send
+            </button>
+          ) : (
+            <VoiceRecorder
+              onTranscription={handleTranscription}
+              onError={handleVoiceError}
+              disabled={isLoading}
+              compact
+            />
+          )}
         </form>
       </div>
     </aside>

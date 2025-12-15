@@ -2,8 +2,9 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { Zap, ChevronDown } from "lucide-react"
+import { Zap, ChevronDown, Send } from "lucide-react"
 import { useChat, type Message, type TaskCard } from "@/hooks/use-chat"
+import { VoiceRecorder } from "@/components/voice-recorder"
 import { cn } from "@/lib/utils"
 
 const ASSISTANT_NAME = "Synapse"
@@ -38,6 +39,15 @@ export function SynapseMobileSheet() {
   const handleQuickAction = async (prompt: string) => {
     if (isLoading) return
     await sendMessage(prompt)
+  }
+
+  const handleTranscription = (text: string) => {
+    // Send directly for natural voice experience
+    sendMessage(text)
+  }
+
+  const handleVoiceError = (error: string) => {
+    console.error("Voice error:", error)
   }
 
   return (
@@ -141,15 +151,26 @@ export function SynapseMobileSheet() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
               className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-fuchsia-500 disabled:opacity-50"
-              placeholder="Ask anything..."
+              placeholder="Type or tap mic..."
             />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="px-4 py-2.5 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-fuchsia-500 transition"
-            >
-              Send
-            </button>
+
+            {input.trim() ? (
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="px-4 py-2.5 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-fuchsia-500 transition flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send
+              </button>
+            ) : (
+              <VoiceRecorder
+                onTranscription={handleTranscription}
+                onError={handleVoiceError}
+                disabled={isLoading}
+                compact
+              />
+            )}
           </form>
         </div>
       </div>
