@@ -1,0 +1,176 @@
+name: Work-OS Scheduled Notifications
+
+on:
+  schedule:
+    # All times in UTC - adjust for EST (UTC-5) / EDT (UTC-4)
+    # Using EST times (winter) - adjust in spring for EDT
+    
+    # 8:00 AM EST = 13:00 UTC
+    - cron: '0 13 * * 1-5'
+    
+    # 10:00 AM EST = 15:00 UTC (has Jeremy started?)
+    - cron: '0 15 * * 1-5'
+    
+    # 4:00 PM EST = 21:00 UTC
+    - cron: '0 21 * * 1-5'
+    
+    # 6:00 PM EST = 23:00 UTC (end of day wrap-up)
+    - cron: '0 23 * * 1-5'
+    
+    # Sunday 6:00 PM EST = 23:00 UTC (weekly backlog review)
+    - cron: '0 23 * * 0'
+
+  # Allow manual triggers for testing
+  workflow_dispatch:
+    inputs:
+      notification_type:
+        description: 'Which notification to trigger'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - started-check
+          - afternoon
+          - end-of-day
+          - weekly-review
+          - test
+
+jobs:
+  scheduled-notification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    
+    steps:
+      - name: Determine notification type
+        id: determine
+        run: |
+          # For manual dispatch, use the input
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.notification_type }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # For scheduled runs, determine based on UTC hour
+          HOUR=$(date -u +%H)
+          DAY=$(date -u +%u)  # 1=Monday, 7=Sunday
+          
+          case $HOUR in
+            13) echo "type=morning" >> $GITHUB_OUTPUT ;;
+            15) echo "type=started-check" >> $GITHUB_OUTPUT ;;
+            21) echo "type=afternoon" >> $GITHUB_OUTPUT ;;
+            23)
+              if [ "$DAY" == "7" ]; then
+                echo "type=weekly-review" >> $GITHUB_OUTPUT
+              else
+                echo "type=end-of-day" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            *) echo "type=unknown" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Morning Summary (8am EST)
+        if: steps.determine.outputs.type == 'morning'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/morning-summary" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Morning summary failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Started Check (10am EST)
+        if: steps.determine.outputs.type == 'started-check'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/started-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          
+          # Don't fail if no notification needed (404 or specific response)
+          if [ "$http_code" -ge 500 ]; then
+            echo "::error::Started check failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Afternoon Summary (4pm EST)
+        if: steps.determine.outputs.type == 'afternoon'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/afternoon-summary" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Afternoon summary failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: End of Day Wrap-up (6pm EST)
+        if: steps.determine.outputs.type == 'end-of-day'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/end-of-day" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::End of day wrap-up failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Weekly Backlog Review (Sunday 6pm EST)
+        if: steps.determine.outputs.type == 'weekly-review'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/weekly-backlog-review" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Weekly review failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Test Notification
+        if: steps.determine.outputs.type == 'test'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/test" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"message": "🧪 GitHub Actions test - crons are working!"}')
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
