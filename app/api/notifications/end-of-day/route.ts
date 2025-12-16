@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { moves, clients } from '@/lib/schema';
-import { eq, and, gte, sql } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { sendNotification } from '@/lib/notifications';
 
 // Verify cron secret
@@ -22,6 +22,8 @@ export async function GET(request: Request) {
   }
 
   try {
+    const db = getDb();
+    
     // Get today's stats
     const now = new Date();
     const estOffset = -5 * 60;
