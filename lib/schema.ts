@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date, boolean } from "drizzle-orm/pg-core"
 import type { InferSelectModel } from "drizzle-orm"
 import { relations } from "drizzle-orm"
 
@@ -92,8 +92,8 @@ export const dailyLog = pgTable("daily_log", {
   nonBacklogMovesCount: integer("non_backlog_moves_count").default(0),
   notificationsSent: jsonb("notifications_sent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  workStartedNotified: boolean('work_started_notified').default(false),
-  workStartedAt: timestamp('work_started_at', { withTimezone: true }),
+  workStartedNotified: boolean("work_started_notified").default(false),
+  workStartedAt: timestamp("work_started_at", { withTimezone: true }),
 })
 
 // =============================================================================
