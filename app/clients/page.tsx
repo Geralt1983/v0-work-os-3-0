@@ -125,16 +125,17 @@ export default function ClientsPage() {
                 <Card
                   key={client.clientId}
                   className={cn(
-                    "bg-zinc-900/50 border-white/10 transition-all duration-200",
-                    "hover:border-white/20 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5",
+                    "relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 transition-all duration-200",
+                    "hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20",
                     sentimentConfig[client.sentiment].bgClass,
                   )}
-                  style={{
-                    borderLeftWidth: "3px",
-                    borderLeftColor: client.color || "#666",
-                  }}
                 >
-                  <CardContent className="p-4 space-y-4">
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+                    style={{ backgroundColor: client.color || "#666" }}
+                  />
+
+                  <CardContent className="p-4 pl-5 space-y-4">
                     {/* Header row: Name + Priority badge */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
