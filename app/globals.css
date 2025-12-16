@@ -126,6 +126,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Always show scrollbar to prevent layout shift when content loads */
+  html {
+    overflow-y: scroll;
+  }
 }
 
 /* Card physics animations for drag and drop */

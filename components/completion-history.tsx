@@ -11,7 +11,42 @@ export function CompletionHistory() {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">Loading history...</CardContent>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Completion History
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Track your progress and patterns over time.</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Skeleton for 3 days to reserve space */}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2 animate-pulse">
+              <div className="flex items-center justify-between pb-2 border-b">
+                <div className="h-6 w-24 bg-muted rounded" />
+                <div className="flex items-center gap-4">
+                  <div className="h-4 w-16 bg-muted rounded" />
+                  <div className="h-4 w-12 bg-muted rounded" />
+                  <div className="h-4 w-16 bg-muted rounded" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                {[1, 2].map((j) => (
+                  <div key={j} className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="h-4 w-16 bg-muted rounded" />
+                      <div className="h-4 w-48 bg-muted rounded" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-16 bg-muted rounded" />
+                      <div className="h-4 w-12 bg-muted rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </CardContent>
       </Card>
     )
   }
