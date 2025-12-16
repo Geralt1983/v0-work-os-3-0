@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { db } from '@/lib/db';
 import { moves, clients, clientMemory } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { sendNotification } from '@/lib/notifications';
 
 function verifyCronSecret(request: Request): boolean {
@@ -21,8 +21,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const db = getDb();
-    
     // Get all backlog moves with age
     const backlogMoves = await db.query.moves.findMany({
       where: eq(moves.status, 'backlog'),

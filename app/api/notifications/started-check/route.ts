@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { db } from '@/lib/db';
 import { moves, dailyLog } from '@/lib/schema';
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import { sendNotification } from '@/lib/notifications';
 
 // Verify cron secret
@@ -9,7 +9,7 @@ function verifyCronSecret(request: Request): boolean {
   const authHeader = request.headers.get('authorization');
   const expectedToken = process.env.CRON_SECRET;
   
-  if (!expectedToken) return true;
+  if (!expectedToken) return true; // No secret configured, allow
   if (!authHeader) return false;
   
   const token = authHeader.replace('Bearer ', '');
@@ -23,8 +23,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const db = getDb();
-    
     // Get today's date in EST
     const now = new Date();
     const estOffset = -5 * 60; // EST is UTC-5
@@ -32,11 +30,11 @@ export async function GET(request: Request) {
     const todayStr = estNow.toISOString().split('T')[0];
     
     // Check if we already sent a "started" notification today
-    const todayLogEntry = await db.query.dailyLog.findFirst({
+    const todayLog = await db.query.dailyLog.findFirst({
       where: eq(dailyLog.date, todayStr),
     });
     
-    if (todayLogEntry?.workStartedNotified) {
+    if (todayLog?.workStartedNotified) {
       return NextResponse.json({ 
         sent: false, 
         reason: 'Already notified today' 
