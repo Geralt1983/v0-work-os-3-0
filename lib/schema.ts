@@ -92,6 +92,8 @@ export const dailyLog = pgTable("daily_log", {
   nonBacklogMovesCount: integer("non_backlog_moves_count").default(0),
   notificationsSent: jsonb("notifications_sent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  workStartedNotified: boolean('work_started_notified').default(false),
+  workStartedAt: timestamp('work_started_at', { withTimezone: true }),
 })
 
 // =============================================================================
