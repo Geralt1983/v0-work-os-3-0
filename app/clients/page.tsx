@@ -84,9 +84,8 @@ export default function ClientsPage() {
   })
 
   return (
-    <div className="min-h-screen flex flex-col bg-black text-white">
-      {/* Header with navigation */}
-      <div className="flex-none mx-auto w-full max-w-6xl px-4 py-6 md:py-8">
+    <div className="min-h-screen bg-black text-white">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Clients</h1>
@@ -98,8 +97,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 pb-8">
+      <main className="mt-8 pb-8">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-fuchsia-400" />
