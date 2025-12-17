@@ -55,20 +55,22 @@ export async function GET(request: Request) {
 
     // Group by date in user's timezone
     const grouped = new Map<string, DayGroup>()
-    const today = new Date()
+
+    const nowInTz = new Date().toLocaleString("en-US", { timeZone: timezone })
+    const today = new Date(nowInTz)
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
 
-    // Get today and yesterday keys in user's timezone
+    // Get date key from a timestamp in user's timezone
     const getTzDateKey = (date: Date) => {
-      const localStr = date.toLocaleDateString("en-US", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-      const [month, day, year] = localStr.split("/")
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      // Convert UTC timestamp to user's timezone
+      const tzStr = date.toLocaleString("en-US", { timeZone: timezone })
+      const tzDate = new Date(tzStr)
+
+      const year = tzDate.getFullYear()
+      const month = String(tzDate.getMonth() + 1).padStart(2, "0")
+      const day = String(tzDate.getDate()).padStart(2, "0")
+      return `${year}-${month}-${day}`
     }
 
     const todayKey = getTzDateKey(today)

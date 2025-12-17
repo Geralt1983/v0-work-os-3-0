@@ -20,7 +20,7 @@ interface SynapseSidebarProps {
 }
 
 export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
-  const { messages, isLoading, error, sendMessage } = useChat()
+  const { messages, isLoading, error, sendMessage, unreadCount, markAsSeen } = useChat() // Get unreadCount and markAsSeen
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === "undefined") return false
     return localStorage.getItem("synapse-sidebar-collapsed") === "true"
@@ -43,6 +43,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
 
     if (!collapsed) {
       setTimeout(() => scrollToBottom("instant"), 50)
+      markAsSeen() // Mark messages as seen when opening sidebar
     }
   }
 
@@ -87,9 +88,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
       >
         <Zap className="w-5 h-5" />
         <span className="font-medium">Synapse</span>
-        {messages.length > 0 && (
-          <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">{messages.length}</span>
-        )}
+        {unreadCount > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">{unreadCount}</span>}
       </button>
     )
   }

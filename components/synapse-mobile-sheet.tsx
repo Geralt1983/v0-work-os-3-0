@@ -16,7 +16,7 @@ const QUICK_ACTIONS = [
 ]
 
 export function SynapseMobileSheet() {
-  const { messages, isLoading, error, sendMessage } = useChat()
+  const { messages, isLoading, error, sendMessage, unreadCount, markAsSeen } = useChat()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -27,6 +27,11 @@ export function SynapseMobileSheet() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages, isOpen])
+
+  const handleOpen = () => {
+    setIsOpen(true)
+    markAsSeen()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,16 +59,16 @@ export function SynapseMobileSheet() {
     <>
       {/* Floating button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-fuchsia-600 text-white shadow-lg hover:bg-fuchsia-500 transition-all hover:scale-105",
           isOpen && "hidden",
         )}
       >
         <Zap className="w-6 h-6" />
-        {messages.length > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs bg-white text-fuchsia-600 rounded-full font-medium">
-            {messages.length > 9 ? "9+" : messages.length}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>

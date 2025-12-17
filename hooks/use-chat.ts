@@ -89,12 +89,16 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastSeenTime, setLastSeenTime] = useState<string | null>(null)
 
-  // Load session from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem("workos-chat-session")
+    const lastSeen = localStorage.getItem("chat-last-seen")
     if (stored) {
       setSessionId(stored)
+    }
+    if (lastSeen) {
+      setLastSeenTime(lastSeen)
     }
   }, [])
 
@@ -110,7 +114,7 @@ export function useChat() {
         return []
       }
     },
-    { revalidateOnFocus: false },
+    { revalidateOnFocus: false, refreshInterval: 5000 }, // Poll every 5s for cross-device sync
   )
 
   // Update messages when history loads
@@ -119,6 +123,20 @@ export function useChat() {
       setMessages(historyData)
     }
   }, [historyData])
+
+  const unreadCount = messages.filter((m) => {
+    if (m.role === "user") return false // Don't count user's own messages
+    if (!lastSeenTime) return true // All messages are unread if never seen
+    if (!m.timestamp) return false
+    return new Date(m.timestamp) > new Date(lastSeenTime)
+  }).length
+
+  const markAsSeen = useCallback(() => {
+    const now = new Date().toISOString()
+    setLastSeenTime(now)
+    localStorage.setItem("chat-last-seen", now)
+    window.dispatchEvent(new Event("chat-seen"))
+  }, [])
 
   // Switch to a different session
   const switchSession = useCallback((newSessionId: string) => {
@@ -181,10 +199,10 @@ export function useChat() {
           ]
         })
 
-        localStorage.setItem("chat-last-message-time", new Date().toISOString())
-        // Mark as seen since user is actively chatting
-        localStorage.setItem("chat-last-seen", new Date().toISOString())
+        markAsSeen()
         window.dispatchEvent(new Event("chat-message-received"))
+
+        mutateHistory()
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to send message")
         // Remove optimistic message on error
@@ -193,7 +211,7 @@ export function useChat() {
         setIsLoading(false)
       }
     },
-    [sessionId],
+    [sessionId, markAsSeen, mutateHistory],
   )
 
   // Clear chat / start new session
@@ -211,5 +229,7 @@ export function useChat() {
     clearChat,
     switchSession,
     sessionId,
+    unreadCount, // Export unread count
+    markAsSeen, // Export mark as seen function
   }
 }
