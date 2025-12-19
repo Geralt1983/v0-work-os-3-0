@@ -44,7 +44,12 @@ export function useMoveHistory(days = 30, clientId?: number) {
 }
 
 export function useHeatmap(weeks = 12) {
-  const { data, error, isLoading } = useSWR<{ heatmap: HeatmapDay[] }>(`/api/moves/heatmap?weeks=${weeks}`, fetcher)
+  const timezone = typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York"
+
+  const { data, error, isLoading } = useSWR<{ heatmap: HeatmapDay[] }>(
+    `/api/moves/heatmap?weeks=${weeks}&timezone=${encodeURIComponent(timezone)}`,
+    fetcher,
+  )
 
   return {
     heatmap: data?.heatmap || [],

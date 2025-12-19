@@ -45,13 +45,14 @@ export function CompletionHeatmap() {
   }
 
   const getMobileDayLabel = (dateStr: string, index: number) => {
-    const today = new Date().toISOString().split("T")[0]
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0]
+    const now = new Date()
+    const today = now.toLocaleDateString("en-CA") // YYYY-MM-DD in local timezone
+    const yesterday = new Date(now.getTime() - 86400000).toLocaleDateString("en-CA")
 
     if (dateStr === today) return "Today"
     if (dateStr === yesterday) return "Yest"
 
-    const date = new Date(dateStr)
+    const date = new Date(dateStr + "T12:00:00") // Add noon time to avoid timezone shifts
     return date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2)
   }
 

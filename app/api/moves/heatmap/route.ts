@@ -3,9 +3,14 @@ import { getDb } from "@/lib/db"
 import { moves } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 
+function getDateInTimezone(date: Date, timezone: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: timezone }) // en-CA gives YYYY-MM-DD format
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const weeks = Number.parseInt(searchParams.get("weeks") || "12")
+  const timezone = searchParams.get("timezone") || "America/New_York"
 
   try {
     const db = getDb()
@@ -26,8 +31,8 @@ export async function GET(request: Request) {
     for (const move of completedMoves) {
       if (!move.completedAt) continue
 
-      const completedAt = move.completedAt instanceof Date ? move.completedAt.toISOString() : String(move.completedAt)
-      const dateKey = completedAt.split("T")[0]
+      const completedAtDate = move.completedAt instanceof Date ? move.completedAt : new Date(String(move.completedAt))
+      const dateKey = getDateInTimezone(completedAtDate, timezone)
 
       // Only include dates within range
       if (new Date(dateKey) < startDate) continue
@@ -45,7 +50,7 @@ export async function GET(request: Request) {
     for (let i = weeks * 7; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split("T")[0]
+      const dateStr = getDateInTimezone(date, timezone)
       const data = countMap.get(dateStr)
 
       const minutes = data?.minutes || 0
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
     for (let i = weeks * 7; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split("T")[0]
+      const dateStr = getDateInTimezone(date, timezone)
       const level = Math.random() > 0.3 ? Math.floor(Math.random() * 5) : 0
       const minutes = level * 45
       mockHeatmap.push({
