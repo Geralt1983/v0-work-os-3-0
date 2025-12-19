@@ -8,6 +8,12 @@ import { Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DAILY_TARGET_MINUTES } from "@/lib/constants"
 
+function isWeekday(dateStr: string): boolean {
+  const date = new Date(dateStr + "T12:00:00") // Add noon to avoid timezone shifts
+  const day = date.getDay()
+  return day !== 0 && day !== 6 // 0 = Sunday, 6 = Saturday
+}
+
 export function CompletionHeatmap() {
   const isMobile = useIsMobile()
   const { heatmap, isLoading } = useHeatmap(isMobile ? 2 : 12)
@@ -22,7 +28,11 @@ export function CompletionHeatmap() {
 
   let currentStreak = 0
   for (let i = heatmap.length - 1; i >= 0; i--) {
-    if (heatmap[i].count > 0) {
+    const day = heatmap[i]
+    // Skip weekends for streak calculation
+    if (!isWeekday(day.date)) continue
+    // Check if weekday has 180+ minutes
+    if (day.minutes >= 180) {
       currentStreak++
     } else {
       break
