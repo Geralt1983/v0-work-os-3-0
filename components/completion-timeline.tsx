@@ -25,14 +25,10 @@ export function CompletionTimeline() {
   // Count active filters for badge
   const activeFilterCount = (clientFilter !== "all" ? 1 : 0) + (days !== 30 ? 1 : 0)
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const today = new Date().toISOString().split("T")[0]
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0]
+  const formatDate = (dateStr: string, displayLabel: string | null) => {
+    if (displayLabel) return displayLabel
 
-    if (dateStr === today) return "Today"
-    if (dateStr === yesterday) return "Yesterday"
-
+    const date = new Date(dateStr + "T12:00:00") // Add noon time to avoid timezone edge cases
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       month: "short",
@@ -176,7 +172,7 @@ export function CompletionTimeline() {
             {timeline.map((day) => (
               <div key={day.date}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-sm">{formatDate(day.date)}</h3>
+                  <h3 className="font-medium text-sm">{formatDate(day.date, day.displayLabel)}</h3>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{day.moves.length} moves</span>
                     <span>&bull;</span>

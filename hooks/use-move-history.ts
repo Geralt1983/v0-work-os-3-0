@@ -12,6 +12,7 @@ interface HistoryMove {
 
 interface TimelineDay {
   date: string
+  displayLabel: string | null // Added displayLabel from API
   moves: HistoryMove[]
   totalMinutes: number
   clientsTouched: string[]
@@ -27,7 +28,11 @@ interface HeatmapDay {
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function useMoveHistory(days = 30, clientId?: number) {
-  const url = clientId ? `/api/moves/history?days=${days}&clientId=${clientId}` : `/api/moves/history?days=${days}`
+  const timezone = typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York"
+
+  const url = clientId
+    ? `/api/moves/history?days=${days}&clientId=${clientId}&timezone=${encodeURIComponent(timezone)}`
+    : `/api/moves/history?days=${days}&timezone=${encodeURIComponent(timezone)}`
 
   const { data, error, isLoading } = useSWR<{ timeline: TimelineDay[] }>(url, fetcher)
 

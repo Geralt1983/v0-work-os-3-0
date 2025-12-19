@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const days = Number.parseInt(searchParams.get("days") || "30")
   const clientId = searchParams.get("clientId")
+  const timezone = searchParams.get("timezone") || "America/New_York"
 
   try {
     const db = getDb()
@@ -34,14 +35,16 @@ export async function GET(request: Request) {
       .where(and(...conditions))
       .orderBy(desc(moves.completedAt))
 
-    // Group by date
+    // Group by date IN USER'S TIMEZONE
     const grouped: Record<string, any[]> = {}
 
     for (const move of completedMoves) {
       if (!move.completedAt) continue
 
-      const completedAt = move.completedAt instanceof Date ? move.completedAt.toISOString() : String(move.completedAt)
-      const dateKey = completedAt.split("T")[0]
+      const completedAt = move.completedAt instanceof Date ? move.completedAt : new Date(move.completedAt)
+
+      // Convert UTC timestamp to user's local date string
+      const dateKey = completedAt.toLocaleDateString("en-CA", { timeZone: timezone }) // YYYY-MM-DD format
 
       if (!grouped[dateKey]) {
         grouped[dateKey] = []
@@ -53,21 +56,29 @@ export async function GET(request: Request) {
         clientColor: move.clientColor,
         drainType: move.drainType,
         effortEstimate: move.effortEstimate,
-        completedAt: completedAt,
+        completedAt: completedAt.toISOString(),
       })
     }
+
+    // Also compute today and yesterday in user's timezone for frontend comparison
+    const now = new Date()
+    const todayKey = now.toLocaleDateString("en-CA", { timeZone: timezone })
+    const yesterdayDate = new Date(now.getTime() - 86400000)
+    const yesterdayKey = yesterdayDate.toLocaleDateString("en-CA", { timeZone: timezone })
 
     // Convert to array sorted by date
     const timeline = Object.entries(grouped)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, moves]) => ({
         date,
+        // Add display label based on user's timezone
+        displayLabel: date === todayKey ? "Today" : date === yesterdayKey ? "Yesterday" : null,
         moves,
         totalMinutes: moves.reduce((sum: number, m: any) => sum + (m.effortEstimate || 1) * 20, 0),
         clientsTouched: [...new Set(moves.map((m: any) => m.clientName))].filter(Boolean),
       }))
 
-    return NextResponse.json({ timeline })
+    return NextResponse.json({ timeline, todayKey, yesterdayKey })
   } catch (error) {
     console.error("Failed to fetch history:", error)
 
@@ -75,6 +86,7 @@ export async function GET(request: Request) {
     const mockTimeline = [
       {
         date: new Date().toISOString().split("T")[0],
+        displayLabel: "Today",
         moves: [
           {
             id: 1,
