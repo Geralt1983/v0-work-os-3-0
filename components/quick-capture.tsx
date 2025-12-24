@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus, Minus, Sparkles, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useClients } from "@/hooks/use-moves"
 
 interface EstimateResult {
   client: string | null
@@ -19,6 +20,7 @@ interface QuickCaptureProps {
 }
 
 export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
+  const { clients } = useClients()
   const [input, setInput] = useState("")
   const [isEstimating, setIsEstimating] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
@@ -68,6 +70,11 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     setIsAdding(true)
     setError(null)
 
+    // Look up clientId from detected client name
+    const matchedClient = estimate.client
+      ? clients.find((c) => c.name.toLowerCase() === estimate.client?.toLowerCase())
+      : null
+
     try {
       const res = await fetch("/api/moves", {
         method: "POST",
@@ -75,6 +82,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
         body: JSON.stringify({
           title: estimate.title,
           status: "backlog",
+          clientId: matchedClient?.id || null,
           complexityAiGuess: estimate.complexity,
           complexityFinal: adjustedComplexity,
         }),
