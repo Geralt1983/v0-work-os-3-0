@@ -32,6 +32,10 @@ export const moves = pgTable("moves", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
   backlogEnteredAt: timestamp("backlog_entered_at", { withTimezone: true }),
+  // Complexity tracking (1-10 scale)
+  complexityAiGuess: integer("complexity_ai_guess"),
+  complexityFinal: integer("complexity_final"),
+  complexityAdjustedAt: timestamp("complexity_adjusted_at", { withTimezone: true }),
 })
 
 // =============================================================================
@@ -145,6 +149,18 @@ export const moveEvents = pgTable("move_events", {
 })
 
 // =============================================================================
+// DAILY GOALS (complexity tracking)
+// =============================================================================
+export const dailyGoals = pgTable("daily_goals", {
+  id: serial("id").primaryKey(),
+  date: date("date").unique().notNull(),
+  targetComplexity: integer("target_complexity").default(18),
+  earnedComplexity: integer("earned_complexity").default(0),
+  moveCount: integer("move_count").default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
+
+// =============================================================================
 // BEHAVIORAL PATTERNS
 // =============================================================================
 export const behavioralPatterns = pgTable("behavioral_patterns", {
@@ -167,6 +183,7 @@ export type Message = InferSelectModel<typeof messages>
 export type MoveEvent = InferSelectModel<typeof moveEvents>
 export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
+export type DailyGoal = InferSelectModel<typeof dailyGoals>
 export type GraveyardMove = InferSelectModel<typeof moveGraveyard>
 export type MoveStatus = "active" | "queued" | "backlog" | "done"
 export type DrainType = "deep" | "shallow" | "admin"

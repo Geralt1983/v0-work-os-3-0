@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { SynapsePicks } from "@/components/synapse-picks"
 import { Graveyard } from "@/components/graveyard"
 import { GroupedBacklog } from "@/components/grouped-backlog"
+import { QuickCapture } from "@/components/quick-capture"
 import { FileText, Layers, CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
@@ -401,6 +402,10 @@ export default function MovesPage() {
 
         <div className="mt-4">
           <DoneToday />
+        </div>
+
+        <div className="mt-4">
+          <QuickCapture onMoveCreated={refresh} />
         </div>
 
         <div className="mt-4 hidden lg:block">

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, dailyLog, clients } from "@/lib/schema"
-import { eq } from "drizzle-orm"
+import { moves, dailyLog, clients, dailyGoals } from "@/lib/schema"
+import { eq, sql } from "drizzle-orm"
 import { logMoveEvent } from "@/lib/events"
 import { sendNotification } from "@/lib/notifications"
 
@@ -13,7 +13,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const moveId = Number.parseInt(id)
     const body = await request.json().catch(() => ({}))
 
-    const [currentMove] = await db.select({ status: moves.status }).from(moves).where(eq(moves.id, moveId)).limit(1)
+    const [currentMove] = await db
+      .select({
+        status: moves.status,
+        complexityAiGuess: moves.complexityAiGuess,
+        complexityFinal: moves.complexityFinal,
+      })
+      .from(moves)
+      .where(eq(moves.id, moveId))
+      .limit(1)
 
     const [updated] = await db
       .update(moves)
@@ -36,6 +44,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       fromStatus: currentMove?.status,
       toStatus: "done",
     })
+
+    // ============================================
+    // DAILY GOALS - COMPLEXITY TRACKING
+    // ============================================
+    try {
+      const complexity = currentMove?.complexityFinal || currentMove?.complexityAiGuess || 3
+      const now = new Date()
+      const estOffset = -5 * 60
+      const estNow = new Date(now.getTime() + (estOffset - now.getTimezoneOffset()) * 60000)
+      const todayDate = estNow.toISOString().split("T")[0]
+
+      // Upsert into daily_goals
+      await db
+        .insert(dailyGoals)
+        .values({
+          date: todayDate,
+          earnedComplexity: complexity,
+          moveCount: 1,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: dailyGoals.date,
+          set: {
+            earnedComplexity: sql`${dailyGoals.earnedComplexity} + ${complexity}`,
+            moveCount: sql`${dailyGoals.moveCount} + 1`,
+            updatedAt: now,
+          },
+        })
+
+      console.log(`[COMPLEXITY] Added ${complexity} points for move ${moveId}`)
+    } catch (complexityError) {
+      console.error("[COMPLEXITY] Failed to update daily goals:", complexityError)
+    }
 
     // ============================================
     // "WORK STARTED" NOTIFICATION LOGIC

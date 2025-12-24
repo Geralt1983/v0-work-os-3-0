@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
         createdAt: moves.createdAt,
         updatedAt: moves.updatedAt,
         completedAt: moves.completedAt,
+        complexityAiGuess: moves.complexityAiGuess,
+        complexityFinal: moves.complexityFinal,
+        complexityAdjustedAt: moves.complexityAdjustedAt,
         clientName: clients.name,
       })
       .from(moves)
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log("[v0] Moves API: POST body received", body)
 
-    const { clientId, title, description, status, effortEstimate, drainType } = body
+    const { clientId, title, description, status, effortEstimate, drainType, complexityAiGuess, complexityFinal } = body
 
     if (!title) {
       console.log("[v0] Moves API: Title is missing")
@@ -92,6 +95,9 @@ export async function POST(request: NextRequest) {
         drainType: drainType || null,
         sortOrder: newSortOrder,
         updatedAt: new Date(),
+        complexityAiGuess: complexityAiGuess || null,
+        complexityFinal: complexityFinal || null,
+        complexityAdjustedAt: complexityFinal ? new Date() : null,
       })
       .returning()
 
