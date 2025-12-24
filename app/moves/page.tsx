@@ -16,7 +16,7 @@ import { SynapsePicks } from "@/components/synapse-picks"
 import { Graveyard } from "@/components/graveyard"
 import { GroupedBacklog } from "@/components/grouped-backlog"
 import { QuickCapture } from "@/components/quick-capture"
-import { FileText, Layers, CheckSquare } from "lucide-react"
+import { CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
@@ -601,12 +601,17 @@ export default function MovesPage() {
                         {/* Title - grows to fill space, truncate with ellipsis */}
                         <span className="flex-1 text-sm text-zinc-100 truncate">{move.title}</span>
 
-                        {/* Drain type */}
-                        <span className="text-xs text-zinc-500 w-16 shrink-0 capitalize">{move.drainType || "—"}</span>
-
-                        {/* Effort */}
-                        <span className="text-xs text-zinc-500 w-10 shrink-0 text-right">
-                          {(move.effortEstimate || 2) * 20}m
+                        {/* Complexity */}
+                        <span className={`text-xs w-10 shrink-0 text-right font-medium ${
+                          move.complexity
+                            ? move.complexity <= 2 ? "text-emerald-400"
+                              : move.complexity <= 4 ? "text-green-400"
+                              : move.complexity <= 6 ? "text-yellow-400"
+                              : move.complexity <= 8 ? "text-orange-400"
+                              : "text-red-400"
+                            : "text-zinc-500"
+                        }`}>
+                          {move.complexity || "—"}
                         </span>
 
                         {/* Actions */}
@@ -798,14 +803,17 @@ function MoveCard({
     setTilt({ x: 0, y: 0 })
   }
 
-  const typeIcon = {
-    Quick: <Zap className="h-3 w-3" />,
-    Standard: <FileText className="h-3 w-3" />,
-    Chunky: <Layers className="h-3 w-3" />,
-    Deep: <Clock className="h-3 w-3" />,
-  }
-
   const isCompact = variant === "compact"
+
+  // Complexity color based on 1-10 scale
+  const getComplexityColor = (value: number | undefined) => {
+    if (!value) return "text-zinc-500"
+    if (value <= 2) return "text-emerald-400"
+    if (value <= 4) return "text-green-400"
+    if (value <= 6) return "text-yellow-400"
+    if (value <= 8) return "text-orange-400"
+    return "text-red-400"
+  }
 
   const subtasks = move.subtasks || []
   const completedSubtasks = subtasks.filter((s) => s.completed).length
@@ -890,10 +898,14 @@ function MoveCard({
       )}
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
-        <span className="flex items-center gap-1">
-          {typeIcon[move.type]}
-          {move.type}
-        </span>
+        {move.complexity ? (
+          <span className={`flex items-center gap-1.5 text-sm font-medium ${getComplexityColor(move.complexity)}`}>
+            <span className="text-base tabular-nums">{move.complexity}</span>
+            <span className="text-zinc-500 font-normal">complexity</span>
+          </span>
+        ) : (
+          <span className="text-sm text-zinc-500">—</span>
+        )}
         <span className="text-sm text-zinc-500">{move.ageLabel}</span>
       </div>
     </motion.div>

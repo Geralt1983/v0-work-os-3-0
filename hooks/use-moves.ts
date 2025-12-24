@@ -31,6 +31,9 @@ interface BackendMove {
   completedAt: string | null
   clientName?: string
   client?: { id: number; name: string; color: string | null }
+  complexityAiGuess?: number | null
+  complexityFinal?: number | null
+  complexityAdjustedAt?: string | null
 }
 
 export interface Move {
@@ -48,6 +51,10 @@ export interface Move {
   ageLabel?: string
   completedAt?: number
   sortOrder?: number
+  drainType?: string
+  complexity?: number // Final complexity (user-adjusted or AI guess)
+  complexityAiGuess?: number
+  complexityFinal?: number
 }
 
 export interface Subtask {
@@ -197,6 +204,10 @@ export function useMoves() {
         ageLabel: getAgeLabel(move.createdAt),
         completedAt: move.completedAt ? new Date(move.completedAt).getTime() : undefined,
         sortOrder: move.sortOrder ?? undefined,
+        drainType: move.drainType ?? undefined,
+        complexity: move.complexityFinal ?? move.complexityAiGuess ?? undefined,
+        complexityAiGuess: move.complexityAiGuess ?? undefined,
+        complexityFinal: move.complexityFinal ?? undefined,
       }))
 
       if (isPreviewEnvironment()) {
