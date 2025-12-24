@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Loader2, Plus, Minus, Sparkles, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useClients } from "@/hooks/use-moves"
@@ -26,9 +27,24 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [estimate, setEstimate] = useState<EstimateResult | null>(null)
   const [adjustedComplexity, setAdjustedComplexity] = useState<number | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string>("none")
   const [error, setError] = useState<string | null>(null)
 
   const currentComplexity = adjustedComplexity ?? estimate?.complexity ?? 0
+
+  // When estimate comes in, try to match the detected client
+  useEffect(() => {
+    if (estimate?.client && clients.length > 0) {
+      const matched = clients.find(
+        (c) => c.name.toLowerCase() === estimate.client?.toLowerCase()
+      )
+      if (matched) {
+        setSelectedClientId(String(matched.id))
+      } else {
+        setSelectedClientId("none")
+      }
+    }
+  }, [estimate?.client, clients])
 
   const handleEstimate = useCallback(async () => {
     if (!input.trim()) return
@@ -37,6 +53,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     setError(null)
     setEstimate(null)
     setAdjustedComplexity(null)
+    setSelectedClientId("none")
 
     try {
       const res = await fetch("/api/ai/estimate-complexity", {
@@ -70,10 +87,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     setIsAdding(true)
     setError(null)
 
-    // Look up clientId from detected client name
-    const matchedClient = estimate.client
-      ? clients.find((c) => c.name.toLowerCase() === estimate.client?.toLowerCase())
-      : null
+    const clientId = selectedClientId !== "none" ? Number(selectedClientId) : null
 
     try {
       const res = await fetch("/api/moves", {
@@ -82,7 +96,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
         body: JSON.stringify({
           title: estimate.title,
           status: "backlog",
-          clientId: matchedClient?.id || null,
+          clientId,
           complexityAiGuess: estimate.complexity,
           complexityFinal: adjustedComplexity,
         }),
@@ -94,6 +108,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
       setInput("")
       setEstimate(null)
       setAdjustedComplexity(null)
+      setSelectedClientId("none")
       onMoveCreated?.()
     } catch (err) {
       setError("Failed to add move")
@@ -110,8 +125,10 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
   }
 
   const resetCapture = () => {
+    setInput("")
     setEstimate(null)
     setAdjustedComplexity(null)
+    setSelectedClientId("none")
     setError(null)
   }
 
@@ -130,6 +147,8 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     if (value <= 8) return "Heavy"
     return "Major"
   }
+
+  const selectedClient = clients.find((c) => String(c.id) === selectedClientId)
 
   return (
     <div className="w-full space-y-3">
@@ -182,13 +201,34 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
       {/* Estimate Result */}
       {estimate && (
         <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-800 space-y-4">
-          {/* Client & Title */}
-          <div className="space-y-1">
-            {estimate.client && (
-              <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-violet-600/20 text-violet-400 border border-violet-500/30">
-                {estimate.client}
-              </span>
-            )}
+          {/* Client Selector & Title */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                <SelectTrigger className="w-[160px] bg-zinc-800 border-zinc-700 text-zinc-100">
+                  <SelectValue placeholder="Select client" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800">
+                  <SelectItem value="none" className="text-zinc-400 focus:bg-zinc-800 focus:text-zinc-100">
+                    No client
+                  </SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem
+                      key={client.id}
+                      value={String(client.id)}
+                      className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100"
+                    >
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {estimate.client && selectedClientId === "none" && (
+                <span className="text-xs text-zinc-500">
+                  AI detected: {estimate.client}
+                </span>
+              )}
+            </div>
             <h3 className="text-lg font-medium text-zinc-100">{estimate.title}</h3>
           </div>
 
