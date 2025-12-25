@@ -11,8 +11,8 @@ export const MOCK_CLIENTS = [
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
-export const MOCK_MOVES = [
-  // Acme Corp moves
+export const MOCK_TASKS = [
+  // Acme Corp tasks
   {
     id: 1,
     clientId: 1,
@@ -56,7 +56,7 @@ export const MOCK_MOVES = [
     completedAt: null,
   },
 
-  // TechStart moves
+  // TechStart tasks
   {
     id: 4,
     clientId: 2,
@@ -100,7 +100,7 @@ export const MOCK_MOVES = [
     completedAt: null,
   },
 
-  // Global Media moves
+  // Global Media tasks
   {
     id: 7,
     clientId: 3,
@@ -130,7 +130,7 @@ export const MOCK_MOVES = [
     completedAt: null,
   },
 
-  // Internal moves
+  // Internal tasks
   {
     id: 9,
     clientId: 4,
@@ -146,7 +146,7 @@ export const MOCK_MOVES = [
     completedAt: null,
   },
 
-  // Side Project moves
+  // Side Project tasks
   {
     id: 10,
     clientId: 5,
@@ -162,7 +162,7 @@ export const MOCK_MOVES = [
     completedAt: null,
   },
 
-  // Some completed moves for metrics
+  // Some completed tasks for metrics
   {
     id: 11,
     clientId: 1,
@@ -192,6 +192,9 @@ export const MOCK_MOVES = [
     completedAt: daysAgo(9),
   },
 ]
+
+// Legacy alias
+export const MOCK_MOVES = MOCK_TASKS
 
 export function isPreviewEnvironment(): boolean {
   if (typeof window === "undefined") {

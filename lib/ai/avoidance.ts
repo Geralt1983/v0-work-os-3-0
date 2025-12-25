@@ -1,5 +1,5 @@
 import { getDb } from "../db"
-import { moves, clients, clientMemory, moveEvents } from "../schema"
+import { tasks, clients, clientMemory, taskEvents } from "../schema"
 import { eq, sql, and, gte } from "drizzle-orm"
 
 export interface AvoidanceReport {
@@ -18,7 +18,7 @@ interface StaleClient {
 }
 
 interface DeferredTask {
-  moveId: number
+  taskId: number
   title: string
   clientName: string
   deferCount: number
@@ -61,7 +61,7 @@ async function detectStaleClients(): Promise<StaleClient[]> {
     return memories.map((m) => ({
       name: m.clientName,
       daysSinceTouch: m.staleDays || 0,
-      lastMoveTitle: m.lastMoveDescription || null,
+      lastMoveTitle: m.lastTaskDescription || null,
       severity: (m.staleDays || 0) >= 5 ? "severe" : (m.staleDays || 0) >= 3 ? "critical" : "warning",
     }))
   } catch (err) {
@@ -74,50 +74,50 @@ async function detectFrequentlyDeferred(): Promise<DeferredTask[]> {
   try {
     const db = await getDb()
 
-    // Find moves that have been deferred 3+ times
-    const deferredMoves = await db
+    // Find tasks that have been deferred 3+ times
+    const deferredTasks = await db
       .select({
-        moveId: moveEvents.moveId,
+        taskId: taskEvents.taskId,
         deferCount: sql<number>`COUNT(*)`.as("defer_count"),
       })
-      .from(moveEvents)
+      .from(taskEvents)
       .where(sql`event_type IN ('deferred', 'demoted')`)
-      .groupBy(moveEvents.moveId)
+      .groupBy(taskEvents.taskId)
       .having(sql`COUNT(*) >= 2`)
 
     const results: DeferredTask[] = []
 
-    for (const dm of deferredMoves) {
-      const [move] = await db
+    for (const dt of deferredTasks) {
+      const [task] = await db
         .select({
-          id: moves.id,
-          title: moves.title,
-          status: moves.status,
-          clientId: moves.clientId,
-          createdAt: moves.createdAt,
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          clientId: tasks.clientId,
+          createdAt: tasks.createdAt,
         })
-        .from(moves)
-        .where(eq(moves.id, dm.moveId))
+        .from(tasks)
+        .where(eq(tasks.id, dt.taskId))
         .limit(1)
 
-      if (move && move.status !== "done") {
+      if (task && task.status !== "done") {
         let clientName = "Unknown"
-        if (move.clientId) {
+        if (task.clientId) {
           const [client] = await db
             .select({ name: clients.name })
             .from(clients)
-            .where(eq(clients.id, move.clientId))
+            .where(eq(clients.id, task.clientId))
             .limit(1)
           if (client) clientName = client.name
         }
 
-        const daysSinceCreated = Math.floor((Date.now() - new Date(move.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        const daysSinceCreated = Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24))
 
         results.push({
-          moveId: move.id,
-          title: move.title,
+          taskId: task.id,
+          title: task.title,
           clientName,
-          deferCount: dm.deferCount,
+          deferCount: dt.deferCount,
           daysSinceCreated,
         })
       }
@@ -142,23 +142,23 @@ async function detectAvoidancePatterns(): Promise<AvoidancePattern[]> {
 
     const clientDistribution = await db
       .select({
-        clientId: moves.clientId,
-        moveCount: sql<number>`COUNT(*)`.as("move_count"),
+        clientId: tasks.clientId,
+        taskCount: sql<number>`COUNT(*)`.as("task_count"),
       })
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, sevenDaysAgo)))
-      .groupBy(moves.clientId)
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, sevenDaysAgo)))
+      .groupBy(tasks.clientId)
 
     if (clientDistribution.length > 0) {
-      const totalMoves = clientDistribution.reduce((sum, c) => sum + c.moveCount, 0)
-      const maxMoves = Math.max(...clientDistribution.map((c) => c.moveCount))
-      const concentration = maxMoves / totalMoves
+      const totalTasks = clientDistribution.reduce((sum, c) => sum + c.taskCount, 0)
+      const maxTasks = Math.max(...clientDistribution.map((c) => c.taskCount))
+      const concentration = maxTasks / totalTasks
 
       if (concentration > 0.6 && clientDistribution.length > 2) {
         patterns.push({
           type: "client_concentration",
           description: "One client is getting disproportionate attention",
-          evidence: `${Math.round(concentration * 100)}% of moves went to one client this week`,
+          evidence: `${Math.round(concentration * 100)}% of tasks went to one client this week`,
         })
       }
     }
@@ -166,12 +166,12 @@ async function detectAvoidancePatterns(): Promise<AvoidancePattern[]> {
     // Pattern 2: Drain type avoidance
     const drainDistribution = await db
       .select({
-        drainType: moves.drainType,
-        moveCount: sql<number>`COUNT(*)`.as("move_count"),
+        drainType: tasks.drainType,
+        taskCount: sql<number>`COUNT(*)`.as("task_count"),
       })
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, sevenDaysAgo)))
-      .groupBy(moves.drainType)
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, sevenDaysAgo)))
+      .groupBy(tasks.drainType)
 
     const drainTypes = ["deep", "shallow", "admin"]
     const usedDrainTypes = drainDistribution.map((d) => d.drainType)
@@ -181,35 +181,35 @@ async function detectAvoidancePatterns(): Promise<AvoidancePattern[]> {
       patterns.push({
         type: "drain_avoidance",
         description: `Avoiding ${avoidedDrainTypes.join(", ")} type work`,
-        evidence: `No ${avoidedDrainTypes.join(" or ")} moves completed this week`,
+        evidence: `No ${avoidedDrainTypes.join(" or ")} tasks completed this week`,
       })
     }
 
     // Pattern 3: Morning vs afternoon avoidance
-    const morningMoves = await db
+    const morningTasks = await db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(moves)
+      .from(tasks)
       .where(
         and(
-          eq(moves.status, "done"),
-          gte(moves.completedAt, sevenDaysAgo),
+          eq(tasks.status, "done"),
+          gte(tasks.completedAt, sevenDaysAgo),
           sql`EXTRACT(HOUR FROM completed_at AT TIME ZONE 'America/New_York') < 12`,
         ),
       )
 
-    const afternoonMoves = await db
+    const afternoonTasks = await db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(moves)
+      .from(tasks)
       .where(
         and(
-          eq(moves.status, "done"),
-          gte(moves.completedAt, sevenDaysAgo),
+          eq(tasks.status, "done"),
+          gte(tasks.completedAt, sevenDaysAgo),
           sql`EXTRACT(HOUR FROM completed_at AT TIME ZONE 'America/New_York') >= 12`,
         ),
       )
 
-    const morningCount = morningMoves[0]?.count ?? 0
-    const afternoonCount = afternoonMoves[0]?.count ?? 0
+    const morningCount = morningTasks[0]?.count ?? 0
+    const afternoonCount = afternoonTasks[0]?.count ?? 0
     const totalTimeCount = morningCount + afternoonCount
 
     if (totalTimeCount > 5) {

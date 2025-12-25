@@ -14,7 +14,7 @@ export default function HistoryPage() {
             <p className="hidden sm:block text-sm text-white/60 mt-1">Track your progress and patterns over time.</p>
           </div>
           <div className="flex-shrink-0 pt-1">
-            <WorkOSNav active="history" />
+            <WorkOSNav />
           </div>
         </div>
 

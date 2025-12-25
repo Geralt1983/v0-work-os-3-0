@@ -3,9 +3,9 @@
 import type React from "react"
 
 import { useState, useMemo } from "react"
-import { useMoves, useClients, type Move } from "@/hooks/use-moves"
-import { NewMoveDialog } from "@/components/new-move-dialog"
-import { EditMoveDialog } from "@/components/edit-move-dialog"
+import { useTasks, useClients, type Task } from "@/hooks/use-tasks"
+import { NewTaskDialog } from "@/components/new-task-dialog"
+import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
@@ -42,35 +42,35 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { useSWRConfig } from "swr"
 
-type MoveVariant = "primary" | "compact"
-type MovesView = "board" | "list" | "focus"
+type TaskVariant = "primary" | "compact" | "secondary"
+type TasksView = "board" | "list" | "focus"
 type SortKey = "client" | "status" | "type"
 type SortDir = "asc" | "desc"
-type MoveStatus = "today" | "upnext" | "backlog" | "done"
+type TaskStatus = "today" | "upnext" | "backlog" | "done"
 
 export default function MovesPage() {
   const {
-    moves,
+    tasks,
     isLoading,
-    completeMove,
-    updateMoveStatus,
-    reorderMoves,
-    createMove,
-    updateMove,
+    completeTask,
+    updateTaskStatus,
+    reorderTasks,
+    createTask,
+    updateTask,
     updateSubtasks,
     setSubtasksFromTitles,
-    deleteMove,
+    deleteTask,
     refresh,
-  } = useMoves()
+  } = useTasks()
   const { clients } = useClients()
   const { mutate: globalMutate } = useSWRConfig()
 
-  const [view, setView] = useState<MovesView>("board")
+  const [view, setView] = useState<TasksView>("board")
   const [clientFilter, setClientFilter] = useState("all")
   const clientOptions = useMemo(() => {
-    const names = new Set(moves.map((m) => m.client).filter(Boolean))
+    const names = new Set(tasks.map((t) => t.client).filter(Boolean))
     return Array.from(names).sort() as string[]
-  }, [moves])
+  }, [tasks])
 
   const [statusFilter, setStatusFilter] = useState("all")
   const statusOptions = [
@@ -87,14 +87,14 @@ export default function MovesPage() {
     { value: "admin", label: "Admin" },
   ]
 
-  const [editingMove, setEditingMove] = useState<Move | null>(null)
-  const [isNewMoveOpen, setIsNewMoveOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false)
   const [focusIndex, setFocusIndex] = useState(0)
   const isMobile = useIsMobile()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [draggedItems, setDraggedItems] = useState<{
-    today: Move[]
-    upnext: Move[]
+    today: Task[]
+    upnext: Task[]
   } | null>(null)
   const [recentlyDropped, setRecentlyDropped] = useState<string | null>(null)
 
@@ -110,13 +110,13 @@ export default function MovesPage() {
     }),
   )
 
-  const activeMove = activeId ? moves.find((m) => m.id === activeId) : null
+  const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
     setDraggedItems({
-      today: moves.filter((m) => m.status === "today"),
-      upnext: moves.filter((m) => m.status === "upnext"),
+      today: tasks.filter((t) => t.status === "today"),
+      upnext: tasks.filter((t) => t.status === "upnext"),
     })
   }
 
@@ -132,11 +132,11 @@ export default function MovesPage() {
     const activeId = active.id as string
     const overId = over.id as string
 
-    const draggedMove = moves.find((m) => m.id === activeId)
-    if (!draggedMove) return
+    const draggedTask = tasks.find((t) => t.id === activeId)
+    if (!draggedTask) return
 
     // Determine the target column/status from the overId
-    let targetStatus: MoveStatus | null = null
+    let targetStatus: TaskStatus | null = null
     let targetIndex = 0
 
     // Check if dropped over a column
@@ -166,7 +166,7 @@ export default function MovesPage() {
     if (!targetStatus) return
 
     if (targetStatus === "backlog") {
-      await updateMoveStatus(activeId, "backlog")
+      await updateTaskStatus(activeId, "backlog")
       // Refresh the grouped backlog view
       globalMutate("/api/backlog/grouped")
       setRecentlyDropped(activeId)
@@ -176,17 +176,17 @@ export default function MovesPage() {
 
     // Get the final order from draggedItems for the target column
     const targetColumnItems = targetStatus === "today" ? finalItems.today : finalItems.upnext
-    const newOrder = targetColumnItems.map((m) => m.id)
+    const newOrder = targetColumnItems.map((t) => t.id)
 
     // If moving to a different column, update status first then reorder
-    if (draggedMove.status !== targetStatus) {
+    if (draggedTask.status !== targetStatus) {
       // Update status AND provide the full new order for the target column
-      await updateMoveStatus(activeId, targetStatus, targetIndex)
+      await updateTaskStatus(activeId, targetStatus, targetIndex)
       // Wait a bit for the status update to propagate, then reorder
-      await reorderMoves(targetStatus, newOrder)
+      await reorderTasks(targetStatus, newOrder)
     } else {
       // Same column - just reorder
-      await reorderMoves(targetStatus, newOrder)
+      await reorderTasks(targetStatus, newOrder)
     }
 
     setRecentlyDropped(activeId)
@@ -211,9 +211,9 @@ export default function MovesPage() {
 
     if (!activeColumn) return
 
-    // Find the active move
-    const activeMove = draggedItems[activeColumn].find((m) => m.id === activeId)
-    if (!activeMove) return
+    // Find the active task
+    const draggedItem = draggedItems[activeColumn].find((t) => t.id === activeId)
+    if (!draggedItem) return
 
     // Determine target column
     let targetColumn: "today" | "upnext" | null = null
@@ -236,14 +236,14 @@ export default function MovesPage() {
     // If moving within the same column - use insert logic
     if (activeColumn === targetColumn) {
       const items = [...draggedItems[targetColumn]]
-      const activeIndex = items.findIndex((m) => m.id === activeId)
-      const overIndex = overId.endsWith("-column") ? items.length - 1 : items.findIndex((m) => m.id === overId)
+      const activeIndex = items.findIndex((t) => t.id === activeId)
+      const overIndex = overId.endsWith("-column") ? items.length - 1 : items.findIndex((t) => t.id === overId)
 
       if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
         // Remove from old position
         items.splice(activeIndex, 1)
         // Insert at new position
-        items.splice(overIndex, 0, activeMove)
+        items.splice(overIndex, 0, draggedItem)
 
         setDraggedItems({
           ...draggedItems,
@@ -252,17 +252,17 @@ export default function MovesPage() {
       }
     } else {
       // Moving between columns - remove from source, insert in target
-      const sourceItems = draggedItems[activeColumn].filter((m) => m.id !== activeId)
+      const sourceItems = draggedItems[activeColumn].filter((t) => t.id !== activeId)
       const targetItems = [...draggedItems[targetColumn]]
 
       // Find insertion index
-      const overIndex = overId.endsWith("-column") ? targetItems.length : targetItems.findIndex((m) => m.id === overId)
+      const overIndex = overId.endsWith("-column") ? targetItems.length : targetItems.findIndex((t) => t.id === overId)
 
       // Insert at the target position
       if (overIndex === -1) {
-        targetItems.push(activeMove)
+        targetItems.push(draggedItem)
       } else {
-        targetItems.splice(overIndex, 0, activeMove)
+        targetItems.splice(overIndex, 0, draggedItem)
       }
 
       setDraggedItems({
@@ -273,35 +273,35 @@ export default function MovesPage() {
     }
   }
 
-  const filteredMoves = useMemo(() => {
-    return moves.filter((m) => {
-      if (clientFilter !== "all" && m.client !== clientFilter) return false
-      if (statusFilter !== "all" && m.status !== statusFilter) return false
-      if (typeFilter !== "all" && m.drainType !== typeFilter) return false
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      if (clientFilter !== "all" && t.client !== clientFilter) return false
+      if (statusFilter !== "all" && t.status !== statusFilter) return false
+      if (typeFilter !== "all" && t.drainType !== typeFilter) return false
       return true
     })
-  }, [moves, clientFilter, statusFilter, typeFilter])
+  }, [tasks, clientFilter, statusFilter, typeFilter])
 
   const byStatus = useMemo(() => {
-    const today = filteredMoves.filter((m) => m.status === "today")
-    const upnext = filteredMoves.filter((m) => m.status === "upnext")
-    const backlog = filteredMoves.filter((m) => m.status === "backlog")
-    const done = filteredMoves.filter((m) => m.status === "done")
+    const today = filteredTasks.filter((t) => t.status === "today")
+    const upnext = filteredTasks.filter((t) => t.status === "upnext")
+    const backlog = filteredTasks.filter((t) => t.status === "backlog")
+    const done = filteredTasks.filter((t) => t.status === "done")
     return { today, upnext, backlog, done }
-  }, [filteredMoves])
+  }, [filteredTasks])
 
-  const activeMoves = useMemo(() => {
+  const activeTasks = useMemo(() => {
     return [...byStatus.today, ...byStatus.upnext]
   }, [byStatus.today, byStatus.upnext])
 
   const handleComplete = async (id: string) => {
-    await completeMove(id)
+    await completeTask(id)
     refresh()
   }
 
   const handleEditFromBacklog = (taskId: number) => {
-    const move = moves.find((m) => m.id === taskId.toString())
-    if (move) setEditingMove(move)
+    const task = tasks.find((t) => t.id === taskId.toString())
+    if (task) setEditingTask(task)
   }
 
   const mobileTabs = [
@@ -365,11 +365,11 @@ export default function MovesPage() {
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Moves</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">One move per client, every day.</p>
+            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Tasks</h1>
+            <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
           </div>
           <div className="flex-shrink-0 pt-1">
-            <WorkOSNav active="moves" />
+            <WorkOSNav />
           </div>
         </div>
 
@@ -393,7 +393,7 @@ export default function MovesPage() {
           <Button
             size="sm"
             className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white h-9 px-3"
-            onClick={() => setIsNewMoveOpen(true)}
+            onClick={() => setIsNewTaskOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
             New
@@ -405,7 +405,7 @@ export default function MovesPage() {
         </div>
 
         <div className="mt-4">
-          <QuickCapture onMoveCreated={refresh} />
+          <QuickCapture onTaskCreated={refresh} />
         </div>
 
         <div className="mt-4 hidden lg:block">
@@ -522,31 +522,31 @@ export default function MovesPage() {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0}>
-                  <SortableContext items={displayItems.today.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-                    {displayItems.today.map((move) => (
-                      <SortableMoveCard
-                        key={move.id}
-                        move={move}
+                  <SortableContext items={displayItems.today.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                    {displayItems.today.map((task) => (
+                      <SortableTaskCard
+                        key={task.id}
+                        task={task}
                         variant="primary"
                         onComplete={handleComplete}
-                        onEdit={() => setEditingMove(move)}
-                        isDragging={activeId === move.id}
-                        justDropped={recentlyDropped === move.id}
+                        onEdit={() => setEditingTask(task)}
+                        isDragging={activeId === task.id}
+                        justDropped={recentlyDropped === task.id}
                       />
                     ))}
                   </SortableContext>
                 </DroppableColumn>
                 <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0}>
-                  <SortableContext items={displayItems.upnext.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-                    {displayItems.upnext.map((move) => (
-                      <SortableMoveCard
-                        key={move.id}
-                        move={move}
+                  <SortableContext items={displayItems.upnext.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                    {displayItems.upnext.map((task) => (
+                      <SortableTaskCard
+                        key={task.id}
+                        task={task}
                         variant="primary"
                         onComplete={handleComplete}
-                        onEdit={() => setEditingMove(move)}
-                        isDragging={activeId === move.id}
-                        justDropped={recentlyDropped === move.id}
+                        onEdit={() => setEditingTask(task)}
+                        isDragging={activeId === task.id}
+                        justDropped={recentlyDropped === task.id}
                       />
                     ))}
                   </SortableContext>
@@ -561,9 +561,9 @@ export default function MovesPage() {
                   easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               >
-                {activeMove ? (
+                {activeTask ? (
                   <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-fuchsia-500/50 rounded-2xl">
-                    <MoveCard move={activeMove} variant="primary" onComplete={handleComplete} isDragging={true} />
+                    <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
                   </div>
                 ) : null}
               </DragOverlay>
@@ -578,40 +578,40 @@ export default function MovesPage() {
                   <h3 className="text-sm font-medium text-zinc-400">Active & Queued</h3>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
-                  {filteredMoves
-                    .filter((m) => m.status === "today" || m.status === "upnext")
-                    .map((move) => (
+                  {filteredTasks
+                    .filter((t) => t.status === "today" || t.status === "upnext")
+                    .map((task) => (
                       <div
-                        key={move.id}
+                        key={task.id}
                         className="flex items-center gap-3 py-2 px-4 hover:bg-zinc-800/50 cursor-pointer transition-colors"
-                        onClick={() => setEditingMove(move)}
+                        onClick={() => setEditingTask(task)}
                       >
                         {/* Client badge - fixed width */}
                         <Badge
                           variant="outline"
                           className="w-24 justify-center text-xs shrink-0 truncate"
                           style={{
-                            borderColor: move.clientColor || "#6b7280",
-                            color: move.clientColor || "#6b7280",
+                            borderColor: task.clientColor || "#6b7280",
+                            color: task.clientColor || "#6b7280",
                           }}
                         >
-                          {move.client}
+                          {task.client}
                         </Badge>
 
                         {/* Title - grows to fill space, truncate with ellipsis */}
-                        <span className="flex-1 text-sm text-zinc-100 truncate">{move.title}</span>
+                        <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
 
-                        {/* Complexity */}
+                        {/* Points */}
                         <span className={`text-xs w-10 shrink-0 text-right font-medium ${
-                          move.complexity
-                            ? move.complexity <= 2 ? "text-emerald-400"
-                              : move.complexity <= 4 ? "text-green-400"
-                              : move.complexity <= 6 ? "text-yellow-400"
-                              : move.complexity <= 8 ? "text-orange-400"
+                          task.points
+                            ? task.points <= 2 ? "text-emerald-400"
+                              : task.points <= 4 ? "text-green-400"
+                              : task.points <= 6 ? "text-yellow-400"
+                              : task.points <= 8 ? "text-orange-400"
                               : "text-red-400"
                             : "text-zinc-500"
                         }`}>
-                          {move.complexity || "—"}
+                          {task.points || "—"}
                         </span>
 
                         {/* Actions */}
@@ -620,7 +620,7 @@ export default function MovesPage() {
                             className="p-1.5 hover:bg-zinc-700 rounded transition-colors"
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleComplete(move.id)
+                              handleComplete(task.id)
                             }}
                           >
                             <Check className="h-4 w-4 text-zinc-500 hover:text-emerald-400" />
@@ -628,7 +628,7 @@ export default function MovesPage() {
                         </div>
                       </div>
                     ))}
-                  {filteredMoves.filter((m) => m.status === "today" || m.status === "upnext").length === 0 && (
+                  {filteredTasks.filter((t) => t.status === "today" || t.status === "upnext").length === 0 && (
                     <div className="py-4 px-4 text-sm text-zinc-500 text-center">No active or queued tasks</div>
                   )}
                 </div>
@@ -645,16 +645,16 @@ export default function MovesPage() {
           {view === "focus" && (
             <div className="space-y-6">
               <div className="flex flex-col gap-4">
-                {activeMoves.length === 0 ? (
+                {activeTasks.length === 0 ? (
                   <p className="text-zinc-500 text-center py-8">No active tasks. Promote something from backlog!</p>
                 ) : (
-                  activeMoves.map((move, index) => (
-                    <MoveCard
-                      key={move.id}
-                      move={move}
+                  activeTasks.map((task, index) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
                       variant="primary"
                       onComplete={handleComplete}
-                      onEdit={() => setEditingMove(move)}
+                      onEdit={() => setEditingTask(task)}
                       isDragging={focusIndex === index}
                       onClick={() => setFocusIndex(index)}
                     />
@@ -675,13 +675,13 @@ export default function MovesPage() {
               (displayItems.today.length === 0 ? (
                 <p className="text-zinc-500 text-sm text-center py-4">No tasks for today</p>
               ) : (
-                displayItems.today.map((move) => (
-                  <MoveCard
-                    key={move.id}
-                    move={move}
+                displayItems.today.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
                     variant="compact"
                     onComplete={handleComplete}
-                    onEdit={() => setEditingMove(move)}
+                    onEdit={() => setEditingTask(task)}
                   />
                 ))
               ))}
@@ -689,13 +689,13 @@ export default function MovesPage() {
               (displayItems.upnext.length === 0 ? (
                 <p className="text-zinc-500 text-sm text-center py-4">No queued tasks</p>
               ) : (
-                displayItems.upnext.map((move) => (
-                  <MoveCard
-                    key={move.id}
-                    move={move}
+                displayItems.upnext.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
                     variant="compact"
                     onComplete={handleComplete}
-                    onEdit={() => setEditingMove(move)}
+                    onEdit={() => setEditingTask(task)}
                   />
                 ))
               ))}
@@ -708,33 +708,33 @@ export default function MovesPage() {
         </div>
       </div>
 
-      <NewMoveDialog
-        open={isNewMoveOpen}
-        onClose={() => setIsNewMoveOpen(false)}
+      <NewTaskDialog
+        open={isNewTaskOpen}
+        onClose={() => setIsNewTaskOpen(false)}
         onSubmit={async (data) => {
-          await createMove(data)
+          await createTask(data)
           refresh()
         }}
       />
 
-      <EditMoveDialog
-        open={!!editingMove}
-        move={editingMove}
-        onClose={() => setEditingMove(null)}
-        onSave={async (id, data) => {
-          await updateMove(id, data)
+      <EditTaskDialog
+        open={!!editingTask}
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={async (id: string, data: Record<string, unknown>) => {
+          await updateTask(id, data)
           refresh()
         }}
-        onUpdateSubtasks={async (id, subtasks) => {
-          await updateSubtasks(id, subtasks)
+        onUpdateSubtasks={async (id: string, subtasks: unknown[]) => {
+          await updateSubtasks(id, subtasks as Parameters<typeof updateSubtasks>[1])
           refresh()
         }}
-        onSetSubtasksFromTitles={async (id, titles) => {
+        onSetSubtasksFromTitles={async (id: string, titles: string[]) => {
           await setSubtasksFromTitles(id, titles)
           refresh()
         }}
-        onDelete={async (id) => {
-          await deleteMove(id)
+        onDelete={async (id: string) => {
+          await deleteTask(id)
           refresh()
         }}
       />
@@ -742,7 +742,7 @@ export default function MovesPage() {
   )
 }
 
-function ViewToggle({ view, onChange }: { view: MovesView; onChange: (v: MovesView) => void }) {
+function ViewToggle({ view, onChange }: { view: TasksView; onChange: (v: TasksView) => void }) {
   return (
     <div className="inline-flex rounded-full bg-zinc-900 p-1">
       <button
@@ -767,16 +767,16 @@ function ViewToggle({ view, onChange }: { view: MovesView; onChange: (v: MovesVi
   )
 }
 
-function MoveCard({
-  move,
+function TaskCard({
+  task,
   variant,
   onComplete,
   onClick,
   onEdit,
   isDragging = false,
 }: {
-  move: Move
-  variant: MoveVariant
+  task: Task
+  variant: TaskVariant
   onComplete: (id: string) => Promise<void>
   onClick?: () => void
   onEdit?: () => void
@@ -788,7 +788,7 @@ function MoveCard({
 
   const handleComplete = async () => {
     setCompleting(true)
-    await onComplete(move.id)
+    await onComplete(task.id)
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -805,8 +805,8 @@ function MoveCard({
 
   const isCompact = variant === "compact"
 
-  // Complexity color based on 1-10 scale
-  const getComplexityColor = (value: number | undefined) => {
+  // Points color based on 1-10 scale
+  const getPointsColor = (value: number | undefined) => {
     if (!value) return "text-zinc-500"
     if (value <= 2) return "text-emerald-400"
     if (value <= 4) return "text-green-400"
@@ -815,7 +815,7 @@ function MoveCard({
     return "text-red-400"
   }
 
-  const subtasks = move.subtasks || []
+  const subtasks = task.subtasks || []
   const completedSubtasks = subtasks.filter((s) => s.completed).length
   const totalSubtasks = subtasks.length
   const hasSubtasks = totalSubtasks > 0
@@ -844,11 +844,11 @@ function MoveCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{move.client}</div>
+          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
           <h3
             className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
-            {move.title}
+            {task.title}
           </h3>
         </div>
         <div className="flex items-center gap-1">
@@ -869,8 +869,8 @@ function MoveCard({
               handleComplete()
             }}
             disabled={completing}
-            aria-label={`Complete task: ${move.title}`}
-            title={`Complete: ${move.title}`}
+            aria-label={`Complete task: ${task.title}`}
+            title={`Complete: ${task.title}`}
             className={`flex-shrink-0 p-2 rounded-xl transition-all ${
               completing
                 ? "bg-emerald-500 text-white scale-90"
@@ -898,15 +898,15 @@ function MoveCard({
       )}
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
-        {move.complexity ? (
-          <span className={`flex items-center gap-1.5 text-sm font-medium ${getComplexityColor(move.complexity)}`}>
-            <span className="text-base tabular-nums">{move.complexity}</span>
-            <span className="text-zinc-500 font-normal">complexity</span>
+        {task.points ? (
+          <span className={`flex items-center gap-1.5 text-sm font-medium ${getPointsColor(task.points)}`}>
+            <span className="text-base tabular-nums">{task.points}</span>
+            <span className="text-zinc-500 font-normal">pts</span>
           </span>
         ) : (
           <span className="text-sm text-zinc-500">—</span>
         )}
-        <span className="text-sm text-zinc-500">{move.ageLabel}</span>
+        <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>
     </motion.div>
   )
@@ -916,7 +916,7 @@ function UndoToast({
   undoState,
   onUndo,
 }: {
-  undoState: { id: string; previousStatus: MoveStatus } | null
+  undoState: { id: string; previousStatus: TaskStatus } | null
   onUndo: () => void
 }) {
   return (
@@ -975,15 +975,15 @@ function DroppableColumn({
   )
 }
 
-function SortableMoveCard({
-  move,
+function SortableTaskCard({
+  task,
   variant,
   onComplete,
   onEdit,
   isDragging: isDraggingProp,
   justDropped,
 }: {
-  move: Move
+  task: Task
   variant: "primary" | "secondary"
   onComplete: (id: string) => void
   onEdit: () => void
@@ -991,8 +991,8 @@ function SortableMoveCard({
   justDropped?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: move.id,
-    data: { type: "move", move },
+    id: task.id,
+    data: { type: "task", task },
   })
 
   const style: React.CSSProperties = {
@@ -1013,10 +1013,10 @@ function SortableMoveCard({
       {...listeners}
       className={`touch-none ${justDropped ? "animate-thud" : ""}`}
     >
-      <MoveCard
-        move={move}
+      <TaskCard
+        task={task}
         variant={variant}
-        onComplete={onComplete}
+        onComplete={async (id) => onComplete(id)}
         onEdit={onEdit}
         isDragging={isDragging || isDraggingProp}
       />

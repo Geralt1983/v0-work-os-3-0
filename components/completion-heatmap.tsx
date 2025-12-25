@@ -1,6 +1,6 @@
 "use client"
 
-import { useHeatmap } from "@/hooks/use-move-history"
+import { useHeatmap } from "@/hooks/use-task-history"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"

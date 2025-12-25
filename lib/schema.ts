@@ -15,9 +15,9 @@ export const clients = pgTable("clients", {
 })
 
 // =============================================================================
-// MOVES
+// TASKS (formerly moves)
 // =============================================================================
-export const moves = pgTable("moves", {
+export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id),
   title: text("title").notNull(),
@@ -32,11 +32,14 @@ export const moves = pgTable("moves", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
   backlogEnteredAt: timestamp("backlog_entered_at", { withTimezone: true }),
-  // Complexity tracking (1-10 scale)
-  complexityAiGuess: integer("complexity_ai_guess"),
-  complexityFinal: integer("complexity_final"),
-  complexityAdjustedAt: timestamp("complexity_adjusted_at", { withTimezone: true }),
+  // Points tracking (1-10 scale, formerly complexity)
+  pointsAiGuess: integer("points_ai_guess"),
+  pointsFinal: integer("points_final"),
+  pointsAdjustedAt: timestamp("points_adjusted_at", { withTimezone: true }),
 })
+
+// Legacy alias for backwards compatibility during migration
+export const moves = tasks
 
 // =============================================================================
 // SESSIONS (for chat)
@@ -68,10 +71,10 @@ export const clientMemory = pgTable("client_memory", {
   id: text("id").primaryKey(),
   clientName: text("client_name").notNull().unique(),
   tier: text("tier").default("active"),
-  lastMoveId: text("last_move_id"),
-  lastMoveDescription: text("last_move_description"),
-  lastMoveAt: timestamp("last_move_at"),
-  totalMoves: integer("total_moves").default(0),
+  lastTaskId: text("last_task_id"),
+  lastTaskDescription: text("last_task_description"),
+  lastTaskAt: timestamp("last_task_at"),
+  totalTasks: integer("total_tasks").default(0),
   staleDays: integer("stale_days").default(0),
   notes: text("notes"),
   sentiment: text("sentiment").default("neutral"),
@@ -88,12 +91,12 @@ export const clientMemory = pgTable("client_memory", {
 export const dailyLog = pgTable("daily_log", {
   id: text("id").primaryKey(),
   date: text("date").notNull(),
-  completedMoves: jsonb("completed_moves"),
+  completedTasks: jsonb("completed_tasks"),
   clientsTouched: jsonb("clients_touched"),
   clientsSkipped: jsonb("clients_skipped"),
   summary: text("summary"),
-  backlogMovesCount: integer("backlog_moves_count").default(0),
-  nonBacklogMovesCount: integer("non_backlog_moves_count").default(0),
+  backlogTasksCount: integer("backlog_tasks_count").default(0),
+  nonBacklogTasksCount: integer("non_backlog_tasks_count").default(0),
   notificationsSent: jsonb("notifications_sent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   workStartedNotified: boolean("work_started_notified").default(false),
@@ -106,7 +109,7 @@ export const dailyLog = pgTable("daily_log", {
 export const dailySnapshots = pgTable("daily_snapshots", {
   id: serial("id").primaryKey(),
   snapshotDate: date("snapshot_date").notNull(),
-  movesCompleted: integer("moves_completed").default(0),
+  tasksCompleted: integer("tasks_completed").default(0),
   minutesEarned: integer("minutes_earned").default(0),
   clientsTouched: text("clients_touched").array().default([]),
   drainTypesUsed: text("drain_types_used").array().default([]),
@@ -117,11 +120,11 @@ export const dailySnapshots = pgTable("daily_snapshots", {
 })
 
 // =============================================================================
-// MOVE GRAVEYARD
+// TASK GRAVEYARD (formerly move_graveyard)
 // =============================================================================
-export const moveGraveyard = pgTable("move_graveyard", {
+export const taskGraveyard = pgTable("task_graveyard", {
   id: serial("id").primaryKey(),
-  originalMoveId: integer("original_move_id"),
+  originalTaskId: integer("original_task_id"),
   clientId: integer("client_id").references(() => clients.id),
   title: varchar("title", { length: 500 }).notNull(),
   description: text("description"),
@@ -133,14 +136,17 @@ export const moveGraveyard = pgTable("move_graveyard", {
   daysInBacklog: integer("days_in_backlog"),
 })
 
+// Legacy alias
+export const moveGraveyard = taskGraveyard
+
 // =============================================================================
-// MOVE EVENTS
+// TASK EVENTS (formerly move_events)
 // =============================================================================
-export const moveEvents = pgTable("move_events", {
+export const taskEvents = pgTable("task_events", {
   id: serial("id").primaryKey(),
-  moveId: integer("move_id")
+  taskId: integer("task_id")
     .notNull()
-    .references(() => moves.id),
+    .references(() => tasks.id),
   eventType: varchar("event_type", { length: 50 }).notNull(),
   fromStatus: varchar("from_status", { length: 50 }),
   toStatus: varchar("to_status", { length: 50 }),
@@ -148,15 +154,21 @@ export const moveEvents = pgTable("move_events", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
 
+// Legacy alias
+export const moveEvents = taskEvents
+
 // =============================================================================
-// DAILY GOALS (complexity tracking)
+// DAILY GOALS (points tracking with streaks)
 // =============================================================================
 export const dailyGoals = pgTable("daily_goals", {
   id: serial("id").primaryKey(),
   date: date("date").unique().notNull(),
-  targetComplexity: integer("target_complexity").default(18),
-  earnedComplexity: integer("earned_complexity").default(0),
-  moveCount: integer("move_count").default(0),
+  targetPoints: integer("target_points").default(18),
+  earnedPoints: integer("earned_points").default(0),
+  taskCount: integer("task_count").default(0),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastGoalHitDate: date("last_goal_hit_date"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
 
@@ -177,15 +189,19 @@ export const behavioralPatterns = pgTable("behavioral_patterns", {
 // TYPE EXPORTS
 // =============================================================================
 export type Client = InferSelectModel<typeof clients>
-export type Move = InferSelectModel<typeof moves>
+export type Task = InferSelectModel<typeof tasks>
+export type Move = Task // Legacy alias
 export type Session = InferSelectModel<typeof sessions>
 export type Message = InferSelectModel<typeof messages>
-export type MoveEvent = InferSelectModel<typeof moveEvents>
+export type TaskEvent = InferSelectModel<typeof taskEvents>
+export type MoveEvent = TaskEvent // Legacy alias
 export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
 export type DailyGoal = InferSelectModel<typeof dailyGoals>
-export type GraveyardMove = InferSelectModel<typeof moveGraveyard>
-export type MoveStatus = "active" | "queued" | "backlog" | "done"
+export type GraveyardTask = InferSelectModel<typeof taskGraveyard>
+export type GraveyardMove = GraveyardTask // Legacy alias
+export type TaskStatus = "active" | "queued" | "backlog" | "done"
+export type MoveStatus = TaskStatus // Legacy alias
 export type DrainType = "deep" | "shallow" | "admin"
 
 export type Subtask = {
@@ -197,13 +213,16 @@ export type Subtask = {
 // =============================================================================
 // RELATIONS
 // =============================================================================
-export const movesRelations = relations(moves, ({ one }) => ({
+export const tasksRelations = relations(tasks, ({ one }) => ({
   client: one(clients, {
-    fields: [moves.clientId],
+    fields: [tasks.clientId],
     references: [clients.id],
   }),
 }))
 
+// Legacy alias
+export const movesRelations = tasksRelations
+
 export const clientsRelations = relations(clients, ({ many }) => ({
-  moves: many(moves),
+  tasks: many(tasks),
 }))

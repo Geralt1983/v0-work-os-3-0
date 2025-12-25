@@ -1,77 +1,77 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, moveEvents, clientMemory, clients } from "@/lib/schema"
+import { tasks, taskEvents, clientMemory, clients } from "@/lib/schema"
 import { eq, sql, desc } from "drizzle-orm"
 
 // POST - Simulate a deferral event for testing
 export async function POST(request: NextRequest) {
   try {
     const db = await getDb()
-    const { moveId } = await request.json()
+    const { taskId } = await request.json()
 
-    if (!moveId) {
-      return NextResponse.json({ error: "moveId required" }, { status: 400 })
+    if (!taskId) {
+      return NextResponse.json({ error: "taskId required" }, { status: 400 })
     }
 
-    // Get the move and its client
-    const [move] = await db
+    // Get the task and its client
+    const [task] = await db
       .select({
-        id: moves.id,
-        title: moves.title,
-        status: moves.status,
-        clientId: moves.clientId,
+        id: tasks.id,
+        title: tasks.title,
+        status: tasks.status,
+        clientId: tasks.clientId,
       })
-      .from(moves)
-      .where(eq(moves.id, moveId))
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
       .limit(1)
 
-    if (!move) {
-      return NextResponse.json({ error: "Move not found" }, { status: 404 })
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
     // Log a demoted event
-    await db.insert(moveEvents).values({
-      moveId,
+    await db.insert(taskEvents).values({
+      taskId,
       eventType: "demoted",
-      fromStatus: move.status || "active",
+      fromStatus: task.status || "active",
       toStatus: "backlog",
       metadata: { simulated: true },
     })
 
     // Get client name and update defer count
-    if (move.clientId) {
+    if (task.clientId) {
       const [client] = await db
         .select({ name: clients.name })
         .from(clients)
-        .where(eq(clients.id, move.clientId))
+        .where(eq(clients.id, task.clientId))
         .limit(1)
 
       if (client) {
         await db
           .update(clientMemory)
           .set({
-            deferCount: sql`COALESCE(defer_count, 0) + 1`,
+            avoidanceScore: sql`COALESCE(avoidance_score, 0) + 1`,
             updatedAt: new Date(),
           })
           .where(eq(clientMemory.clientName, client.name))
       }
     }
 
-    // Get total deferral count for this move
+    // Get total deferral count for this task
     const events = await db
       .select()
-      .from(moveEvents)
-      .where(eq(moveEvents.moveId, moveId))
-      .orderBy(desc(moveEvents.createdAt))
+      .from(taskEvents)
+      .where(eq(taskEvents.taskId, taskId))
+      .orderBy(desc(taskEvents.createdAt))
 
     const deferralCount = events.filter((e) => e.eventType === "demoted" || e.eventType === "deferred").length
 
     return NextResponse.json({
       success: true,
-      moveId,
-      title: move.title,
+      taskId,
+      title: task.title,
       deferralCount,
-      message: `Simulated deferral for "${move.title}". Total deferrals: ${deferralCount}`,
+      message: `Simulated deferral for "${task.title}". Total deferrals: ${deferralCount}`,
     })
   } catch (error) {
     console.error("Failed to simulate deferral:", error)
@@ -79,27 +79,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - List all move events for debugging
+// GET - List all task events for debugging
 export async function GET() {
   try {
     const db = await getDb()
 
     const events = await db
       .select({
-        id: moveEvents.id,
-        moveId: moveEvents.moveId,
-        eventType: moveEvents.eventType,
-        fromStatus: moveEvents.fromStatus,
-        toStatus: moveEvents.toStatus,
-        metadata: moveEvents.metadata,
-        createdAt: moveEvents.createdAt,
-        moveTitle: moves.title,
+        id: taskEvents.id,
+        taskId: taskEvents.taskId,
+        eventType: taskEvents.eventType,
+        fromStatus: taskEvents.fromStatus,
+        toStatus: taskEvents.toStatus,
+        metadata: taskEvents.metadata,
+        createdAt: taskEvents.createdAt,
+        taskTitle: tasks.title,
         clientName: clients.name,
       })
-      .from(moveEvents)
-      .leftJoin(moves, eq(moveEvents.moveId, moves.id))
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .orderBy(desc(moveEvents.createdAt))
+      .from(taskEvents)
+      .leftJoin(tasks, eq(taskEvents.taskId, tasks.id))
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .orderBy(desc(taskEvents.createdAt))
       .limit(50)
 
     return NextResponse.json({ events })

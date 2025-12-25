@@ -16,7 +16,7 @@ export interface TodayMetrics {
   earnedMinutes: number
   targetMinutes: number
   percent: number
-  paceStatus: "on_track" | "behind"
+  paceStatus: "ahead" | "on_track" | "behind" | "minimum_only"
   momentum: {
     score: number
     percent: number
@@ -39,22 +39,28 @@ export interface ClientMetrics {
   isStale: boolean
 }
 
-let previewCompletedMoves: { id: number; completedAt: Date; effortEstimate: number }[] = []
+let previewCompletedTasks: { id: number; completedAt: Date; effortEstimate: number }[] = []
 
-export function trackCompletedMove(move: { id: number; effortEstimate?: number }) {
-  previewCompletedMoves.push({
-    id: move.id,
+export function trackCompletedTask(task: { id: number; effortEstimate?: number }) {
+  previewCompletedTasks.push({
+    id: task.id,
     completedAt: new Date(),
-    effortEstimate: move.effortEstimate || 2,
+    effortEstimate: task.effortEstimate || 2,
   })
 }
 
-export function clearPreviewCompletedMoves() {
-  previewCompletedMoves = []
+// Legacy alias
+export const trackCompletedMove = trackCompletedTask
+
+export function clearPreviewCompletedTasks() {
+  previewCompletedTasks = []
 }
 
+// Legacy alias
+export const clearPreviewCompletedMoves = clearPreviewCompletedTasks
+
 function calculatePreviewMomentum(): TodayMetrics["momentum"] {
-  if (previewCompletedMoves.length === 0) {
+  if (previewCompletedTasks.length === 0) {
     return {
       score: 0,
       percent: 0,
@@ -84,7 +90,7 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
 
   const targetMinutes = 180
   const expectedByNow = Math.round((dayProgress / 100) * targetMinutes)
-  const actualMinutes = previewCompletedMoves.reduce((sum, m) => sum + m.effortEstimate * 20, 0)
+  const actualMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * 20, 0)
 
   // Score based on actual vs expected
   const score = expectedByNow > 0 ? Math.round((actualMinutes / expectedByNow) * 100) : actualMinutes > 0 ? 100 : 0
@@ -119,12 +125,12 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
 }
 
 function getPreviewMetrics(): TodayMetrics {
-  const earnedMinutes = previewCompletedMoves.reduce((sum, m) => sum + m.effortEstimate * 20, 0)
+  const earnedMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * 20, 0)
   const targetMinutes = 180
   const percent = Math.round((earnedMinutes / targetMinutes) * 100)
 
   return {
-    completedCount: previewCompletedMoves.length,
+    completedCount: previewCompletedTasks.length,
     earnedMinutes,
     targetMinutes,
     percent,

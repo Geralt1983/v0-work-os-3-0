@@ -121,66 +121,83 @@ export async function sendNotification(message: string, options: NotificationOpt
   }
 }
 
-export async function sendMilestoneAlert(percent: number, movesCount: number, earnedMinutes?: number) {
-  const minutes = earnedMinutes || 0
-  const minimumMet = minutes >= DAILY_MINIMUM_MINUTES
-  const targetMet = minutes >= DAILY_TARGET_MINUTES
-  const toMinimum = Math.max(0, DAILY_MINIMUM_MINUTES - minutes)
-  const toTarget = Math.max(0, DAILY_TARGET_MINUTES - minutes)
+interface MilestoneAlertParams {
+  percent: number
+  taskCount: number
+  earnedPoints: number
+  targetPoints: number
+  currentStreak: number
+}
 
-  let message: string
+// Compact format: "4 tasks ✓ • 16/18 pts • 🔥 Day 3"
+export async function sendMilestoneAlert({
+  percent,
+  taskCount,
+  earnedPoints,
+  targetPoints,
+  currentStreak,
+}: MilestoneAlertParams) {
+  const hitGoal = earnedPoints >= targetPoints
   let priority: "min" | "low" | "default" | "high" | "urgent" = "default"
 
-  if (targetMet || percent >= 100) {
-    message = `🎯 TARGET HIT! ${minutes} min earned (4 hour goal complete!)`
-    priority = "high"
-  } else if (minimumMet) {
-    message = `✅ MINIMUM MET! ${minutes} min earned. ${toTarget} more for target.`
-    priority = "high"
-  } else if (percent >= 75) {
-    message = `🔥 75% to target! ${minutes} min earned. ${toMinimum} to minimum, ${toTarget} to target.`
-  } else if (percent >= 50) {
-    message = `⚡ Halfway to target! ${minutes} min earned. ${toMinimum} to minimum.`
-  } else if (percent >= 25) {
-    message = `🚀 25% to target! ${minutes} min earned (${movesCount} moves). Keep going!`
-  } else {
-    message = `📊 Progress: ${minutes} min earned (${movesCount} moves).`
+  // Build compact message parts
+  const parts: string[] = []
+  parts.push(`${taskCount} task${taskCount !== 1 ? "s" : ""} ✓`)
+  parts.push(`${earnedPoints}/${targetPoints} pts`)
+
+  // Add streak only if ≥2 days
+  if (currentStreak >= 2) {
+    parts.push(`🔥 Day ${currentStreak}`)
   }
 
-  // Also check for exceeding target
+  let message = parts.join(" • ")
+
+  // Add celebratory prefix for milestones
+  if (hitGoal || percent >= 100) {
+    message = `🎯 ${message}`
+    priority = "high"
+  } else if (percent >= 75) {
+    message = `🔥 ${message}`
+  } else if (percent >= 50) {
+    message = `⚡ ${message}`
+  } else if (percent >= 25) {
+    message = `🚀 ${message}`
+  }
+
+  // Special celebrations for exceeding target
   if (percent >= 150) {
-    message = `🏆 150% - Legendary! ${minutes} min earned!`
+    message = `🏆 ${parts.join(" • ")}`
     priority = "high"
   } else if (percent >= 125) {
-    message = `🌟 125% - Above and beyond! ${minutes} min earned!`
+    message = `🌟 ${parts.join(" • ")}`
     priority = "high"
   }
 
   return sendNotification(message, {
-    title: "Work OS Update",
-    tags: "tada,chart_with_upwards_trend",
+    title: "Work OS",
+    tags: "chart_with_upwards_trend",
     priority,
   })
 }
 
 export function formatMorningSummary(stats: {
-  weekMoves: number
+  weekTasks: number
   weekMinutes: number
   weekTarget: number
-  bestDay: { day: string; moves: number } | null
-  worstDay: { day: string; moves: number } | null
+  bestDay: { day: string; tasks: number } | null
+  worstDay: { day: string; tasks: number } | null
   staleClients: string[]
   deferredTasks?: Array<{ title: string; deferCount: number }>
 }) {
   const pct = Math.round((stats.weekMinutes / stats.weekTarget) * 100)
   let msg = `☀️ Good morning!\n\n`
-  msg += `📊 Week so far: ${stats.weekMoves} moves (${stats.weekMinutes}/${stats.weekTarget} min = ${pct}%)\n\n`
+  msg += `📊 Week so far: ${stats.weekTasks} tasks (${stats.weekMinutes}/${stats.weekTarget} min = ${pct}%)\n\n`
   msg += `🎯 Today's goals:\n`
   msg += `   • Minimum: ${DAILY_MINIMUM_MINUTES} min (3 hours)\n`
   msg += `   • Target: ${DAILY_TARGET_MINUTES} min (4 hours)\n`
 
   if (stats.bestDay) {
-    msg += `\n🏆 Best day: ${stats.bestDay.day} (${stats.bestDay.moves} moves)`
+    msg += `\n🏆 Best day: ${stats.bestDay.day} (${stats.bestDay.tasks} tasks)`
   }
 
   if (stats.staleClients.length > 0) {

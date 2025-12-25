@@ -42,13 +42,13 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     window.dispatchEvent(new Event("synapse-collapse-change"))
 
     if (!collapsed) {
-      setTimeout(() => scrollToBottom("instant"), 50)
+      setTimeout(() => scrollToBottom("auto"), 50)
       markAsSeen() // Mark messages as seen when opening sidebar
     }
   }
 
   useEffect(() => {
-    scrollToBottom("instant")
+    scrollToBottom("auto")
   }, []) // Initial mount
 
   useEffect(() => {

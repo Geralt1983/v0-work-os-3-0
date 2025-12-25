@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moveGraveyard, clients } from "@/lib/schema"
+import { taskGraveyard, clients } from "@/lib/schema"
 import { desc, eq } from "drizzle-orm"
 
 export async function GET() {
@@ -9,21 +9,21 @@ export async function GET() {
 
     const archived = await db
       .select({
-        id: moveGraveyard.id,
-        originalMoveId: moveGraveyard.originalMoveId,
-        title: moveGraveyard.title,
-        description: moveGraveyard.description,
-        effortEstimate: moveGraveyard.effortEstimate,
-        drainType: moveGraveyard.drainType,
-        archivedAt: moveGraveyard.archivedAt,
-        archiveReason: moveGraveyard.archiveReason,
-        daysInBacklog: moveGraveyard.daysInBacklog,
+        id: taskGraveyard.id,
+        originalTaskId: taskGraveyard.originalTaskId,
+        title: taskGraveyard.title,
+        description: taskGraveyard.description,
+        effortEstimate: taskGraveyard.effortEstimate,
+        drainType: taskGraveyard.drainType,
+        archivedAt: taskGraveyard.archivedAt,
+        archiveReason: taskGraveyard.archiveReason,
+        daysInBacklog: taskGraveyard.daysInBacklog,
         clientName: clients.name,
         clientColor: clients.color,
       })
-      .from(moveGraveyard)
-      .leftJoin(clients, eq(moveGraveyard.clientId, clients.id))
-      .orderBy(desc(moveGraveyard.archivedAt))
+      .from(taskGraveyard)
+      .leftJoin(clients, eq(taskGraveyard.clientId, clients.id))
+      .orderBy(desc(taskGraveyard.archivedAt))
 
     return NextResponse.json(archived)
   } catch (error) {

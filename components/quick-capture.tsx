@@ -5,32 +5,32 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Loader2, Plus, Minus, Sparkles, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useClients } from "@/hooks/use-moves"
+import { useClients } from "@/hooks/use-tasks"
 
 interface EstimateResult {
   client: string | null
   title: string
-  complexity: number
+  points: number
   reasoning: string
   confidence: number
   raw_input: string
 }
 
 interface QuickCaptureProps {
-  onMoveCreated?: () => void
+  onTaskCreated?: () => void
 }
 
-export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
+export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
   const { clients } = useClients()
   const [input, setInput] = useState("")
   const [isEstimating, setIsEstimating] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [estimate, setEstimate] = useState<EstimateResult | null>(null)
-  const [adjustedComplexity, setAdjustedComplexity] = useState<number | null>(null)
+  const [adjustedPoints, setAdjustedPoints] = useState<number | null>(null)
   const [selectedClientId, setSelectedClientId] = useState<string>("none")
   const [error, setError] = useState<string | null>(null)
 
-  const currentComplexity = adjustedComplexity ?? estimate?.complexity ?? 0
+  const currentPoints = adjustedPoints ?? estimate?.points ?? 0
 
   // When estimate comes in, try to match the detected client
   useEffect(() => {
@@ -52,11 +52,11 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     setIsEstimating(true)
     setError(null)
     setEstimate(null)
-    setAdjustedComplexity(null)
+    setAdjustedPoints(null)
     setSelectedClientId("none")
 
     try {
-      const res = await fetch("/api/ai/estimate-complexity", {
+      const res = await fetch("/api/ai/estimate-points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw_input: input.trim() }),
@@ -67,7 +67,7 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
       const data: EstimateResult = await res.json()
       setEstimate(data)
     } catch (err) {
-      setError("Failed to estimate complexity")
+      setError("Failed to estimate points")
       console.error(err)
     } finally {
       setIsEstimating(false)
@@ -90,49 +90,49 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     const clientId = selectedClientId !== "none" ? Number(selectedClientId) : null
 
     try {
-      const res = await fetch("/api/moves", {
+      const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: estimate.title,
           status: "backlog",
           clientId,
-          complexityAiGuess: estimate.complexity,
-          complexityFinal: adjustedComplexity,
+          pointsAiGuess: estimate.points,
+          pointsFinal: adjustedPoints,
         }),
       })
 
-      if (!res.ok) throw new Error("Failed to create move")
+      if (!res.ok) throw new Error("Failed to create task")
 
       // Reset state
       setInput("")
       setEstimate(null)
-      setAdjustedComplexity(null)
+      setAdjustedPoints(null)
       setSelectedClientId("none")
-      onMoveCreated?.()
+      onTaskCreated?.()
     } catch (err) {
-      setError("Failed to add move")
+      setError("Failed to add task")
       console.error(err)
     } finally {
       setIsAdding(false)
     }
   }
 
-  const adjustComplexity = (delta: number) => {
-    const current = adjustedComplexity ?? estimate?.complexity ?? 5
+  const adjustPoints = (delta: number) => {
+    const current = adjustedPoints ?? estimate?.points ?? 5
     const newValue = Math.max(1, Math.min(10, current + delta))
-    setAdjustedComplexity(newValue)
+    setAdjustedPoints(newValue)
   }
 
   const resetCapture = () => {
     setInput("")
     setEstimate(null)
-    setAdjustedComplexity(null)
+    setAdjustedPoints(null)
     setSelectedClientId("none")
     setError(null)
   }
 
-  const getComplexityColor = (value: number) => {
+  const getPointsColor = (value: number) => {
     if (value <= 2) return "text-emerald-400"
     if (value <= 4) return "text-green-400"
     if (value <= 6) return "text-yellow-400"
@@ -140,8 +140,8 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
     return "text-red-400"
   }
 
-  const getComplexityLabel = (value: number) => {
-    if (value <= 2) return "Trivial"
+  const getPointsLabel = (value: number) => {
+    if (value <= 2) return "Quick"
     if (value <= 4) return "Routine"
     if (value <= 6) return "Meaningful"
     if (value <= 8) return "Heavy"
@@ -232,45 +232,45 @@ export function QuickCapture({ onMoveCreated }: QuickCaptureProps) {
             <h3 className="text-lg font-medium text-zinc-100">{estimate.title}</h3>
           </div>
 
-          {/* Complexity Display & Adjustment */}
+          {/* Points Display & Adjustment */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="icon-sm"
-                onClick={() => adjustComplexity(-1)}
-                disabled={currentComplexity <= 1}
+                onClick={() => adjustPoints(-1)}
+                disabled={currentPoints <= 1}
                 className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
               >
                 <Minus className="w-4 h-4" />
               </Button>
 
               <div className="flex items-center gap-2">
-                <span className={cn("text-3xl font-bold tabular-nums", getComplexityColor(currentComplexity))}>
-                  {currentComplexity}
+                <span className={cn("text-3xl font-bold tabular-nums", getPointsColor(currentPoints))}>
+                  {currentPoints}
                 </span>
                 <div className="flex flex-col">
-                  <span className={cn("text-sm font-medium", getComplexityColor(currentComplexity))}>
-                    {getComplexityLabel(currentComplexity)}
+                  <span className={cn("text-sm font-medium", getPointsColor(currentPoints))}>
+                    {getPointsLabel(currentPoints)}
                   </span>
-                  <span className="text-xs text-zinc-500">complexity</span>
+                  <span className="text-xs text-zinc-500">points</span>
                 </div>
               </div>
 
               <Button
                 variant="outline"
                 size="icon-sm"
-                onClick={() => adjustComplexity(1)}
-                disabled={currentComplexity >= 10}
+                onClick={() => adjustPoints(1)}
+                disabled={currentPoints >= 10}
                 className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
               >
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
 
-            {adjustedComplexity !== null && adjustedComplexity !== estimate.complexity && (
+            {adjustedPoints !== null && adjustedPoints !== estimate.points && (
               <span className="text-xs text-zinc-500">
-                AI said {estimate.complexity}
+                AI said {estimate.points}
               </span>
             )}
           </div>

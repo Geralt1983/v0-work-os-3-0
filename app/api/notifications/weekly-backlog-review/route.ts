@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients, clientMemory } from "@/lib/schema"
+import { tasks, clients, clientMemory } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import { sendNotification } from "@/lib/notifications"
 
@@ -22,34 +22,34 @@ export async function GET(request: Request) {
 
   try {
     const db = await getDb()
-    const backlogMoves = await db
+    const backlogTasks = await db
       .select({
-        id: moves.id,
-        title: moves.title,
-        createdAt: moves.createdAt,
-        backlogEnteredAt: moves.backlogEnteredAt,
+        id: tasks.id,
+        title: tasks.title,
+        createdAt: tasks.createdAt,
+        backlogEnteredAt: tasks.backlogEnteredAt,
         clientName: clients.name,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .where(eq(moves.status, "backlog"))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .where(eq(tasks.status, "backlog"))
 
     const now = Date.now()
-    const aged = backlogMoves.map((m) => {
-      const created = new Date(m.backlogEnteredAt || m.createdAt).getTime()
+    const aged = backlogTasks.map((t) => {
+      const created = new Date(t.backlogEnteredAt || t.createdAt).getTime()
       const daysOld = Math.floor((now - created) / (1000 * 60 * 60 * 24))
-      return { ...m, daysOld }
+      return { ...t, daysOld }
     })
 
-    const critical = aged.filter((m) => m.daysOld >= 21)
-    const stale = aged.filter((m) => m.daysOld >= 14 && m.daysOld < 21)
-    const aging = aged.filter((m) => m.daysOld >= 7 && m.daysOld < 14)
+    const critical = aged.filter((t) => t.daysOld >= 21)
+    const stale = aged.filter((t) => t.daysOld >= 14 && t.daysOld < 21)
+    const aging = aged.filter((t) => t.daysOld >= 7 && t.daysOld < 14)
 
     const memories = await db.select().from(clientMemory)
     const staleClients = memories.filter((m) => (m.staleDays || 0) >= 3)
 
     let message = `📋 Weekly Backlog Review\n\n`
-    message += `📦 Total backlog: ${backlogMoves.length} tasks\n\n`
+    message += `📦 Total backlog: ${backlogTasks.length} tasks\n\n`
 
     if (critical.length > 0) {
       message += `🔴 CRITICAL (21+ days): ${critical.length}\n`
@@ -73,12 +73,12 @@ export async function GET(request: Request) {
 
     message += `\n\n🗡️ Time to keep or kill!`
 
-    await sendNotification(message, "Weekly Review")
+    await sendNotification(message, { title: "Weekly Review" })
 
     return NextResponse.json({
       sent: true,
       stats: {
-        total: backlogMoves.length,
+        total: backlogTasks.length,
         critical: critical.length,
         stale: stale.length,
         aging: aging.length,

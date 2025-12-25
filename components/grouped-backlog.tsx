@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useGroupedBacklog } from "@/hooks/use-grouped-backlog"
-import { useMoves } from "@/hooks/use-moves"
+import { useTasks } from "@/hooks/use-tasks"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronRight, ArrowUp, Clock, AlertTriangle, RefreshCw } from "lucide-react"
@@ -38,7 +38,7 @@ interface GroupedBacklogProps {
 
 export function GroupedBacklog({ onEditMove }: GroupedBacklogProps = {}) {
   const { groups, totalTasks, isLoading, error, refresh } = useGroupedBacklog()
-  const { updateMoveStatus, refresh: refreshMoves } = useMoves()
+  const { updateTaskStatus, refresh: refreshTasks } = useTasks()
   const [expandedClients, setExpandedClients] = useState<Set<number>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -55,9 +55,9 @@ export function GroupedBacklog({ onEditMove }: GroupedBacklogProps = {}) {
   }
 
   const handlePromote = async (taskId: number) => {
-    await updateMoveStatus(taskId.toString(), "upnext")
+    await updateTaskStatus(taskId.toString(), "upnext")
     refresh()
-    refreshMoves()
+    refreshTasks()
   }
 
   const handleRefresh = async () => {

@@ -83,6 +83,7 @@ export async function POST(request: Request) {
       openaiMessages.push(assistantMessage)
 
       for (const toolCall of assistantMessage.tool_calls) {
+        if (!("function" in toolCall)) continue
         const toolName = toolCall.function.name
         const toolArgs = JSON.parse(toolCall.function.arguments)
 

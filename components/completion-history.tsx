@@ -67,7 +67,7 @@ export function CompletionHistory() {
             <div className="flex items-center justify-between pb-2 border-b">
               <h3 className="font-semibold text-lg">{day.displayLabel}</h3>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{day.moves.length} moves</span>
+                <span>{day.tasks.length} tasks</span>
                 <span>•</span>
                 <span>{day.totalMinutes} min</span>
                 <span>•</span>
@@ -75,37 +75,39 @@ export function CompletionHistory() {
               </div>
             </div>
 
-            {/* Moves List */}
+            {/* Tasks List */}
             <div className="space-y-1">
-              {day.moves.map((move) => {
-                const completedTime = new Date(move.completedAt).toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })
-                const minutes = (move.effortActual || move.effortEstimate || 1) * 20
+              {day.tasks.map((task) => {
+                const completedTime = task.completedAt
+                  ? new Date(task.completedAt).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : ""
+                const minutes = (task.effortActual || task.effortEstimate || 1) * 20
 
                 return (
-                  <div key={move.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
+                  <div key={task.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className="text-xs text-muted-foreground w-16 shrink-0">{completedTime}</span>
-                      <span className="truncate">{move.title}</span>
+                      <span className="truncate">{task.title}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {move.client && (
+                      {task.client && (
                         <Badge
                           variant="outline"
                           style={{
-                            borderColor: move.client.color,
-                            color: move.client.color,
+                            borderColor: task.client.color,
+                            color: task.client.color,
                           }}
                         >
-                          {move.client.name}
+                          {task.client.name}
                         </Badge>
                       )}
-                      {move.drainType && (
+                      {task.drainType && (
                         <Badge variant="secondary" className="text-xs">
-                          {move.drainType}
+                          {task.drainType}
                         </Badge>
                       )}
                       <span className="text-sm text-muted-foreground w-12 text-right">{minutes}m</span>

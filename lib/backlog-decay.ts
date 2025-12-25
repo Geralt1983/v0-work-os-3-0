@@ -1,5 +1,5 @@
 import { getDb } from "./db"
-import { moves, moveGraveyard, clients } from "./schema"
+import { tasks, taskGraveyard, clients } from "./schema"
 import { eq, and, lte } from "drizzle-orm"
 
 export interface DecayStatus {
@@ -13,20 +13,20 @@ export interface DecayStatus {
 export async function getBacklogWithDecay(): Promise<DecayStatus[]> {
   const db = getDb()
 
-  const backlogMoves = await db
+  const backlogTasks = await db
     .select({
-      id: moves.id,
-      title: moves.title,
-      clientId: moves.clientId,
-      createdAt: moves.createdAt,
+      id: tasks.id,
+      title: tasks.title,
+      clientId: tasks.clientId,
+      createdAt: tasks.createdAt,
       clientName: clients.name,
     })
-    .from(moves)
-    .leftJoin(clients, eq(moves.clientId, clients.id))
-    .where(eq(moves.status, "backlog"))
+    .from(tasks)
+    .leftJoin(clients, eq(tasks.clientId, clients.id))
+    .where(eq(tasks.status, "backlog"))
 
-  return backlogMoves.map((move) => {
-    const createdAt = move.createdAt
+  return backlogTasks.map((task) => {
+    const createdAt = task.createdAt
     const daysInBacklog = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
 
     let status: DecayStatus["status"] = "normal"
@@ -35,64 +35,64 @@ export async function getBacklogWithDecay(): Promise<DecayStatus[]> {
     else if (daysInBacklog >= 7) status = "aging"
 
     return {
-      id: move.id,
-      title: move.title,
-      clientName: move.clientName || "Unknown",
+      id: task.id,
+      title: task.title,
+      clientName: task.clientName || "Unknown",
       daysInBacklog,
       status,
     }
   })
 }
 
-export async function archiveMove(moveId: number, reason = "manual") {
+export async function archiveTask(taskId: number, reason = "manual") {
   const db = getDb()
 
-  const [move] = await db
+  const [task] = await db
     .select({
-      id: moves.id,
-      clientId: moves.clientId,
-      title: moves.title,
-      description: moves.description,
-      effortEstimate: moves.effortEstimate,
-      drainType: moves.drainType,
-      createdAt: moves.createdAt,
+      id: tasks.id,
+      clientId: tasks.clientId,
+      title: tasks.title,
+      description: tasks.description,
+      effortEstimate: tasks.effortEstimate,
+      drainType: tasks.drainType,
+      createdAt: tasks.createdAt,
     })
-    .from(moves)
-    .where(eq(moves.id, moveId))
+    .from(tasks)
+    .where(eq(tasks.id, taskId))
 
-  if (!move) throw new Error("Move not found")
+  if (!task) throw new Error("Task not found")
 
-  const daysInBacklog = Math.floor((Date.now() - new Date(move.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+  const daysInBacklog = Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24))
 
   // Move to graveyard
-  await db.insert(moveGraveyard).values({
-    originalMoveId: move.id,
-    clientId: move.clientId,
-    title: move.title,
-    description: move.description,
-    effortEstimate: move.effortEstimate,
-    drainType: move.drainType,
+  await db.insert(taskGraveyard).values({
+    originalTaskId: task.id,
+    clientId: task.clientId,
+    title: task.title,
+    description: task.description,
+    effortEstimate: task.effortEstimate,
+    drainType: task.drainType,
     archiveReason: reason,
-    originalCreatedAt: move.createdAt,
+    originalCreatedAt: task.createdAt,
     daysInBacklog,
   })
 
   // Delete original
-  await db.delete(moves).where(eq(moves.id, moveId))
+  await db.delete(tasks).where(eq(tasks.id, taskId))
 
   return { archived: true, daysInBacklog }
 }
 
-export async function resurrectMove(graveyardId: number) {
+export async function resurrectTask(graveyardId: number) {
   const db = getDb()
 
-  const [archived] = await db.select().from(moveGraveyard).where(eq(moveGraveyard.id, graveyardId))
+  const [archived] = await db.select().from(taskGraveyard).where(eq(taskGraveyard.id, graveyardId))
 
-  if (!archived) throw new Error("Archived move not found")
+  if (!archived) throw new Error("Archived task not found")
 
-  // Recreate move
-  const [newMove] = await db
-    .insert(moves)
+  // Recreate task
+  const [newTask] = await db
+    .insert(tasks)
     .values({
       clientId: archived.clientId,
       title: archived.title,
@@ -104,27 +104,27 @@ export async function resurrectMove(graveyardId: number) {
     .returning()
 
   // Remove from graveyard
-  await db.delete(moveGraveyard).where(eq(moveGraveyard.id, graveyardId))
+  await db.delete(taskGraveyard).where(eq(taskGraveyard.id, graveyardId))
 
-  return newMove
+  return newTask
 }
 
 export async function runAutoDecay() {
   const db = getDb()
 
-  // Find moves that have been in backlog 30+ days
+  // Find tasks that have been in backlog 30+ days
   const threshold = new Date()
   threshold.setDate(threshold.getDate() - 30)
 
-  const expiredMoves = await db
+  const expiredTasks = await db
     .select()
-    .from(moves)
-    .where(and(eq(moves.status, "backlog"), lte(moves.createdAt, threshold)))
+    .from(tasks)
+    .where(and(eq(tasks.status, "backlog"), lte(tasks.createdAt, threshold)))
 
   const archived = []
-  for (const move of expiredMoves) {
-    await archiveMove(move.id, "auto_decay")
-    archived.push(move.title)
+  for (const task of expiredTasks) {
+    await archiveTask(task.id, "auto_decay")
+    archived.push(task.title)
   }
 
   return { archivedCount: archived.length, titles: archived }

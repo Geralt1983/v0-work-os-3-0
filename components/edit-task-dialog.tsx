@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { X, Wand2, GitBranch, Loader2, Square, CheckSquare, Trash2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useClients, type MoveStatus, type Move, type Subtask } from "@/hooks/use-moves"
+import { useClients, type TaskStatus, type Task, type Subtask } from "@/hooks/use-tasks"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +16,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-interface EditMoveDialogProps {
+interface EditTaskDialogProps {
   open: boolean
-  move: Move | null
+  task: Task | null
   onClose: () => void
   onSave: (
     id: string,
@@ -26,7 +26,7 @@ interface EditMoveDialogProps {
       title: string
       clientId?: number
       description?: string
-      status?: MoveStatus
+      status?: TaskStatus
       effortEstimate?: number
       drainType?: string
     },
@@ -49,13 +49,13 @@ const drainOptions = [
   { value: "admin", label: "Admin", color: "bg-blue-500" },
 ]
 
-const statusOptions: { value: MoveStatus; label: string }[] = [
+const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: "backlog", label: "Backlog" },
   { value: "upnext", label: "Up Next" },
   { value: "today", label: "Today" },
 ]
 
-function typeToEffort(type: Move["type"]): number {
+function typeToEffort(type: Task["type"]): number {
   switch (type) {
     case "Quick":
       return 1
@@ -70,21 +70,21 @@ function typeToEffort(type: Move["type"]): number {
   }
 }
 
-export function EditMoveDialog({
+export function EditTaskDialog({
   open,
-  move,
+  task,
   onClose,
   onSave,
   onUpdateSubtasks,
   onSetSubtasksFromTitles,
   onDelete,
-}: EditMoveDialogProps) {
+}: EditTaskDialogProps) {
   const { clients, isLoading: clientsLoading } = useClients()
 
   const [title, setTitle] = useState("")
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
-  const [status, setStatus] = useState<MoveStatus>("backlog")
+  const [status, setStatus] = useState<TaskStatus>("backlog")
   const [effortEstimate, setEffortEstimate] = useState(2)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -106,41 +106,41 @@ export function EditMoveDialog({
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
-    if (!move || !onDelete) return
+    if (!task || !onDelete) return
     setIsDeleting(true)
     try {
-      await onDelete(move.id)
+      await onDelete(task.id)
       setShowDeleteConfirm(false)
       onClose()
     } catch (error) {
-      console.error("Failed to delete move:", error)
+      console.error("Failed to delete task:", error)
     } finally {
       setIsDeleting(false)
     }
   }
 
-  // Populate form when move changes
+  // Populate form when task changes
   useEffect(() => {
-    if (move) {
-      setTitle(move.title)
-      setClientId(move.clientId)
-      setDescription(move.description || "")
-      setStatus(move.status === "done" ? "today" : move.status)
-      setEffortEstimate(typeToEffort(move.type))
+    if (task) {
+      setTitle(task.title)
+      setClientId(task.clientId)
+      setDescription(task.description || "")
+      setStatus(task.status === "done" ? "today" : task.status)
+      setEffortEstimate(typeToEffort(task.type))
       setDrainType("shallow")
-      setSubtasks(move.subtasks || [])
+      setSubtasks(task.subtasks || [])
     }
-  }, [move])
+  }, [task])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !move) return
+    if (!title.trim() || !task) return
 
     setIsSubmitting(true)
     setSubmitError(null)
 
     try {
-      await onSave(move.id, {
+      await onSave(task.id, {
         title: title.trim(),
         clientId,
         description: description.trim() || undefined,
@@ -150,14 +150,14 @@ export function EditMoveDialog({
       })
       onClose()
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Failed to update move")
+      setSubmitError(error instanceof Error ? error.message : "Failed to update task")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleRewrite = async () => {
-    if (!move) return
+    if (!task) return
     setIsRewriting(true)
     try {
       const selectedClient = clients.find((c) => c.id === clientId)
@@ -191,11 +191,11 @@ export function EditMoveDialog({
   }
 
   const handleBreakdown = async () => {
-    if (!move) return
+    if (!task) return
     setIsBreakingDown(true)
     try {
       const selectedClient = clients.find((c) => c.id === clientId)
-      const res = await fetch(`/api/moves/${move.id}/breakdown`, {
+      const res = await fetch(`/api/tasks/${task.id}/breakdown`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -226,8 +226,8 @@ export function EditMoveDialog({
     const updatedSubtasks = subtasks.map((s) => (s.id === subtaskId ? { ...s, completed: !s.completed } : s))
     setSubtasks(updatedSubtasks)
 
-    if (move && onUpdateSubtasks) {
-      await onUpdateSubtasks(move.id, updatedSubtasks)
+    if (task && onUpdateSubtasks) {
+      await onUpdateSubtasks(task.id, updatedSubtasks)
     }
   }
 
@@ -235,14 +235,14 @@ export function EditMoveDialog({
     const updatedSubtasks = subtasks.filter((s) => s.id !== subtaskId)
     setSubtasks(updatedSubtasks)
 
-    if (move && onUpdateSubtasks) {
-      await onUpdateSubtasks(move.id, updatedSubtasks)
+    if (task && onUpdateSubtasks) {
+      await onUpdateSubtasks(task.id, updatedSubtasks)
     }
   }
 
   const confirmSubtasks = async () => {
-    if (move && onSetSubtasksFromTitles && subtaskSuggestions.length > 0) {
-      await onSetSubtasksFromTitles(move.id, subtaskSuggestions)
+    if (task && onSetSubtasksFromTitles && subtaskSuggestions.length > 0) {
+      await onSetSubtasksFromTitles(task.id, subtaskSuggestions)
       // Update local state
       const newSubtasks: Subtask[] = subtaskSuggestions.map((title) => ({
         id: `subtask-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -262,7 +262,7 @@ export function EditMoveDialog({
     setShowRewriteConfirm(false)
   }
 
-  if (!move) return null
+  if (!task) return null
 
   const completedCount = subtasks.filter((s) => s.completed).length
   const totalCount = subtasks.length
@@ -294,7 +294,7 @@ export function EditMoveDialog({
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                  <h2 className="text-lg font-semibold text-white">Edit Move</h2>
+                  <h2 className="text-lg font-semibold text-white">Edit Task</h2>
                   <button
                     type="button"
                     onClick={onClose}
@@ -540,9 +540,9 @@ export function EditMoveDialog({
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="bg-zinc-900 border-zinc-800">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete this move?</AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Delete this task?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              This will permanently delete "{move?.title}". This action cannot be undone.
+              This will permanently delete "{task?.title}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -606,7 +606,7 @@ export function EditMoveDialog({
                   ))}
                 </ul>
                 <div className="text-zinc-500 text-sm mt-4">
-                  These subtasks will be added to this move and shown on the card.
+                  These subtasks will be added to this task and shown on the card.
                 </div>
               </div>
             </AlertDialogDescription>

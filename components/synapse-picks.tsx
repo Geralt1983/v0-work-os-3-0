@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useBacklogRecommendations } from "@/hooks/use-backlog-recommendations"
-import { useMoves } from "@/hooks/use-moves"
+import { useTasks } from "@/hooks/use-tasks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,7 @@ interface AvoidanceData {
 
 export function SynapsePicks() {
   const { recommendations, isLoading, error, refresh } = useBacklogRecommendations()
-  const { updateMoveStatus, refresh: refreshMoves } = useMoves()
+  const { updateTaskStatus, refresh: refreshTasks } = useTasks()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [promotingIds, setPromotingIds] = useState<Set<number>>(new Set())
@@ -61,13 +61,13 @@ export function SynapsePicks() {
     setPromotingIds((prev) => new Set(prev).add(moveId))
 
     try {
-      await updateMoveStatus(moveId.toString(), "upnext")
+      await updateTaskStatus(moveId.toString(), "upnext")
 
       // Mark as promoted for success feedback
       setPromotedIds((prev) => new Set(prev).add(moveId))
 
       // Refresh moves list, recommendations, and grouped backlog
-      await Promise.all([refreshMoves(), refresh(), globalMutate("/api/backlog/grouped")])
+      await Promise.all([refreshTasks(), refresh(), globalMutate("/api/backlog/grouped")])
 
       // Clear promoted state after delay
       setTimeout(() => {

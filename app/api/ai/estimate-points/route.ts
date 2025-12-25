@@ -26,10 +26,10 @@ function detectClient(text: string): string | null {
   return null
 }
 
-const COMPLEXITY_PROMPT = `You are a task complexity estimator for a healthcare operations consultant. Estimate the complexity of tasks on a 1-10 scale based on time, cognitive load, and stakes.
+const POINTS_PROMPT = `You are a task points estimator for a healthcare operations consultant. Estimate the points value of tasks on a 1-10 scale based on time, cognitive load, and stakes.
 
-COMPLEXITY SCALE:
-1-2: Trivial (<5 min) - forward email, check status, quick acknowledgment
+POINTS SCALE:
+1-2: Quick (<5 min) - forward email, check status, quick acknowledgment
 3-4: Routine (15-30 min) - simple reply, small document review, standard update
 5-6: Meaningful (30-60 min) - documentation, coordination across parties, research
 7-8: Heavy lift (1-2 hours) - large order set review, complex issue resolution, training prep
@@ -41,8 +41,8 @@ TASK TO ANALYZE:
 Respond in JSON format:
 {
   "title": "Clean, actionable task title (imperative verb, specific)",
-  "complexity": <number 1-10>,
-  "reasoning": "Brief explanation of complexity factors",
+  "points": <number 1-10>,
+  "reasoning": "Brief explanation of points estimate",
   "confidence": <number 0.0-1.0>
 }
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: COMPLEXITY_PROMPT.replace("{input}", raw_input),
+          content: POINTS_PROMPT.replace("{input}", raw_input),
         },
       ],
       response_format: { type: "json_object" },
@@ -89,15 +89,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       client: detectedClient,
       title: parsed.title,
-      complexity: Math.min(10, Math.max(1, parsed.complexity)),
+      points: Math.min(10, Math.max(1, parsed.points)),
       reasoning: parsed.reasoning,
       confidence: parsed.confidence,
       raw_input,
     })
   } catch (error) {
-    console.error("Complexity estimation error:", error)
+    console.error("Points estimation error:", error)
     return NextResponse.json(
-      { error: "Failed to estimate complexity" },
+      { error: "Failed to estimate points" },
       { status: 500 }
     )
   }

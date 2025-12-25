@@ -5,17 +5,17 @@ import type React from "react"
 import { useState } from "react"
 import { X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useClients, type MoveStatus } from "@/hooks/use-moves"
+import { useClients, type TaskStatus } from "@/hooks/use-tasks"
 
-interface NewMoveDialogProps {
+interface NewTaskDialogProps {
   open: boolean
   onClose: () => void
   onSubmit: (data: {
     title: string
     clientId?: number
-    clientName?: string // Add clientName to pass to createMove
+    clientName?: string
     description?: string
-    status?: MoveStatus
+    status?: TaskStatus
     effortEstimate?: number
     drainType?: string
   }) => Promise<void>
@@ -34,20 +34,20 @@ const drainOptions = [
   { value: "admin", label: "Admin", color: "bg-blue-500", description: "Paperwork, documentation" },
 ]
 
-const statusOptions: { value: MoveStatus; label: string }[] = [
+const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: "backlog", label: "Backlog" },
   { value: "upnext", label: "Up Next" },
   { value: "today", label: "Today" },
 ]
 
-export function NewMoveDialog({ open, onClose, onSubmit }: NewMoveDialogProps) {
+export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
   const { clients, isLoading: clientsLoading, error: clientsError } = useClients()
-  console.log("[v0] NewMoveDialog clients:", { clients, clientsLoading, clientsError })
+  console.log("[v0] NewTaskDialog clients:", { clients, clientsLoading, clientsError })
 
   const [title, setTitle] = useState("")
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
-  const [status, setStatus] = useState<MoveStatus>("backlog")
+  const [status, setStatus] = useState<TaskStatus>("backlog")
   const [effortEstimate, setEffortEstimate] = useState(2)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)

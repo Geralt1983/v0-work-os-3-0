@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Skull, RotateCcw } from "lucide-react"
-import { useMoves } from "@/hooks/use-moves"
+import { useTasks } from "@/hooks/use-tasks"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -22,13 +22,13 @@ interface ArchivedMove {
 
 export function Graveyard() {
   const { data, mutate } = useSWR<ArchivedMove[]>("/api/graveyard", fetcher)
-  const { refresh: refreshMoves } = useMoves()
+  const { refresh: refreshTasks } = useTasks()
   const [open, setOpen] = useState(false)
 
   const handleResurrect = async (id: number) => {
     await fetch(`/api/graveyard/${id}/resurrect`, { method: "POST" })
     mutate()
-    refreshMoves()
+    refreshTasks()
   }
 
   const archived = data || []

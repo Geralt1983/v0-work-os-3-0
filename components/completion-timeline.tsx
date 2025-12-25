@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useMoveHistory } from "@/hooks/use-move-history"
-import { useClients } from "@/hooks/use-moves"
+import { useMoveHistory } from "@/hooks/use-task-history"
+import { useClients } from "@/hooks/use-tasks"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

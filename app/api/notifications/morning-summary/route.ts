@@ -3,7 +3,7 @@ export const maxDuration = 60
 import { NextResponse } from "next/server"
 import { sendNotification, formatMorningSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
-import { moves, clients, moveEvents } from "@/lib/schema"
+import { tasks, clients, taskEvents } from "@/lib/schema"
 import { eq, gte, and, desc, sql } from "drizzle-orm"
 
 export async function GET() {
@@ -28,24 +28,24 @@ export async function GET() {
 
     console.log("[Morning Summary] Week start:", weekStartUTC.toISOString())
 
-    const moveTimeoutPromise = new Promise<never>((_, reject) =>
+    const taskTimeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Database query timeout")), 10000),
     )
 
-    // Get moves completed this week
-    const weekMoves = await Promise.race([
+    // Get tasks completed this week
+    const weekTasks = await Promise.race([
       db
         .select()
-        .from(moves)
-        .where(and(eq(moves.status, "done"), gte(moves.completedAt, weekStartUTC))),
-      moveTimeoutPromise,
+        .from(tasks)
+        .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, weekStartUTC))),
+      taskTimeoutPromise,
     ])
 
-    const weekMinutes = weekMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
+    const weekMinutes = weekTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
     const daysInWeek = Math.min(dayOfWeek === 0 ? 7 : dayOfWeek, 5)
     const weekTarget = daysInWeek * 180
 
-    console.log("[Morning Summary] Week stats:", { movesCount: weekMoves.length, weekMinutes, weekTarget })
+    console.log("[Morning Summary] Week stats:", { tasksCount: weekTasks.length, weekMinutes, weekTarget })
 
     // Get stale clients (no activity in 2+ days)
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
@@ -60,17 +60,17 @@ export async function GET() {
         setTimeout(() => reject(new Error("Database query timeout")), 10000),
       )
 
-      const lastMove = await Promise.race([
+      const lastTask = await Promise.race([
         db
           .select()
-          .from(moves)
-          .where(and(eq(moves.clientId, client.id), eq(moves.status, "done")))
-          .orderBy(desc(moves.completedAt))
+          .from(tasks)
+          .where(and(eq(tasks.clientId, client.id), eq(tasks.status, "done")))
+          .orderBy(desc(tasks.completedAt))
           .limit(1),
         clientTimeoutPromise,
       ])
 
-      if (!lastMove[0]?.completedAt || lastMove[0].completedAt < twoDaysAgo) {
+      if (!lastTask[0]?.completedAt || lastTask[0].completedAt < twoDaysAgo) {
         staleClients.push(client.name)
       }
     }
@@ -79,33 +79,33 @@ export async function GET() {
       setTimeout(() => reject(new Error("Database query timeout")), 10000),
     )
 
-    const deferredMoves = await Promise.race([
+    const deferredTaskEvents = await Promise.race([
       db
         .select({
-          moveId: moveEvents.moveId,
+          taskId: taskEvents.taskId,
           deferCount: sql<number>`COUNT(*)`.as("defer_count"),
         })
-        .from(moveEvents)
+        .from(taskEvents)
         .where(sql`event_type IN ('deferred', 'demoted')`)
-        .groupBy(moveEvents.moveId)
+        .groupBy(taskEvents.taskId)
         .having(sql`COUNT(*) >= 2`),
       deferredTimeoutPromise,
     ])
 
     const deferredTasks: Array<{ title: string; deferCount: number }> = []
 
-    for (const dm of deferredMoves.slice(0, 3)) {
-      const moveDetailsTimeoutPromise = new Promise<never>((_, reject) =>
+    for (const dt of deferredTaskEvents.slice(0, 3)) {
+      const taskDetailsTimeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Database query timeout")), 10000),
       )
 
-      const [move] = await Promise.race([
-        db.select({ title: moves.title, status: moves.status }).from(moves).where(eq(moves.id, dm.moveId)).limit(1),
-        moveDetailsTimeoutPromise,
+      const [task] = await Promise.race([
+        db.select({ title: tasks.title, status: tasks.status }).from(tasks).where(eq(tasks.id, dt.taskId)).limit(1),
+        taskDetailsTimeoutPromise,
       ])
 
-      if (move && move.status !== "done") {
-        deferredTasks.push({ title: move.title, deferCount: dm.deferCount })
+      if (task && task.status !== "done") {
+        deferredTasks.push({ title: task.title, deferCount: dt.deferCount })
       }
     }
 
@@ -113,7 +113,7 @@ export async function GET() {
     deferredTasks.sort((a, b) => b.deferCount - a.deferCount)
 
     const message = formatMorningSummary({
-      weekMoves: weekMoves.length,
+      weekTasks: weekTasks.length,
       weekMinutes,
       weekTarget,
       bestDay: null,

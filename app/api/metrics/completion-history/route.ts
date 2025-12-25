@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, desc, gte, and } from "drizzle-orm"
 
-interface CompletedMove {
+interface CompletedTask {
   id: number
   title: string
-  completedAt: Date
+  completedAt: Date | null
   effortActual: number | null
   effortEstimate: number | null
   drainType: string | null
@@ -18,7 +18,7 @@ interface CompletedMove {
 interface DayGroup {
   date: string
   displayLabel: string
-  moves: CompletedMove[]
+  tasks: CompletedTask[]
   totalMinutes: number
   uniqueClients: number
 }
@@ -36,22 +36,22 @@ export async function GET(request: Request) {
     cutoffDate.setDate(cutoffDate.getDate() - daysBack)
     cutoffDate.setHours(0, 0, 0, 0)
 
-    const completedMoves = await db
+    const completedTasks = await db
       .select({
-        id: moves.id,
-        title: moves.title,
-        completedAt: moves.completedAt,
-        effortActual: moves.effortActual,
-        effortEstimate: moves.effortEstimate,
-        drainType: moves.drainType,
-        clientId: moves.clientId,
+        id: tasks.id,
+        title: tasks.title,
+        completedAt: tasks.completedAt,
+        effortActual: tasks.effortActual,
+        effortEstimate: tasks.effortEstimate,
+        drainType: tasks.drainType,
+        clientId: tasks.clientId,
         clientName: clients.name,
         clientColor: clients.color,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, cutoffDate)))
-      .orderBy(desc(moves.completedAt))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, cutoffDate)))
+      .orderBy(desc(tasks.completedAt))
 
     // Group by date in user's timezone
     const grouped = new Map<string, DayGroup>()
@@ -76,10 +76,10 @@ export async function GET(request: Request) {
     const todayKey = getTzDateKey(today)
     const yesterdayKey = getTzDateKey(yesterday)
 
-    for (const move of completedMoves) {
-      if (!move.completedAt) continue
+    for (const task of completedTasks) {
+      if (!task.completedAt) continue
 
-      const dateKey = getTzDateKey(new Date(move.completedAt))
+      const dateKey = getTzDateKey(new Date(task.completedAt))
 
       // Determine display label
       let displayLabel: string
@@ -99,22 +99,22 @@ export async function GET(request: Request) {
         grouped.set(dateKey, {
           date: dateKey,
           displayLabel,
-          moves: [],
+          tasks: [],
           totalMinutes: 0,
           uniqueClients: 0,
         })
       }
 
       const group = grouped.get(dateKey)!
-      group.moves.push(move)
+      group.tasks.push(task)
 
-      const minutes = (move.effortActual || move.effortEstimate || 1) * 20
+      const minutes = (task.effortActual || task.effortEstimate || 1) * 20
       group.totalMinutes += minutes
     }
 
     // Calculate unique clients per day
     for (const group of grouped.values()) {
-      const clientNames = new Set(group.moves.map((m) => m.clientName).filter(Boolean))
+      const clientNames = new Set(group.tasks.map((t) => t.clientName).filter(Boolean))
       group.uniqueClients = clientNames.size
     }
 

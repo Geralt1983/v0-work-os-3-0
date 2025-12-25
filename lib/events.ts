@@ -1,53 +1,53 @@
 import { getDb } from "./db"
-import { moveEvents, clientMemory, moves, clients } from "./schema"
+import { taskEvents, clientMemory, tasks, clients } from "./schema"
 import { eq, sql } from "drizzle-orm"
 
 export type EventType = "created" | "promoted" | "demoted" | "completed" | "deferred" | "reopened" | "edited"
 
 interface LogEventParams {
-  moveId: number
+  taskId: number
   eventType: EventType
   fromStatus?: string
   toStatus?: string
   metadata?: Record<string, any>
 }
 
-export async function logMoveEvent({ moveId, eventType, fromStatus, toStatus, metadata = {} }: LogEventParams) {
+export async function logTaskEvent({ taskId, eventType, fromStatus, toStatus, metadata = {} }: LogEventParams) {
   try {
     const db = await getDb()
 
     // Log the event
-    await db.insert(moveEvents).values({
-      moveId,
+    await db.insert(taskEvents).values({
+      taskId,
       eventType,
       fromStatus,
       toStatus,
       metadata,
     })
 
-    // Get the move to find its client
-    const [move] = await db
+    // Get the task to find its client
+    const [task] = await db
       .select({
-        id: moves.id,
-        clientId: moves.clientId,
+        id: tasks.id,
+        clientId: tasks.clientId,
       })
-      .from(moves)
-      .where(eq(moves.id, moveId))
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
       .limit(1)
 
-    if (!move?.clientId) return
+    if (!task?.clientId) return
 
     // Get the client name
-    const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, move.clientId)).limit(1)
+    const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, task.clientId)).limit(1)
 
     if (!client) return
 
-    // If this is a deferral, increment the defer count for the client
+    // If this is a deferral, increment the avoidance score for the client
     if (eventType === "deferred" || eventType === "demoted") {
       await db
         .update(clientMemory)
         .set({
-          deferCount: sql`COALESCE(defer_count, 0) + 1`,
+          avoidanceScore: sql`COALESCE(avoidance_score, 0) + 1`,
           updatedAt: new Date(),
         })
         .where(eq(clientMemory.clientName, client.name))
@@ -58,34 +58,42 @@ export async function logMoveEvent({ moveId, eventType, fromStatus, toStatus, me
       await db
         .update(clientMemory)
         .set({
-          lastMoveAt: new Date(),
-          totalMoves: sql`COALESCE(total_moves, 0) + 1`,
+          lastTaskAt: new Date(),
+          totalTasks: sql`COALESCE(total_tasks, 0) + 1`,
           staleDays: 0,
           updatedAt: new Date(),
         })
         .where(eq(clientMemory.clientName, client.name))
     }
   } catch (err) {
-    console.error("[events] Failed to log move event:", err)
+    console.error("[events] Failed to log task event:", err)
   }
 }
 
-// Get event history for a move
-export async function getMoveHistory(moveId: number) {
+// Legacy alias
+export const logMoveEvent = (params: { moveId: number; eventType: EventType; fromStatus?: string; toStatus?: string; metadata?: Record<string, any> }) => {
+  return logTaskEvent({ ...params, taskId: params.moveId })
+}
+
+// Get event history for a task
+export async function getTaskHistory(taskId: number) {
   try {
     const db = await getDb()
-    return db.select().from(moveEvents).where(eq(moveEvents.moveId, moveId)).orderBy(moveEvents.createdAt)
+    return db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.createdAt)
   } catch (err) {
-    console.error("[events] Failed to get move history:", err)
+    console.error("[events] Failed to get task history:", err)
     return []
   }
 }
 
-// Count deferrals for a specific move
-export async function getDeferralCount(moveId: number): Promise<number> {
+// Legacy alias
+export const getMoveHistory = getTaskHistory
+
+// Count deferrals for a specific task
+export async function getDeferralCount(taskId: number): Promise<number> {
   try {
     const db = await getDb()
-    const events = await db.select().from(moveEvents).where(eq(moveEvents.moveId, moveId))
+    const events = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId))
 
     return events.filter((e) => e.eventType === "deferred" || e.eventType === "demoted").length
   } catch (err) {

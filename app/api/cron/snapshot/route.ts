@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients, clientMemory, dailySnapshots } from "@/lib/schema"
+import { tasks, clients, clientMemory, dailySnapshots } from "@/lib/schema"
 import { eq, and, gte, lt } from "drizzle-orm"
 
 export async function GET(request: Request) {
@@ -23,22 +23,22 @@ export async function GET(request: Request) {
     const startOfDay = new Date(`${today}T00:00:00-05:00`)
     const endOfDay = new Date(`${today}T23:59:59-05:00`)
 
-    // Get completed moves today
+    // Get completed tasks today
     const completedToday = await db
       .select({
-        id: moves.id,
-        clientId: moves.clientId,
-        effortEstimate: moves.effortEstimate,
-        drainType: moves.drainType,
+        id: tasks.id,
+        clientId: tasks.clientId,
+        effortEstimate: tasks.effortEstimate,
+        drainType: tasks.drainType,
       })
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, startOfDay), lt(moves.completedAt, endOfDay)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfDay), lt(tasks.completedAt, endOfDay)))
 
-    const movesCompleted = completedToday.length
-    const minutesEarned = completedToday.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
+    const tasksCompleted = completedToday.length
+    const minutesEarned = completedToday.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
 
     // Get unique clients touched
-    const clientIds = [...new Set(completedToday.map((m) => m.clientId).filter(Boolean))]
+    const clientIds = [...new Set(completedToday.map((t) => t.clientId).filter(Boolean))]
     const clientsTouched: string[] = []
     for (const id of clientIds) {
       const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, id!)).limit(1)
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     }
 
     // Get drain types used
-    const drainTypesUsed = [...new Set(completedToday.map((m) => m.drainType).filter(Boolean))] as string[]
+    const drainTypesUsed = [...new Set(completedToday.map((t) => t.drainType).filter(Boolean))] as string[]
 
     // Get stale clients (2+ days)
     const staleMemories = await db.select().from(clientMemory).where(gte(clientMemory.staleDays, 2))
@@ -61,18 +61,18 @@ export async function GET(request: Request) {
       .insert(dailySnapshots)
       .values({
         snapshotDate: today,
-        movesCompleted,
+        tasksCompleted,
         minutesEarned,
         clientsTouched,
         drainTypesUsed,
         avgMomentum: String(avgMomentum),
         staleClients,
-        avoidanceIncidents: 0, // TODO: Calculate from move_events
+        avoidanceIncidents: 0, // TODO: Calculate from task_events
       })
       .onConflictDoUpdate({
         target: dailySnapshots.snapshotDate,
         set: {
-          movesCompleted,
+          tasksCompleted,
           minutesEarned,
           clientsTouched,
           drainTypesUsed,
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       success: true,
       snapshot: {
         date: today,
-        movesCompleted,
+        tasksCompleted,
         minutesEarned,
         clientsTouched,
         drainTypesUsed,

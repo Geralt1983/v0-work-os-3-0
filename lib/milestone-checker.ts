@@ -1,8 +1,8 @@
 import { getDb } from "@/lib/db"
-import { moves, dailyLog } from "@/lib/schema"
-import { eq, and, gte } from "drizzle-orm"
+import { tasks, dailyLog, dailyGoals } from "@/lib/schema"
+import { eq, and, gte, desc } from "drizzle-orm"
 import { sendMilestoneAlert } from "@/lib/notifications"
-import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES, MILESTONES } from "@/lib/constants"
+import { MILESTONES } from "@/lib/constants"
 
 function getESTDate(): { dateStr: string; startOfDay: Date } {
   const now = new Date()
@@ -25,19 +25,28 @@ export async function checkAndSendMilestone() {
 
     const completedToday = await db
       .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, startOfDay)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfDay)))
 
-    const earnedMinutes = completedToday.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
+    // Get today's goals for points and streak info
+    const [todayGoal] = await db
+      .select()
+      .from(dailyGoals)
+      .where(eq(dailyGoals.date, dateStr))
+      .limit(1)
 
-    const currentPercent = Math.round((earnedMinutes / DAILY_TARGET_MINUTES) * 100)
+    const earnedPoints = todayGoal?.earnedPoints || 0
+    const targetPoints = todayGoal?.targetPoints || 18
+    const currentStreak = todayGoal?.currentStreak || 0
+
+    const currentPercent = Math.round((earnedPoints / targetPoints) * 100)
 
     console.log("[milestone-checker] Progress:", {
-      earnedMinutes,
+      earnedPoints,
+      targetPoints,
       currentPercent,
-      targetMinutes: DAILY_TARGET_MINUTES,
-      minimumMinutes: DAILY_MINIMUM_MINUTES,
-      movesCount: completedToday.length,
+      tasksCount: completedToday.length,
+      currentStreak,
     })
 
     let todayLog = null
@@ -58,7 +67,7 @@ export async function checkAndSendMilestone() {
       return {
         message: "No new milestones",
         currentPercent,
-        earnedMinutes,
+        earnedPoints,
         sentNotifications,
       }
     }
@@ -66,7 +75,13 @@ export async function checkAndSendMilestone() {
     const highestMilestone = Math.max(...newMilestones)
     console.log("[milestone-checker] Sending notification for", highestMilestone)
 
-    const result = await sendMilestoneAlert(highestMilestone, completedToday.length, earnedMinutes)
+    const result = await sendMilestoneAlert({
+      percent: highestMilestone,
+      taskCount: completedToday.length,
+      earnedPoints,
+      targetPoints,
+      currentStreak,
+    })
     console.log("[milestone-checker] Notification result:", result)
 
     const updatedNotifications = [...sentNotifications, ...newMilestones]
@@ -77,7 +92,7 @@ export async function checkAndSendMilestone() {
         await db.insert(dailyLog).values({
           id: `log-${dateStr}`,
           date: dateStr,
-          completedMoves: completedToday.map((m) => m.id),
+          completedTasks: completedToday.map((t) => t.id),
           notificationsSent: updatedNotifications,
         })
       }
@@ -89,7 +104,7 @@ export async function checkAndSendMilestone() {
       success: result.success,
       milestone: highestMilestone,
       currentPercent,
-      earnedMinutes,
+      earnedPoints,
       notificationsSent: updatedNotifications,
     }
   } catch (error) {

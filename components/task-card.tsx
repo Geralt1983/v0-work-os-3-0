@@ -1,7 +1,13 @@
 // Find the card wrapper div and update the className/style for drag physics
 import cn from "classnames" // Ensure cn is imported
 
-const MoveCard = ({ variant, borderColor, isDragging }) => {
+interface TaskCardProps {
+  variant: "primary" | "secondary"
+  borderColor: string
+  isDragging: boolean
+}
+
+const MoveCard = ({ variant, borderColor, isDragging }: TaskCardProps) => {
   return (
     <div
       className={cn(

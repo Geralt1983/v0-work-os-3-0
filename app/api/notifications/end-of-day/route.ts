@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, and, gte } from "drizzle-orm"
 import { sendNotification } from "@/lib/notifications"
 import { getDb } from "@/lib/db" // Assuming getDb is a function to initialize db
@@ -32,19 +32,19 @@ export async function GET(request: Request) {
     const dbInstance = await getDb()
     const completedToday = await dbInstance
       .select({
-        id: moves.id,
-        title: moves.title,
-        effortEstimate: moves.effortEstimate,
-        clientId: moves.clientId,
+        id: tasks.id,
+        title: tasks.title,
+        effortEstimate: tasks.effortEstimate,
+        clientId: tasks.clientId,
         clientName: clients.name,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayStart)))
 
-    const moveCount = completedToday.length
-    const minutesEarned = completedToday.reduce((sum, m) => sum + (m.effortEstimate || 1) * 20, 0)
-    const clientsTouched = new Set(completedToday.map((m) => m.clientName).filter(Boolean)).size
+    const taskCount = completedToday.length
+    const minutesEarned = completedToday.reduce((sum, t) => sum + (t.effortEstimate || 1) * 20, 0)
+    const clientsTouched = new Set(completedToday.map((t) => t.clientName).filter(Boolean)).size
     const goalMinutes = 180
     const percentage = Math.round((minutesEarned / goalMinutes) * 100)
 
@@ -64,11 +64,11 @@ export async function GET(request: Request) {
 
     const allClients = await dbInstance.select().from(clients).where(eq(clients.isActive, 1))
 
-    const touchedNames = new Set(completedToday.map((m) => m.clientName).filter(Boolean))
+    const touchedNames = new Set(completedToday.map((t) => t.clientName).filter(Boolean))
     const untouched = allClients.filter((c) => !touchedNames.has(c.name)).map((c) => c.name)
 
     let message = `${emoji} End of Day Report\n\n`
-    message += `📊 ${moveCount} moves | ${minutesEarned}/${goalMinutes} min (${percentage}%)\n`
+    message += `📊 ${taskCount} tasks | ${minutesEarned}/${goalMinutes} min (${percentage}%)\n`
     message += `👥 ${clientsTouched} clients touched\n\n`
     message += `${verdict}`
 
@@ -76,11 +76,11 @@ export async function GET(request: Request) {
       message += `\n\n⚠️ Didn't touch: ${untouched.join(", ")}`
     }
 
-    await sendNotification(message, "End of Day")
+    await sendNotification(message, { title: "End of Day" })
 
     return NextResponse.json({
       sent: true,
-      stats: { moveCount, minutesEarned, percentage, clientsTouched },
+      stats: { taskCount, minutesEarned, percentage, clientsTouched },
     })
   } catch (error) {
     console.error("End of day notification failed:", error)

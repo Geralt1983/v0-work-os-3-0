@@ -1,9 +1,9 @@
 import useSWR from "swr"
 
-interface CompletedMove {
+interface CompletedTask {
   id: number
   title: string
-  completedAt: Date
+  completedAt: Date | null
   effortActual: number | null
   effortEstimate: number | null
   drainType: string | null
@@ -17,7 +17,7 @@ interface CompletedMove {
 interface DayGroup {
   date: string
   displayLabel: string
-  moves: CompletedMove[]
+  tasks: CompletedTask[]
   totalMinutes: number
   uniqueClients: number
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, dailyLog } from "@/lib/schema"
+import { tasks, dailyLog } from "@/lib/schema"
 import { eq, and, gte } from "drizzle-orm"
 import { sendNotification } from "@/lib/notifications"
 
@@ -41,14 +41,14 @@ export async function GET(request: Request) {
       })
     }
 
-    // Check for any completed moves today
+    // Check for any completed tasks today
     const todayStart = new Date(todayStr + "T00:00:00-05:00") // EST
 
     const completedToday = await db
       .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
-      .orderBy(moves.completedAt)
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayStart)))
+      .orderBy(tasks.completedAt)
       .limit(1)
 
     if (completedToday.length === 0) {
@@ -57,13 +57,13 @@ export async function GET(request: Request) {
 
       let message = ""
       if (hour >= 10 && hour < 11) {
-        message = `⏰ It's ${hour}am and no moves completed yet.\nTime to get rolling!`
+        message = `⏰ It's ${hour}am and no tasks completed yet.\nTime to get rolling!`
       } else if (hour >= 11) {
-        message = `🚨 It's ${hour}am - still no moves today!\nEven one quick win counts.`
+        message = `🚨 It's ${hour}am - still no tasks today!\nEven one quick win counts.`
       }
 
       if (message) {
-        await sendNotification(message, "Work Check")
+        await sendNotification(message, { title: "Work Check" })
 
         // Don't mark as "started" - we're nudging because NOT started
         return NextResponse.json({

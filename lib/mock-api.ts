@@ -2,7 +2,7 @@
 // Switches between mock data and real server based on NEXT_PUBLIC_USE_SERVER env var
 
 import { USE_SERVER } from "./api-client"
-import * as serverMovesApi from "./server-moves-api"
+import * as serverTasksApi from "./server-tasks-api"
 
 export function isPreviewEnvironment(): boolean {
   if (typeof window === "undefined") {
@@ -181,27 +181,27 @@ const mockApi = {
 const serverApi = {
   moves: {
     async list(): Promise<Move[]> {
-      const result = await serverMovesApi.listMoves()
+      const result = await serverTasksApi.listMoves()
       return result as Move[]
     },
 
     async complete(id: string): Promise<Move> {
-      const result = await serverMovesApi.completeMove(id)
+      const result = await serverTasksApi.completeMove(id)
       return result as Move
     },
 
     async requeue(id: string, status: MoveStatus = "backlog"): Promise<Move> {
       // Use demote endpoint for backlog, or updateMove for specific status
       if (status === "backlog") {
-        const result = await serverMovesApi.demoteMove(id)
+        const result = await serverTasksApi.demoteMove(id)
         return result as Move
       }
-      const result = await serverMovesApi.updateMove(id, { status })
+      const result = await serverTasksApi.updateMove(id, { status })
       return result as Move
     },
 
     async updateStatus(id: string, newStatus: MoveStatus): Promise<Move> {
-      const result = await serverMovesApi.updateMove(id, { status: newStatus })
+      const result = await serverTasksApi.updateMove(id, { status: newStatus })
       return result as Move
     },
 
