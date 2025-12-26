@@ -10,7 +10,7 @@ export interface ClientMemory {
   notes: string
   avoidanceScore: number
   preferredWorkTime: string | null
-  movesThisWeek: number
+  tasksThisWeek: number
   lastCompletedAt: string | null
   daysSinceActivity: number | null
 }

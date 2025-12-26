@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date, boolean } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, timestamp, jsonb, varchar, decimal, date, boolean, index } from "drizzle-orm/pg-core"
 import type { InferSelectModel } from "drizzle-orm"
 import { relations } from "drizzle-orm"
 
@@ -15,7 +15,7 @@ export const clients = pgTable("clients", {
 })
 
 // =============================================================================
-// TASKS (formerly moves)
+// TASKS
 // =============================================================================
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -36,10 +36,13 @@ export const tasks = pgTable("tasks", {
   pointsAiGuess: integer("points_ai_guess"),
   pointsFinal: integer("points_final"),
   pointsAdjustedAt: timestamp("points_adjusted_at", { withTimezone: true }),
-})
-
-// Legacy alias for backwards compatibility during migration
-export const moves = tasks
+}, (table) => [
+  index("tasks_status_idx").on(table.status),
+  index("tasks_client_id_idx").on(table.clientId),
+  index("tasks_completed_at_idx").on(table.completedAt),
+  index("tasks_sort_order_idx").on(table.sortOrder),
+  index("tasks_status_sort_idx").on(table.status, table.sortOrder),
+])
 
 // =============================================================================
 // SESSIONS (for chat)
@@ -120,7 +123,7 @@ export const dailySnapshots = pgTable("daily_snapshots", {
 })
 
 // =============================================================================
-// TASK GRAVEYARD (formerly move_graveyard)
+// TASK GRAVEYARD
 // =============================================================================
 export const taskGraveyard = pgTable("task_graveyard", {
   id: serial("id").primaryKey(),
@@ -136,11 +139,8 @@ export const taskGraveyard = pgTable("task_graveyard", {
   daysInBacklog: integer("days_in_backlog"),
 })
 
-// Legacy alias
-export const moveGraveyard = taskGraveyard
-
 // =============================================================================
-// TASK EVENTS (formerly move_events)
+// TASK EVENTS
 // =============================================================================
 export const taskEvents = pgTable("task_events", {
   id: serial("id").primaryKey(),
@@ -153,9 +153,6 @@ export const taskEvents = pgTable("task_events", {
   metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
-
-// Legacy alias
-export const moveEvents = taskEvents
 
 // =============================================================================
 // DAILY GOALS (points tracking with streaks)
@@ -190,18 +187,14 @@ export const behavioralPatterns = pgTable("behavioral_patterns", {
 // =============================================================================
 export type Client = InferSelectModel<typeof clients>
 export type Task = InferSelectModel<typeof tasks>
-export type Move = Task // Legacy alias
 export type Session = InferSelectModel<typeof sessions>
 export type Message = InferSelectModel<typeof messages>
 export type TaskEvent = InferSelectModel<typeof taskEvents>
-export type MoveEvent = TaskEvent // Legacy alias
 export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
 export type DailyGoal = InferSelectModel<typeof dailyGoals>
 export type GraveyardTask = InferSelectModel<typeof taskGraveyard>
-export type GraveyardMove = GraveyardTask // Legacy alias
 export type TaskStatus = "active" | "queued" | "backlog" | "done"
-export type MoveStatus = TaskStatus // Legacy alias
 export type DrainType = "deep" | "shallow" | "admin"
 
 export type Subtask = {
@@ -219,9 +212,6 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
     references: [clients.id],
   }),
 }))
-
-// Legacy alias
-export const movesRelations = tasksRelations
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   tasks: many(tasks),

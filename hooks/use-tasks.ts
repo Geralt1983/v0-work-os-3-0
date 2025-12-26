@@ -3,17 +3,24 @@
 import useSWR, { mutate as globalMutate } from "swr"
 import { MOCK_CLIENTS, MOCK_TASKS, isPreviewEnvironment } from "@/lib/mock-data"
 import { trackCompletedTask } from "@/hooks/use-metrics"
-
-// =============================================================================
-// API CONFIGURATION
-// =============================================================================
-const API_BASE_URL = ""
+import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
+import {
+  type BackendTaskStatus,
+  type FrontendTaskStatus,
+  type TaskSizeType,
+  STATUS_TO_FRONTEND,
+  STATUS_TO_BACKEND,
+  effortToSize,
+  sizeToEffort,
+} from "@/lib/domain"
 
 // =============================================================================
 // TYPE DEFINITIONS
 // =============================================================================
-export type BackendTaskStatus = "active" | "queued" | "backlog" | "done"
-export type TaskStatus = "today" | "upnext" | "backlog" | "done"
+
+// Re-export domain types with legacy alias for backward compatibility
+export type { BackendTaskStatus }
+export type TaskStatus = FrontendTaskStatus
 
 interface BackendTask {
   id: number
@@ -43,9 +50,9 @@ export interface Task {
   clientColor?: string
   title: string
   description?: string
-  type: "Quick" | "Standard" | "Chunky" | "Deep"
+  type: TaskSizeType
   effortEstimate?: number
-  status: TaskStatus
+  status: FrontendTaskStatus
   subtasks?: Subtask[]
   tasksCount?: number
   ageLabel?: string
@@ -57,47 +64,10 @@ export interface Task {
   pointsFinal?: number
 }
 
-// Legacy alias
-export type Move = Task
-export type MoveStatus = TaskStatus
-export type BackendMoveStatus = BackendTaskStatus
-
 export interface Subtask {
   id: string
   title: string
   completed: boolean
-}
-
-// =============================================================================
-// STATUS MAPPING
-// =============================================================================
-const statusToFrontend: Record<BackendTaskStatus, TaskStatus> = {
-  active: "today",
-  queued: "upnext",
-  backlog: "backlog",
-  done: "done",
-}
-
-const statusToBackend: Record<TaskStatus, BackendTaskStatus> = {
-  today: "active",
-  upnext: "queued",
-  backlog: "backlog",
-  done: "done",
-}
-
-function effortToType(effort: number | null): Task["type"] {
-  switch (effort) {
-    case 1:
-      return "Quick"
-    case 2:
-      return "Standard"
-    case 3:
-      return "Chunky"
-    case 4:
-      return "Deep"
-    default:
-      return "Standard"
-  }
 }
 
 function getAgeLabel(createdAt: string): string {
@@ -114,27 +84,8 @@ function getAgeLabel(createdAt: string): string {
 }
 
 // =============================================================================
-// API FETCHER
+// MOCK MODE HELPERS
 // =============================================================================
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE_URL}${path}`
-
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  })
-
-  if (!res.ok) {
-    const error = await res.text().catch(() => "Unknown error")
-    throw new Error(`API error ${res.status}: ${error}`)
-  }
-
-  return res.json()
-}
-
 function shouldUseMockMode(): boolean {
   return isPreviewEnvironment()
 }
@@ -186,7 +137,7 @@ export function useTasks() {
         console.log("[v0] useTasks: API error, will use mock data if in preview", err)
       }
 
-      const tasksToUse = mergeWithMockData(backendTasks, MOCK_TASKS as any)
+      const tasksToUse = mergeWithMockData(backendTasks, MOCK_TASKS as BackendTask[])
 
       const mappedTasks = tasksToUse.map((task) => ({
         id: task.id.toString(),
@@ -195,9 +146,9 @@ export function useTasks() {
         clientColor: task.client?.color ?? undefined,
         title: task.title,
         description: task.description ?? undefined,
-        type: effortToType(task.effortEstimate),
+        type: effortToSize(task.effortEstimate),
         effortEstimate: task.effortEstimate ?? 2,
-        status: statusToFrontend[task.status],
+        status: STATUS_TO_FRONTEND[task.status],
         subtasks: (task.subtasks as Subtask[]) ?? [],
         tasksCount: undefined,
         ageLabel: getAgeLabel(task.createdAt),
@@ -218,10 +169,7 @@ export function useTasks() {
 
       return mappedTasks
     },
-    {
-      refreshInterval: 10000,
-      revalidateOnFocus: true,
-    },
+    SWR_CONFIG.default,
   )
 
   const tasks = data ?? []
@@ -233,20 +181,11 @@ export function useTasks() {
   // =============================================================================
   const completeTask = async (id: string) => {
     const taskToComplete = tasks.find((t) => t.id === id)
-    const effortEstimate =
-      taskToComplete?.type === "Quick"
-        ? 1
-        : taskToComplete?.type === "Standard"
-          ? 2
-          : taskToComplete?.type === "Chunky"
-            ? 3
-            : taskToComplete?.type === "Deep"
-              ? 4
-              : 2
+    const effortEstimate = taskToComplete ? sizeToEffort(taskToComplete.type) : 2
 
     if (shouldUseMockMode()) {
       updateLocalTask(id, { status: "done" as TaskStatus, completedAt: Date.now() })
-      trackCompletedTask({ id: Number.parseInt(id), effortEstimate })
+      trackCompletedTask({ id: Number.parseInt(id, 10), effortEstimate })
     }
 
     mutate(
@@ -295,7 +234,7 @@ export function useTasks() {
     try {
       await apiFetch(`/api/tasks/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: statusToBackend[previousStatus], completedAt: null }),
+        body: JSON.stringify({ status: STATUS_TO_BACKEND[previousStatus], completedAt: null }),
       })
       mutate()
     } catch (err) {
@@ -343,7 +282,7 @@ export function useTasks() {
       await apiFetch(`/api/tasks/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          status: statusToBackend[newStatus],
+          status: STATUS_TO_BACKEND[newStatus],
           sortOrder: newSortOrder,
         }),
       })
@@ -376,7 +315,7 @@ export function useTasks() {
       await apiFetch(`/api/tasks/reorder`, {
         method: "POST",
         body: JSON.stringify({
-          status: statusToBackend[status],
+          status: STATUS_TO_BACKEND[status],
           orderedIds: orderedIds.map((id) => Number.parseInt(id, 10)),
         }),
       })
@@ -398,7 +337,7 @@ export function useTasks() {
     pointsAiGuess?: number
     pointsFinal?: number
   }) => {
-    const backendStatus = taskData.status ? statusToBackend[taskData.status] : "backlog"
+    const backendStatus = taskData.status ? STATUS_TO_BACKEND[taskData.status] : "backlog"
     const targetStatus = taskData.status || "backlog"
 
     const optimisticId = `temp-${Date.now()}`
@@ -409,7 +348,7 @@ export function useTasks() {
       clientColor: undefined,
       title: taskData.title,
       description: taskData.description,
-      type: effortToType(taskData.effortEstimate || 2),
+      type: effortToSize(taskData.effortEstimate || 2),
       effortEstimate: taskData.effortEstimate || 2,
       status: targetStatus,
       ageLabel: "today",
@@ -492,7 +431,7 @@ export function useTasks() {
       drainType?: string
     },
   ) => {
-    const backendStatus = taskData.status ? statusToBackend[taskData.status] : undefined
+    const backendStatus = taskData.status ? STATUS_TO_BACKEND[taskData.status] : undefined
 
     mutate((current: Task[] | undefined) => {
       if (!current) return current
@@ -504,7 +443,7 @@ export function useTasks() {
           clientId: taskData.clientId ?? t.clientId,
           description: taskData.description ?? t.description,
           status: taskData.status ?? t.status,
-          type: taskData.effortEstimate ? effortToType(taskData.effortEstimate) : t.type,
+          type: taskData.effortEstimate ? effortToSize(taskData.effortEstimate) : t.type,
           effortEstimate: taskData.effortEstimate ?? t.effortEstimate,
         }
       })
@@ -582,8 +521,6 @@ export function useTasks() {
 
   return {
     tasks,
-    // Legacy aliases
-    moves: tasks,
     loading: isLoading,
     isLoading,
     error,
@@ -591,11 +528,6 @@ export function useTasks() {
     upNextTasks: byStatus("upnext"),
     backlogTasks: byStatus("backlog"),
     doneTasks: byStatus("done"),
-    // Legacy aliases
-    todayMoves: byStatus("today"),
-    upNextMoves: byStatus("upnext"),
-    backlogMoves: byStatus("backlog"),
-    doneMoves: byStatus("done"),
     completeTask,
     restoreTask,
     updateTaskStatus,
@@ -606,21 +538,9 @@ export function useTasks() {
     setSubtasksFromTitles,
     promoteTask,
     deleteTask,
-    // Legacy aliases
-    completeMove: completeTask,
-    restoreMove: restoreTask,
-    updateMoveStatus: updateTaskStatus,
-    reorderMoves: reorderTasks,
-    createMove: createTask,
-    updateMove: updateTask,
-    promoteMove: promoteTask,
-    deleteMove: deleteTask,
     refresh: () => mutate(),
   }
 }
-
-// Legacy alias
-export const useMoves = useTasks
 
 // =============================================================================
 // CLIENTS HOOK
@@ -652,7 +572,7 @@ export function useClients() {
         console.log("[v0] useClients: API error, will use mock data if in preview", err)
       }
 
-      const clientsToUse = mergeWithMockData(backendClients, MOCK_CLIENTS as any)
+      const clientsToUse = mergeWithMockData(backendClients, MOCK_CLIENTS as BackendClient[])
 
       const mapped = clientsToUse
         .filter((c) => c.isActive === 1)

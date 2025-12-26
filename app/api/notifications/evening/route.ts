@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients, dailyLog } from "@/lib/schema"
+import { tasks, clients, dailyLog } from "@/lib/schema"
 import { eq, and, gte } from "drizzle-orm"
 import { sendNtfyNotification } from "@/lib/ntfy"
 
@@ -21,11 +21,11 @@ export async function POST() {
     const dateStr = today.toISOString().split("T")[0]
     today.setHours(0, 0, 0, 0)
 
-    // Get today's completed moves
+    // Get today's completed tasks
     const completedToday = await db
       .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, today)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, today)))
 
     const earnedMinutes = completedToday.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
     const targetMinutes = 180
@@ -79,7 +79,7 @@ export async function POST() {
     const [existingLog] = await db.select().from(dailyLog).where(eq(dailyLog.date, dateStr))
 
     const logData = {
-      completedMoves: completedToday.map((m) => m.id),
+      completedTasks: completedToday.map((t) => t.id),
       clientsTouched: Array.from(clientsTouched),
       summary: `${rating} day - ${percent}% (${earnedMinutes}min)`,
     }

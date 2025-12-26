@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useMoveHistory } from "@/hooks/use-task-history"
+import { useTaskHistory } from "@/hooks/use-task-history"
 import { useClients } from "@/hooks/use-tasks"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,9 +17,9 @@ export function CompletionTimeline() {
   const [clientFilter, setClientFilter] = useState<string>("all")
 
   const { clients } = useClients()
-  const { timeline, isLoading } = useMoveHistory(
+  const { timeline, isLoading } = useTaskHistory(
     days,
-    clientFilter !== "all" ? Number.parseInt(clientFilter) : undefined,
+    clientFilter !== "all" ? Number.parseInt(clientFilter, 10) : undefined,
   )
 
   // Count active filters for badge
@@ -62,7 +62,7 @@ export function CompletionTimeline() {
           ))}
         </SelectContent>
       </Select>
-      <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v))}>
+      <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v, 10))}>
         <SelectTrigger className="w-full">
           <SelectValue />
         </SelectTrigger>
@@ -76,27 +76,27 @@ export function CompletionTimeline() {
     </div>
   )
 
-  const MobileMoveCard = ({ move }: { move: (typeof timeline)[0]["moves"][0] }) => (
+  const MobileTaskCard = ({ task }: { task: (typeof timeline)[0]["tasks"][0] }) => (
     <div className="bg-muted/20 rounded-lg p-3 space-y-2">
-      <p className="text-sm font-medium">{move.title}</p>
+      <p className="text-sm font-medium">{task.title}</p>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge
           variant="outline"
           className="text-xs"
           style={{
-            borderColor: move.clientColor,
-            color: move.clientColor,
+            borderColor: task.clientColor,
+            color: task.clientColor,
           }}
         >
-          {move.clientName}
+          {task.clientName}
         </Badge>
-        {move.drainType && (
+        {task.drainType && (
           <Badge variant="secondary" className="text-xs">
-            {move.drainType}
+            {task.drainType}
           </Badge>
         )}
-        <span className="text-muted-foreground">{(move.effortEstimate || 1) * 20}m</span>
-        <span className="text-muted-foreground ml-auto">{formatTime(move.completedAt)}</span>
+        <span className="text-muted-foreground">{(task.effortEstimate || 1) * 20}m</span>
+        <span className="text-muted-foreground ml-auto">{formatTime(task.completedAt)}</span>
       </div>
     </div>
   )
@@ -147,7 +147,7 @@ export function CompletionTimeline() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v))}>
+              <Select value={days.toString()} onValueChange={(v) => setDays(Number.parseInt(v, 10))}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -166,7 +166,7 @@ export function CompletionTimeline() {
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Loading history...</div>
         ) : timeline.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">No completed moves in this period.</div>
+          <div className="py-8 text-center text-muted-foreground">No completed tasks in this period.</div>
         ) : (
           <div className="space-y-6">
             {timeline.map((day) => (
@@ -174,7 +174,7 @@ export function CompletionTimeline() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium text-sm">{formatDate(day.date, day.displayLabel)}</h3>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{day.moves.length} moves</span>
+                    <span>{day.tasks.length} tasks</span>
                     <span>&bull;</span>
                     <span>{day.totalMinutes} min</span>
                     <span>&bull;</span>
@@ -184,37 +184,37 @@ export function CompletionTimeline() {
 
                 {isMobile ? (
                   <div className="space-y-2">
-                    {day.moves.map((move) => (
-                      <MobileMoveCard key={move.id} move={move} />
+                    {day.tasks.map((task) => (
+                      <MobileTaskCard key={task.id} task={task} />
                     ))}
                   </div>
                 ) : (
                   <div className="border-l-2 border-border pl-4 space-y-2">
-                    {day.moves.map((move) => (
-                      <div key={move.id} className="flex items-center justify-between py-1">
+                    {day.tasks.map((task) => (
+                      <div key={task.id} className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <span className="text-xs text-muted-foreground w-16 shrink-0">
-                            {formatTime(move.completedAt)}
+                            {formatTime(task.completedAt)}
                           </span>
-                          <span className="truncate text-sm">{move.title}</span>
+                          <span className="truncate text-sm">{task.title}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <Badge
                             variant="outline"
                             className="text-xs"
                             style={{
-                              borderColor: move.clientColor,
-                              color: move.clientColor,
+                              borderColor: task.clientColor,
+                              color: task.clientColor,
                             }}
                           >
-                            {move.clientName}
+                            {task.clientName}
                           </Badge>
-                          {move.drainType && (
+                          {task.drainType && (
                             <Badge variant="secondary" className="text-xs">
-                              {move.drainType}
+                              {task.drainType}
                             </Badge>
                           )}
-                          <span className="text-xs text-muted-foreground">{(move.effortEstimate || 1) * 20}m</span>
+                          <span className="text-xs text-muted-foreground">{(task.effortEstimate || 1) * 20}m</span>
                         </div>
                       </div>
                     ))}

@@ -46,7 +46,7 @@ export function WorkOSNav() {
   }, [pathname, hasUnread])
 
   const items = [
-    { href: "/moves", icon: ListTodo, label: "Moves" },
+    { href: "/tasks", icon: ListTodo, label: "Tasks" },
     { href: "/metrics", icon: BarChart3, label: "Metrics" },
     { href: "/clients", icon: Users, label: "Clients" },
     { href: "/history", icon: History, label: "History" },

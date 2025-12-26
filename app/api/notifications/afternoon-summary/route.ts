@@ -3,8 +3,8 @@ export const maxDuration = 60
 import { NextResponse } from "next/server"
 import { sendNotification, formatAfternoonSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
-import { eq, gte, and, ne } from "drizzle-orm"
+import { tasks, clients } from "@/lib/schema"
+import { eq, gte, and, ne, inArray } from "drizzle-orm"
 import { DAILY_TARGET_MINUTES } from "@/lib/constants"
 
 export async function GET() {
@@ -23,52 +23,46 @@ export async function GET() {
 
     console.log("[Afternoon Summary] Today start:", todayStart.toISOString())
 
-    const todayMovesTimeoutPromise = new Promise<never>((_, reject) =>
+    const todayTasksTimeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Database query timeout")), 10000),
     )
 
-    const todayMoves = await Promise.race([
+    const todayTasks = await Promise.race([
       db
         .select()
-        .from(moves)
-        .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
+        .from(tasks)
+        .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayStart)))
         .limit(maxDuration),
-      todayMovesTimeoutPromise,
+      todayTasksTimeoutPromise,
     ])
 
-    const todayMinutes = todayMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
+    const todayMinutes = todayTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
 
-    const clientIds = [...new Set(todayMoves.map((m) => m.clientId).filter(Boolean))]
-    const clientsTouched: string[] = []
+    // Get unique clients touched - batch query instead of N+1
+    const clientIds = [...new Set(todayTasks.map((t) => t.clientId).filter((id): id is number => id !== null))]
+    const clientsTouched: string[] = clientIds.length > 0
+      ? (await db.select({ name: clients.name }).from(clients).where(inArray(clients.id, clientIds))).map((c) => c.name)
+      : []
 
-    for (const id of clientIds) {
-      const clientTimeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Database query timeout")), 10000),
-      )
-
-      const [client] = await Promise.race([db.select().from(clients).where(eq(clients.id, id!)), clientTimeoutPromise])
-      if (client) clientsTouched.push(client.name)
-    }
-
-    const activeMoveTimeoutPromise = new Promise<never>((_, reject) =>
+    const activeTasksTimeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Database query timeout")), 10000),
     )
 
-    const activeMoves = await Promise.race([
+    const activeTasks = await Promise.race([
       db
         .select()
-        .from(moves)
-        .where(and(eq(moves.status, "active"), ne(moves.status, "done")))
+        .from(tasks)
+        .where(and(eq(tasks.status, "active"), ne(tasks.status, "done")))
         .limit(maxDuration),
-      activeMoveTimeoutPromise,
+      activeTasksTimeoutPromise,
     ])
 
     const message = formatAfternoonSummary({
-      todayMoves: todayMoves.length,
+      todayTasks: todayTasks.length,
       todayMinutes,
       targetMinutes: DAILY_TARGET_MINUTES,
       clientsTouched,
-      remainingActive: activeMoves.length,
+      remainingActive: activeTasks.length,
     })
 
     console.log("[Afternoon Summary] Message:", message)

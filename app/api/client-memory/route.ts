@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { clientMemory, clients, moves } from "@/lib/schema"
+import { clientMemory, clients, tasks } from "@/lib/schema"
 import { eq, and, gte, sql } from "drizzle-orm"
 
 export async function GET() {
@@ -23,32 +23,32 @@ export async function GET() {
     // Get all client memory entries
     const allMemory = await db.select().from(clientMemory)
 
-    const weeklyMoves = await db
+    const weeklyTasks = await db
       .select({
-        clientId: moves.clientId,
+        clientId: tasks.clientId,
         count: sql<number>`COUNT(*)`.as("count"),
       })
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, weekStart)))
-      .groupBy(moves.clientId)
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, weekStart)))
+      .groupBy(tasks.clientId)
 
-    const weeklyMovesMap = new Map(weeklyMoves.map((w) => [w.clientId, Number(w.count)]))
+    const weeklyTasksMap = new Map(weeklyTasks.map((w) => [w.clientId, Number(w.count)]))
 
     const lastActivity = await db
       .select({
-        clientId: moves.clientId,
-        lastCompletion: sql<Date>`MAX(${moves.completedAt})`.as("lastCompletion"),
+        clientId: tasks.clientId,
+        lastCompletion: sql<Date>`MAX(${tasks.completedAt})`.as("lastCompletion"),
       })
-      .from(moves)
-      .where(eq(moves.status, "done"))
-      .groupBy(moves.clientId)
+      .from(tasks)
+      .where(eq(tasks.status, "done"))
+      .groupBy(tasks.clientId)
 
     const lastActivityMap = new Map(lastActivity.map((l) => [l.clientId, l.lastCompletion]))
 
     // Merge clients with their memory settings and stats
     const clientsWithMemory = allClients.map((client) => {
       const memory = allMemory.find((m) => m.clientName === client.name)
-      const movesThisWeek = weeklyMovesMap.get(client.id) || 0
+      const tasksThisWeek = weeklyTasksMap.get(client.id) || 0
       const lastCompletedAt = lastActivityMap.get(client.id)
 
       // Calculate days since last activity
@@ -68,7 +68,7 @@ export async function GET() {
         notes: memory?.notes || "",
         avoidanceScore: memory?.avoidanceScore || 0,
         preferredWorkTime: memory?.preferredWorkTime || null,
-        movesThisWeek,
+        tasksThisWeek,
         lastCompletedAt: lastCompletedAt ? new Date(lastCompletedAt).toISOString() : null,
         daysSinceActivity,
       }

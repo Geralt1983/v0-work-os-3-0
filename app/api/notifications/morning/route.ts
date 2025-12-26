@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, and, gte } from "drizzle-orm"
 import { sendNtfyNotification } from "@/lib/ntfy"
 
@@ -16,13 +16,13 @@ export async function POST() {
     startOfWeek.setDate(diff)
     startOfWeek.setHours(0, 0, 0, 0)
 
-    // Get this week's completed moves
-    const weekMoves = await db
+    // Get this week's completed tasks
+    const weekTasks = await db
       .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, startOfWeek)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfWeek)))
 
-    const weekEarnedMinutes = weekMoves.reduce((sum, m) => sum + (m.effortEstimate || 2) * 20, 0)
+    const weekEarnedMinutes = weekTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
     const weekTargetMinutes = 180 * 5 // 5 days
     const weekPercent = Math.round((weekEarnedMinutes / weekTargetMinutes) * 100)
 
@@ -31,23 +31,23 @@ export async function POST() {
     const workDaysPassed = Math.min(dayOfWeek - 1, 4) // 0-4 work days passed
     const expectedPercent = Math.round((workDaysPassed / 5) * 100)
 
-    // Get active moves count
-    const activeMoves = await db.select().from(moves).where(eq(moves.status, "active"))
+    // Get active tasks count
+    const activeTasks = await db.select().from(tasks).where(eq(tasks.status, "active"))
 
-    const queuedMoves = await db.select().from(moves).where(eq(moves.status, "queued"))
+    const queuedTasks = await db.select().from(tasks).where(eq(tasks.status, "queued"))
 
     // Calculate barriers (stale clients - no activity in 3+ days)
     const threeDaysAgo = new Date(now)
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
-    const allMoves = await db.select().from(moves)
+    const allTasks = await db.select().from(tasks)
 
     const staleClients = allClients.filter((client) => {
-      const clientMoves = allMoves.filter((m) => m.clientId === client.id && m.status === "done")
-      if (clientMoves.length === 0) return true
-      const lastMove = clientMoves.sort((a, b) => (b.completedAt?.getTime() || 0) - (a.completedAt?.getTime() || 0))[0]
-      return !lastMove.completedAt || lastMove.completedAt < threeDaysAgo
+      const clientTasks = allTasks.filter((t) => t.clientId === client.id && t.status === "done")
+      if (clientTasks.length === 0) return true
+      const lastTask = clientTasks.sort((a, b) => (b.completedAt?.getTime() || 0) - (a.completedAt?.getTime() || 0))[0]
+      return !lastTask.completedAt || lastTask.completedAt < threeDaysAgo
     })
 
     // Build status message
@@ -57,8 +57,8 @@ export async function POST() {
     let message = `Week Progress: ${weekPercent}% (${weekStatus})\n`
     message += `${weekEarnedMinutes} min earned of ${weekTargetMinutes} min weekly target\n\n`
     message += `Today's Setup:\n`
-    message += `- ${activeMoves.length} active move(s)\n`
-    message += `- ${queuedMoves.length} queued move(s)\n\n`
+    message += `- ${activeTasks.length} active task(s)\n`
+    message += `- ${queuedTasks.length} queued task(s)\n\n`
 
     if (staleClients.length > 0) {
       message += `Barriers (${staleClients.length} stale clients):\n`
@@ -72,15 +72,15 @@ export async function POST() {
       message += `No barriers - all clients healthy!\n`
     }
 
-    // Recent successes (moves completed in last 2 days)
+    // Recent successes (tasks completed in last 2 days)
     const twoDaysAgo = new Date(now)
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
-    const recentMoves = weekMoves.filter((m) => m.completedAt && m.completedAt >= twoDaysAgo)
+    const recentTasks = weekTasks.filter((t) => t.completedAt && t.completedAt >= twoDaysAgo)
 
-    if (recentMoves.length > 0) {
-      message += `\nRecent Wins (${recentMoves.length} moves):\n`
-      recentMoves.slice(0, 3).forEach((m) => {
-        message += `- ${m.title}\n`
+    if (recentTasks.length > 0) {
+      message += `\nRecent Wins (${recentTasks.length} tasks):\n`
+      recentTasks.slice(0, 3).forEach((t) => {
+        message += `- ${t.title}\n`
       })
     }
 
@@ -96,7 +96,7 @@ export async function POST() {
       weekPercent,
       weekStatus,
       staleClients: staleClients.length,
-      activeMoves: activeMoves.length,
+      activeTasks: activeTasks.length,
     })
   } catch (error) {
     console.error("Morning notification error:", error)

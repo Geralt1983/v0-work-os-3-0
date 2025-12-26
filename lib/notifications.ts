@@ -217,7 +217,7 @@ export function formatMorningSummary(stats: {
 }
 
 export function formatAfternoonSummary(stats: {
-  todayMoves: number
+  todayTasks: number
   todayMinutes: number
   targetMinutes: number
   clientsTouched: string[]
@@ -228,7 +228,7 @@ export function formatAfternoonSummary(stats: {
   const percentOfTarget = Math.round((stats.todayMinutes / DAILY_TARGET_MINUTES) * 100)
 
   let msg = `🌤️ Afternoon Check-in\n\n`
-  msg += `📊 Today: ${stats.todayMinutes} min earned (${stats.todayMoves} moves) - ${percentOfTarget}%\n`
+  msg += `📊 Today: ${stats.todayMinutes} min earned (${stats.todayTasks} tasks) - ${percentOfTarget}%\n`
 
   if (targetMet) {
     msg += `🎯 TARGET HIT! You've crushed today.\n`
@@ -245,7 +245,7 @@ export function formatAfternoonSummary(stats: {
     msg += `\n✅ Touched: ${stats.clientsTouched.join(", ")}`
   }
 
-  msg += `\n📋 ${stats.remainingActive} active moves remaining`
+  msg += `\n📋 ${stats.remainingActive} active tasks remaining`
 
   return msg
 }

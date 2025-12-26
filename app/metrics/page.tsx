@@ -153,8 +153,8 @@ export default function MetricsDashboard() {
   const pacingWidth = `${pacingPercent}%`
   const completedCount = today?.completedCount || 0
   const paceStatus = today?.paceStatus || "behind"
-  const clientsTouchedToday = (today as any)?.clientsTouchedToday || 0
-  const totalExternalClients = (today as any)?.totalExternalClients || 4
+  const clientsTouchedToday = today?.clientsTouchedToday || 0
+  const totalExternalClients = today?.totalExternalClients || 4
 
   const momentum = today?.momentum || {
     score: 0,
@@ -167,7 +167,7 @@ export default function MetricsDashboard() {
   }
 
   const staleClients = clients.filter((c) => c.isStale)
-  const activeClients = clients.filter((c) => c.activeMoves > 0)
+  const activeClients = clients.filter((c) => c.activeTasks > 0)
 
   const sendTestNotification = async () => {
     setNotificationStatus("Sending test...")
@@ -277,7 +277,7 @@ export default function MetricsDashboard() {
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
                     <span>
-                      <span className="text-zinc-100">{completedCount}</span> moves completed
+                      <span className="text-zinc-100">{completedCount}</span> tasks completed
                     </span>
                     <span>
                       <span className="text-zinc-100">{activeClients.length}</span> clients active
@@ -319,7 +319,7 @@ export default function MetricsDashboard() {
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
                       <div className="text-3xl font-semibold text-cyan-400">{completedCount}</div>
-                      <div className="text-xs text-zinc-500 mt-1">moves today</div>
+                      <div className="text-xs text-zinc-500 mt-1">tasks today</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
                       <div className="text-3xl font-semibold text-zinc-100">
@@ -335,12 +335,12 @@ export default function MetricsDashboard() {
                         : "Target reached! Great work today."}
                     </p>
                   ) : earnedMinutes === 0 ? (
-                    <p className="mt-4 text-center text-sm text-zinc-400">No moves completed yet today.</p>
+                    <p className="mt-4 text-center text-sm text-zinc-400">No tasks completed yet today.</p>
                   ) : paceStatus === "on_track" ? (
                     <p className="mt-4 text-center text-sm text-emerald-400">On track to reach target!</p>
                   ) : (
                     <p className="mt-4 text-center text-sm text-amber-400">
-                      {Math.ceil((targetMinutes - earnedMinutes) / 20)} more moves to hit target
+                      {Math.ceil((targetMinutes - earnedMinutes) / 20)} more tasks to hit target
                     </p>
                   )}
                 </div>
@@ -365,7 +365,7 @@ export default function MetricsDashboard() {
                         key={client.clientId}
                         className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm text-amber-200"
                       >
-                        {client.clientName} ({client.daysSinceLastMove}d)
+                        {client.clientName} ({client.daysSinceLastTask}d)
                       </span>
                     ))}
                   </div>
@@ -384,7 +384,7 @@ export default function MetricsDashboard() {
                     <p className="text-sm text-zinc-500">No client data available.</p>
                   ) : (
                     clients.map((client) => {
-                      const { label, tone } = getDaysSinceLabel(client.daysSinceLastMove)
+                      const { label, tone } = getDaysSinceLabel(client.daysSinceLastTask)
                       return (
                         <div
                           key={client.clientId}
@@ -400,7 +400,7 @@ export default function MetricsDashboard() {
                               <div>
                                 <div className="font-medium text-zinc-50">{client.clientName}</div>
                                 <div className="text-xs text-zinc-500">
-                                  {client.totalMoves} total moves · {client.completedMoves} completed
+                                  {client.totalTasks} total tasks · {client.completedTasks} completed
                                 </div>
                               </div>
                             </div>
@@ -413,17 +413,17 @@ export default function MetricsDashboard() {
                           <div className="mt-3 flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-1.5">
                               <span className="text-zinc-500">Active:</span>
-                              <span className="text-zinc-100">{client.activeMoves}</span>
+                              <span className="text-zinc-100">{client.activeTasks}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-zinc-500">Completed:</span>
-                              <span className="text-zinc-100">{client.completedMoves}</span>
+                              <span className="text-zinc-100">{client.completedTasks}</span>
                             </div>
-                            {client.daysSinceLastMove !== null && (
+                            {client.daysSinceLastTask !== null && (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-zinc-500">Last move:</span>
+                                <span className="text-zinc-500">Last task:</span>
                                 <span className={client.isStale ? "text-amber-400" : "text-zinc-100"}>
-                                  {client.daysSinceLastMove === 0 ? "today" : `${client.daysSinceLastMove}d ago`}
+                                  {client.daysSinceLastTask === 0 ? "today" : `${client.daysSinceLastTask}d ago`}
                                 </span>
                               </div>
                             )}

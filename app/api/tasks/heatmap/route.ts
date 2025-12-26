@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves } from "@/lib/schema"
+import { tasks } from "@/lib/schema"
 import { eq } from "drizzle-orm"
+import { effortToMinutes, DAILY_TARGET_MINUTES } from "@/lib/domain"
 
 function getDateInTimezone(date: Date, timezone: string): string {
   return date.toLocaleDateString("en-CA", { timeZone: timezone }) // en-CA gives YYYY-MM-DD format
@@ -17,21 +18,21 @@ export async function GET(request: Request) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - weeks * 7)
 
-    const completedMoves = await db
+    const completedTasks = await db
       .select({
-        completedAt: moves.completedAt,
-        effortEstimate: moves.effortEstimate,
+        completedAt: tasks.completedAt,
+        effortEstimate: tasks.effortEstimate,
       })
-      .from(moves)
-      .where(eq(moves.status, "done"))
+      .from(tasks)
+      .where(eq(tasks.status, "done"))
 
     // Group by date in JavaScript
     const countMap = new Map<string, { count: number; minutes: number }>()
 
-    for (const move of completedMoves) {
-      if (!move.completedAt) continue
+    for (const task of completedTasks) {
+      if (!task.completedAt) continue
 
-      const completedAtDate = move.completedAt instanceof Date ? move.completedAt : new Date(String(move.completedAt))
+      const completedAtDate = task.completedAt instanceof Date ? task.completedAt : new Date(String(task.completedAt))
       const dateKey = getDateInTimezone(completedAtDate, timezone)
 
       // Only include dates within range
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
       const existing = countMap.get(dateKey) || { count: 0, minutes: 0 }
       countMap.set(dateKey, {
         count: existing.count + 1,
-        minutes: existing.minutes + (move.effortEstimate || 1) * 20,
+        minutes: existing.minutes + effortToMinutes(task.effortEstimate),
       })
     }
 
@@ -54,10 +55,10 @@ export async function GET(request: Request) {
       const data = countMap.get(dateStr)
 
       const minutes = data?.minutes || 0
-      // Level 0-4 based on percentage of goal (180 min)
+      // Level 0-4 based on percentage of daily target
       let level = 0
       if (minutes > 0) {
-        const percentage = minutes / 180
+        const percentage = minutes / DAILY_TARGET_MINUTES
         if (percentage >= 1) level = 4
         else if (percentage >= 0.75) level = 3
         else if (percentage >= 0.5) level = 2

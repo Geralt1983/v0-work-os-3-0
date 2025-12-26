@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const db = getDb()
     const { id } = await params
-    const taskId = Number.parseInt(id)
+    const taskId = Number.parseInt(id, 10)
     const body = await request.json().catch(() => ({}))
 
     const [currentTask] = await db

@@ -34,10 +34,10 @@ function getStalenessIndicator(days: number | null) {
   }
 }
 
-function getProgressPercent(movesThisWeek: number, importance: string) {
-  // Expected moves per week based on importance
+function getProgressPercent(tasksThisWeek: number, importance: string) {
+  // Expected tasks per week based on importance
   const expected = importance === "high" ? 10 : importance === "medium" ? 6 : 3
-  return Math.min((movesThisWeek / expected) * 100, 100)
+  return Math.min((tasksThisWeek / expected) * 100, 100)
 }
 
 export default function ClientsPage() {
@@ -110,13 +110,13 @@ export default function ClientsPage() {
             <div className="text-center py-12 text-white/50">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No clients found</p>
-              <p className="text-sm mt-2">Add clients from the Moves page first</p>
+              <p className="text-sm mt-2">Add clients from the Tasks page first</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {sortedClients.map((client) => {
                 const staleness = getStalenessIndicator(client.daysSinceActivity)
-                const progress = getProgressPercent(client.movesThisWeek, client.importance)
+                const progress = getProgressPercent(client.tasksThisWeek, client.importance)
                 const isEditing = editingNotes === client.clientName
                 const isSaving = savingClient === client.clientName
 
@@ -153,7 +153,7 @@ export default function ClientsPage() {
                       {/* Stats row */}
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-white/70">
-                          <span className="font-medium text-white">{client.movesThisWeek}</span> moves this week
+                          <span className="font-medium text-white">{client.tasksThisWeek}</span> tasks this week
                         </span>
                         <span className={cn("flex items-center gap-1", staleness.color)}>
                           {staleness.icon && <span>{staleness.icon}</span>}

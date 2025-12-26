@@ -1,8 +1,8 @@
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
 import { generateAvoidanceReport } from "@/lib/ai/avoidance"
-import { getMoveHistory, logMoveEvent } from "@/lib/events"
+import { getTaskHistory, logTaskEvent } from "@/lib/events"
 import { checkAndSendMilestone } from "@/lib/milestone-checker"
 
 export async function executeTool(name: string, args: Record<string, unknown>) {
@@ -11,59 +11,59 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_all_client_pipelines": {
       const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
-      const allMoves = await db.select().from(moves).where(ne(moves.status, "done"))
+      const allTasks = await db.select().from(tasks).where(ne(tasks.status, "done"))
 
       const pipelines = allClients.map((client) => {
-        const clientMoves = allMoves.filter((m) => m.clientId === client.id)
+        const clientTasks = allTasks.filter((t) => t.clientId === client.id)
         return {
           clientName: client.name,
           clientId: client.id,
-          active: clientMoves.filter((m) => m.status === "active"),
-          queued: clientMoves.filter((m) => m.status === "queued"),
-          backlog: clientMoves.filter((m) => m.status === "backlog"),
+          active: clientTasks.filter((t) => t.status === "active"),
+          queued: clientTasks.filter((t) => t.status === "queued"),
+          backlog: clientTasks.filter((t) => t.status === "backlog"),
         }
       })
 
       return { pipelines }
     }
 
-    case "search_moves": {
+    case "search_tasks": {
       const query = (args.query as string).toLowerCase()
       const clientName = args.client_name as string | undefined
       const status = args.status as string | undefined
 
-      // Get all moves with client info
-      const allMoves = await db
+      // Get all tasks with client info
+      const allTasks = await db
         .select({
-          id: moves.id,
-          title: moves.title,
-          status: moves.status,
-          clientId: moves.clientId,
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          clientId: tasks.clientId,
           clientName: clients.name,
-          drainType: moves.drainType,
-          effortEstimate: moves.effortEstimate,
+          drainType: tasks.drainType,
+          effortEstimate: tasks.effortEstimate,
         })
-        .from(moves)
-        .leftJoin(clients, eq(moves.clientId, clients.id))
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
 
       // Filter by query, client, and status
-      const filtered = allMoves.filter((m) => {
-        const titleMatch = m.title.toLowerCase().includes(query)
+      const filtered = allTasks.filter((t) => {
+        const titleMatch = t.title.toLowerCase().includes(query)
         const clientMatch =
-          !clientName || (m.clientName && m.clientName.toLowerCase().includes(clientName.toLowerCase()))
-        const statusMatch = !status || m.status === status
+          !clientName || (t.clientName && t.clientName.toLowerCase().includes(clientName.toLowerCase()))
+        const statusMatch = !status || t.status === status
         return titleMatch && clientMatch && statusMatch
       })
 
       return {
-        moves: filtered.slice(0, 10),
+        tasks: filtered.slice(0, 10),
         total: filtered.length,
         message:
-          filtered.length === 0 ? "No moves found matching that query" : `Found ${filtered.length} matching moves`,
+          filtered.length === 0 ? "No tasks found matching that query" : `Found ${filtered.length} matching tasks`,
       }
     }
 
-    case "create_move": {
+    case "create_task": {
       let clientId = null
       if (args.client_name) {
         const clientNameLower = (args.client_name as string).toLowerCase()
@@ -78,8 +78,8 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         }
       }
 
-      const [newMove] = await db
-        .insert(moves)
+      const [newTask] = await db
+        .insert(tasks)
         .values({
           title: args.title as string,
           clientId,
@@ -91,17 +91,17 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         })
         .returning()
 
-      await logMoveEvent({
-        moveId: newMove.id,
+      await logTaskEvent({
+        taskId: newTask.id,
         eventType: "created",
-        toStatus: newMove.status,
+        toStatus: newTask.status,
       })
 
-      return { success: true, move: newMove }
+      return { success: true, task: newTask }
     }
 
-    case "update_move": {
-      const moveId = args.move_id as number
+    case "update_task": {
+      const taskId = args.task_id as number
       const updates: Record<string, unknown> = { updatedAt: new Date() }
 
       if (args.title) updates.title = args.title
@@ -110,40 +110,40 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       if (args.effort_estimate) updates.effortEstimate = args.effort_estimate
       if (args.drain_type) updates.drainType = args.drain_type
 
-      const [updated] = await db.update(moves).set(updates).where(eq(moves.id, moveId)).returning()
+      const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, taskId)).returning()
 
       if (!updated) {
-        return { success: false, error: `Move ${moveId} not found` }
+        return { success: false, error: `Task ${taskId} not found` }
       }
 
-      return { success: true, move: updated }
+      return { success: true, task: updated }
     }
 
-    case "complete_move": {
-      const [currentMove] = await db
-        .select({ status: moves.status, title: moves.title })
-        .from(moves)
-        .where(eq(moves.id, args.move_id as number))
+    case "complete_task": {
+      const [currentTask] = await db
+        .select({ status: tasks.status, title: tasks.title })
+        .from(tasks)
+        .where(eq(tasks.id, args.task_id as number))
         .limit(1)
 
-      if (!currentMove) {
-        return { success: false, error: `Move ${args.move_id} not found` }
+      if (!currentTask) {
+        return { success: false, error: `Task ${args.task_id} not found` }
       }
 
       const [updated] = await db
-        .update(moves)
+        .update(tasks)
         .set({
           status: "done",
           completedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(moves.id, args.move_id as number))
+        .where(eq(tasks.id, args.task_id as number))
         .returning()
 
-      await logMoveEvent({
-        moveId: args.move_id as number,
+      await logTaskEvent({
+        taskId: args.task_id as number,
         eventType: "completed",
-        fromStatus: currentMove?.status,
+        fromStatus: currentTask?.status,
         toStatus: "done",
       })
 
@@ -157,96 +157,96 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
 
       return {
         success: true,
-        move: updated,
-        message: `Completed "${currentMove.title}"`,
+        task: updated,
+        message: `Completed "${currentTask.title}"`,
         milestone: milestoneResult,
       }
     }
 
-    case "delete_move": {
-      const [existingMove] = await db
-        .select({ id: moves.id, title: moves.title })
-        .from(moves)
-        .where(eq(moves.id, args.move_id as number))
+    case "delete_task": {
+      const [existingTask] = await db
+        .select({ id: tasks.id, title: tasks.title })
+        .from(tasks)
+        .where(eq(tasks.id, args.task_id as number))
         .limit(1)
 
-      if (!existingMove) {
-        return { success: false, error: `Move ${args.move_id} not found` }
+      if (!existingTask) {
+        return { success: false, error: `Task ${args.task_id} not found` }
       }
 
-      await db.delete(moves).where(eq(moves.id, args.move_id as number))
+      await db.delete(tasks).where(eq(tasks.id, args.task_id as number))
 
-      return { success: true, message: `Deleted "${existingMove.title}"` }
+      return { success: true, message: `Deleted "${existingTask.title}"` }
     }
 
-    case "promote_move": {
-      const [currentMove] = await db
-        .select({ status: moves.status, title: moves.title })
-        .from(moves)
-        .where(eq(moves.id, args.move_id as number))
+    case "promote_task": {
+      const [currentTask] = await db
+        .select({ status: tasks.status, title: tasks.title })
+        .from(tasks)
+        .where(eq(tasks.id, args.task_id as number))
         .limit(1)
 
-      if (!currentMove) {
-        return { success: false, error: `Move ${args.move_id} not found` }
+      if (!currentTask) {
+        return { success: false, error: `Task ${args.task_id} not found` }
       }
 
       const [updated] = await db
-        .update(moves)
+        .update(tasks)
         .set({
           status: args.target as string,
           updatedAt: new Date(),
         })
-        .where(eq(moves.id, args.move_id as number))
+        .where(eq(tasks.id, args.task_id as number))
         .returning()
 
-      await logMoveEvent({
-        moveId: args.move_id as number,
+      await logTaskEvent({
+        taskId: args.task_id as number,
         eventType: "promoted",
-        fromStatus: currentMove?.status,
+        fromStatus: currentTask?.status,
         toStatus: args.target as string,
       })
 
-      return { success: true, move: updated, message: `Promoted "${currentMove.title}" to ${args.target}` }
+      return { success: true, task: updated, message: `Promoted "${currentTask.title}" to ${args.target}` }
     }
 
-    case "demote_move": {
-      const [currentMove] = await db
-        .select({ status: moves.status, title: moves.title })
-        .from(moves)
-        .where(eq(moves.id, args.move_id as number))
+    case "demote_task": {
+      const [currentTask] = await db
+        .select({ status: tasks.status, title: tasks.title })
+        .from(tasks)
+        .where(eq(tasks.id, args.task_id as number))
         .limit(1)
 
-      if (!currentMove) {
-        return { success: false, error: `Move ${args.move_id} not found` }
+      if (!currentTask) {
+        return { success: false, error: `Task ${args.task_id} not found` }
       }
 
       const [updated] = await db
-        .update(moves)
+        .update(tasks)
         .set({
           status: args.target as string,
           updatedAt: new Date(),
         })
-        .where(eq(moves.id, args.move_id as number))
+        .where(eq(tasks.id, args.task_id as number))
         .returning()
 
-      await logMoveEvent({
-        moveId: args.move_id as number,
+      await logTaskEvent({
+        taskId: args.task_id as number,
         eventType: "demoted",
-        fromStatus: currentMove?.status,
+        fromStatus: currentTask?.status,
         toStatus: args.target as string,
       })
 
-      return { success: true, move: updated, message: `Demoted "${currentMove.title}" to ${args.target}` }
+      return { success: true, task: updated, message: `Demoted "${currentTask.title}" to ${args.target}` }
     }
 
-    case "suggest_next_move": {
-      const activeMoves = await db
+    case "suggest_next_task": {
+      const activeTasks = await db
         .select()
-        .from(moves)
-        .where(and(eq(moves.status, "active"), ne(moves.status, "done")))
-      const queuedMoves = await db.select().from(moves).where(eq(moves.status, "queued"))
+        .from(tasks)
+        .where(and(eq(tasks.status, "active"), ne(tasks.status, "done")))
+      const queuedTasks = await db.select().from(tasks).where(eq(tasks.status, "queued"))
 
-      const suggestion = queuedMoves[0] || activeMoves[0]
+      const suggestion = queuedTasks[0] || activeTasks[0]
       return {
         suggestion: suggestion
           ? {
@@ -264,8 +264,8 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       return { report }
     }
 
-    case "get_move_history": {
-      const history = await getMoveHistory(args.move_id as number)
+    case "get_task_history": {
+      const history = await getTaskHistory(args.task_id as number)
       return { history }
     }
 

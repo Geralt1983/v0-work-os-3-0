@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo, useCallback } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,16 +20,52 @@ interface ArchivedMove {
   archivedAt: string
 }
 
+// Memoized archived task item
+const ArchivedTaskItem = memo(function ArchivedTaskItem({
+  task,
+  onResurrect,
+}: {
+  task: ArchivedMove
+  onResurrect: (id: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate">{task.title}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <Badge
+            variant="outline"
+            className="text-xs"
+            style={{
+              borderColor: task.clientColor || undefined,
+              color: task.clientColor || undefined,
+            }}
+          >
+            {task.clientName || "Unknown"}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {task.daysInBacklog}d in backlog - {task.archiveReason}
+          </span>
+        </div>
+      </div>
+      <Button size="sm" variant="outline" onClick={() => onResurrect(task.id)}>
+        <RotateCcw className="h-4 w-4 mr-1" />
+        Resurrect
+      </Button>
+    </div>
+  )
+})
+
 export function Graveyard() {
   const { data, mutate } = useSWR<ArchivedMove[]>("/api/graveyard", fetcher)
   const { refresh: refreshTasks } = useTasks()
   const [open, setOpen] = useState(false)
 
-  const handleResurrect = async (id: number) => {
+  const handleResurrect = useCallback(async (id: number) => {
     await fetch(`/api/graveyard/${id}/resurrect`, { method: "POST" })
     mutate()
     refreshTasks()
-  }
+  }, [mutate, refreshTasks])
 
   const archived = data || []
 
@@ -55,30 +91,7 @@ export function Graveyard() {
             </p>
           ) : (
             archived.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{task.title}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge
-                      variant="outline"
-                      className="text-xs"
-                      style={{
-                        borderColor: task.clientColor || undefined,
-                        color: task.clientColor || undefined,
-                      }}
-                    >
-                      {task.clientName || "Unknown"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {task.daysInBacklog}d in backlog - {task.archiveReason}
-                    </span>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => handleResurrect(task.id)}>
-                  <RotateCcw className="h-4 w-4 mr-1" />
-                  Resurrect
-                </Button>
-              </div>
+              <ArchivedTaskItem key={task.id} task={task} onResurrect={handleResurrect} />
             ))
           )}
         </div>

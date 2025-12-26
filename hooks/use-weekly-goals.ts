@@ -2,7 +2,7 @@ import useSWR from "swr"
 
 interface WeeklyGoals {
   totalMinutes: number
-  movesCompleted: number
+  tasksCompleted: number
   daysElapsed: number
   daysRemaining: number
   workdaysPassed: number

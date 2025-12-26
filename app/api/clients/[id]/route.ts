@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const [client] = await db
       .select()
       .from(clients)
-      .where(eq(clients.id, Number.parseInt(id)))
+      .where(eq(clients.id, Number.parseInt(id, 10)))
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 })
@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const [updated] = await db
       .update(clients)
       .set(body)
-      .where(eq(clients.id, Number.parseInt(id)))
+      .where(eq(clients.id, Number.parseInt(id, 10)))
       .returning()
 
     if (!updated) {
@@ -55,7 +55,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id } = await params
     const [deleted] = await db
       .delete(clients)
-      .where(eq(clients.id, Number.parseInt(id)))
+      .where(eq(clients.id, Number.parseInt(id, 10)))
       .returning()
 
     if (!deleted) {

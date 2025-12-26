@@ -104,8 +104,8 @@ export function WeeklyGoals() {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="text-sm font-medium">{data.movesCompleted}</div>
-              <div className="text-[10px] text-muted-foreground">moves done</div>
+              <div className="text-sm font-medium">{data.tasksCompleted}</div>
+              <div className="text-[10px] text-muted-foreground">tasks done</div>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -70,11 +70,6 @@ export async function logTaskEvent({ taskId, eventType, fromStatus, toStatus, me
   }
 }
 
-// Legacy alias
-export const logMoveEvent = (params: { moveId: number; eventType: EventType; fromStatus?: string; toStatus?: string; metadata?: Record<string, any> }) => {
-  return logTaskEvent({ ...params, taskId: params.moveId })
-}
-
 // Get event history for a task
 export async function getTaskHistory(taskId: number) {
   try {
@@ -85,9 +80,6 @@ export async function getTaskHistory(taskId: number) {
     return []
   }
 }
-
-// Legacy alias
-export const getMoveHistory = getTaskHistory
 
 // Count deferrals for a specific task
 export async function getDeferralCount(taskId: number): Promise<number> {

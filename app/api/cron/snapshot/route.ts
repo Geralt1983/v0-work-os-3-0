@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { tasks, clients, clientMemory, dailySnapshots } from "@/lib/schema"
-import { eq, and, gte, lt } from "drizzle-orm"
+import { eq, and, gte, lt, inArray } from "drizzle-orm"
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -37,13 +37,11 @@ export async function GET(request: Request) {
     const tasksCompleted = completedToday.length
     const minutesEarned = completedToday.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
 
-    // Get unique clients touched
-    const clientIds = [...new Set(completedToday.map((t) => t.clientId).filter(Boolean))]
-    const clientsTouched: string[] = []
-    for (const id of clientIds) {
-      const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, id!)).limit(1)
-      if (client) clientsTouched.push(client.name)
-    }
+    // Get unique clients touched - batch query instead of N+1
+    const clientIds = [...new Set(completedToday.map((t) => t.clientId).filter((id): id is number => id !== null))]
+    const clientsTouched: string[] = clientIds.length > 0
+      ? (await db.select({ name: clients.name }).from(clients).where(inArray(clients.id, clientIds))).map((c) => c.name)
+      : []
 
     // Get drain types used
     const drainTypesUsed = [...new Set(completedToday.map((t) => t.drainType).filter(Boolean))] as string[]

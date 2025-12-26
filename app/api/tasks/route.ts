@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const conditions = []
     if (status) conditions.push(eq(tasks.status, status))
-    if (clientId) conditions.push(eq(tasks.clientId, Number.parseInt(clientId)))
+    if (clientId) conditions.push(eq(tasks.clientId, Number.parseInt(clientId, 10)))
     if (excludeCompleted) conditions.push(ne(tasks.status, "done"))
 
     const allTasks = conditions.length > 0 ? await query.where(and(...conditions)) : await query

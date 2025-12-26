@@ -4,7 +4,7 @@ import { resurrectTask } from "@/lib/backlog-decay"
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const graveyardId = Number.parseInt(id)
+    const graveyardId = Number.parseInt(id, 10)
     const resurrected = await resurrectTask(graveyardId)
     return NextResponse.json(resurrected)
   } catch (error) {

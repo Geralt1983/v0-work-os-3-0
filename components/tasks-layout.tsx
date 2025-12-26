@@ -8,11 +8,11 @@ import { SynapseSidebar } from "@/components/synapse-sidebar"
 import { SynapseMobileSheet } from "@/components/synapse-mobile-sheet"
 import useSWR from "swr"
 
-interface MovesLayoutProps {
+interface TasksLayoutProps {
   children: React.ReactNode
 }
 
-export function MovesLayout({ children }: MovesLayoutProps) {
+export function TasksLayout({ children }: TasksLayoutProps) {
   const isMobile = useIsMobile()
   const [isCollapsed, setIsCollapsed] = useState(true) // Default collapsed until loaded
 

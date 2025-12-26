@@ -1,10 +1,45 @@
 "use client"
 
-import { useTasks } from "@/hooks/use-tasks"
+import { useTasks, type Task } from "@/hooks/use-tasks"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
-import { useState } from "react"
+import { useState, memo, useCallback } from "react"
+
+// Memoized task item to prevent re-renders when other tasks change
+const TaskItem = memo(function TaskItem({
+  task,
+  formatTime,
+}: {
+  task: Task
+  formatTime: (date: number) => string
+}) {
+  return (
+    <div
+      className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-emerald-500/10 transition-colors"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <span className="text-xs text-muted-foreground w-16 shrink-0">{formatTime(task.completedAt!)}</span>
+        <span className="truncate text-sm text-foreground">{task.title}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge
+          variant="outline"
+          className="text-xs"
+          style={{
+            borderColor: task.clientColor,
+            color: task.clientColor,
+          }}
+        >
+          {task.client}
+        </Badge>
+        <span className="text-xs text-muted-foreground w-8 text-right">
+          {(task.effortEstimate || 2) * 20}m
+        </span>
+      </div>
+    </div>
+  )
+})
 
 export function DoneToday() {
   const { tasks } = useTasks()
@@ -31,14 +66,14 @@ export function DoneToday() {
         <CardContent className="py-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className="h-5 w-5" />
-            <span>No moves completed yet today. Let's change that!</span>
+            <span>No tasks completed yet today. Let's change that!</span>
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  const formatTime = (date: number) => {
+  const formatTime = useCallback((date: number) => {
     return new Date(date)
       .toLocaleTimeString("en-US", {
         hour: "numeric",
@@ -46,7 +81,7 @@ export function DoneToday() {
         hour12: true,
       })
       .toLowerCase()
-  }
+  }, [])
 
   return (
     <Card className="border-emerald-500/30 bg-emerald-950/20">
@@ -70,30 +105,7 @@ export function DoneToday() {
         <CardContent className="pt-0">
           <div className="space-y-1">
             {doneTodayTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-emerald-500/10 transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground w-16 shrink-0">{formatTime(task.completedAt!)}</span>
-                  <span className="truncate text-sm text-foreground">{task.title}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge
-                    variant="outline"
-                    className="text-xs"
-                    style={{
-                      borderColor: task.clientColor,
-                      color: task.clientColor,
-                    }}
-                  >
-                    {task.client}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground w-8 text-right">
-                    {(task.effortEstimate || 2) * 20}m
-                  </span>
-                </div>
-              </div>
+              <TaskItem key={task.id} task={task} formatTime={formatTime} />
             ))}
           </div>
         </CardContent>

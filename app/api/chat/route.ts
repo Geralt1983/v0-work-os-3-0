@@ -91,12 +91,12 @@ export async function POST(request: Request) {
 
         const result = await executeTool(toolName, toolArgs)
 
-        // Create task card for move creation
-        if (toolName === "create_move" && result.move) {
+        // Create task card for task creation
+        if (toolName === "create_task" && result.task) {
           taskCard = {
-            title: result.move.title,
-            taskId: String(result.move.id),
-            status: result.move.status,
+            title: result.task.title,
+            taskId: String(result.task.id),
+            status: result.task.status,
           }
         }
 

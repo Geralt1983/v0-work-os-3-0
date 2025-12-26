@@ -2,6 +2,8 @@
 
 import useSWR from "swr"
 import { isPreviewEnvironment } from "@/lib/mock-data"
+import { SWR_CONFIG } from "@/lib/fetch-utils"
+import { MINUTES_PER_EFFORT, DAILY_TARGET_MINUTES } from "@/lib/domain"
 
 const fetcher = async (url: string) => {
   const res = await fetch(url)
@@ -27,15 +29,17 @@ export interface TodayMetrics {
     dayProgress: number
   }
   streak: number
+  clientsTouchedToday: number
+  totalExternalClients: number
 }
 
 export interface ClientMetrics {
   clientId: number
   clientName: string
-  totalMoves: number
-  completedMoves: number
-  activeMoves: number
-  daysSinceLastMove: number | null
+  totalTasks: number
+  completedTasks: number
+  activeTasks: number
+  daysSinceLastTask: number | null
   isStale: boolean
 }
 
@@ -125,8 +129,8 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
 }
 
 function getPreviewMetrics(): TodayMetrics {
-  const earnedMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * 20, 0)
-  const targetMinutes = 180
+  const earnedMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * MINUTES_PER_EFFORT, 0)
+  const targetMinutes = DAILY_TARGET_MINUTES
   const percent = Math.round((earnedMinutes / targetMinutes) * 100)
 
   return {
@@ -137,6 +141,8 @@ function getPreviewMetrics(): TodayMetrics {
     paceStatus: percent >= 100 ? "on_track" : "behind",
     momentum: calculatePreviewMomentum(),
     streak: 0,
+    clientsTouchedToday: 0,
+    totalExternalClients: 4,
   }
 }
 
@@ -145,46 +151,46 @@ function getPreviewClientMetrics(): ClientMetrics[] {
     {
       clientId: 1,
       clientName: "Acme Corp",
-      totalMoves: 5,
-      completedMoves: 2,
-      activeMoves: 3,
-      daysSinceLastMove: 1,
+      totalTasks: 5,
+      completedTasks: 2,
+      activeTasks: 3,
+      daysSinceLastTask: 1,
       isStale: false,
     },
     {
       clientId: 2,
       clientName: "TechStart",
-      totalMoves: 4,
-      completedMoves: 1,
-      activeMoves: 3,
-      daysSinceLastMove: 0,
+      totalTasks: 4,
+      completedTasks: 1,
+      activeTasks: 3,
+      daysSinceLastTask: 0,
       isStale: false,
     },
     {
       clientId: 3,
       clientName: "Global Media",
-      totalMoves: 3,
-      completedMoves: 0,
-      activeMoves: 3,
-      daysSinceLastMove: 3,
+      totalTasks: 3,
+      completedTasks: 0,
+      activeTasks: 3,
+      daysSinceLastTask: 3,
       isStale: true,
     },
     {
       clientId: 4,
       clientName: "Internal",
-      totalMoves: 2,
-      completedMoves: 1,
-      activeMoves: 1,
-      daysSinceLastMove: 0,
+      totalTasks: 2,
+      completedTasks: 1,
+      activeTasks: 1,
+      daysSinceLastTask: 0,
       isStale: false,
     },
     {
       clientId: 5,
       clientName: "Side Project",
-      totalMoves: 1,
-      completedMoves: 0,
-      activeMoves: 1,
-      daysSinceLastMove: 5,
+      totalTasks: 1,
+      completedTasks: 0,
+      activeTasks: 1,
+      daysSinceLastTask: 5,
       isStale: true,
     },
   ]
@@ -197,8 +203,7 @@ export function useMetrics() {
     isLoading: todayLoading,
     mutate: mutateToday,
   } = useSWR<TodayMetrics>("/api/metrics/today", fetcher, {
-    refreshInterval: 10000,
-    revalidateOnFocus: true,
+    ...SWR_CONFIG.default,
     onError: () => {},
   })
 
@@ -208,8 +213,7 @@ export function useMetrics() {
     isLoading: clientsLoading,
     mutate: mutateClients,
   } = useSWR<ClientMetrics[]>("/api/metrics/clients", fetcher, {
-    refreshInterval: 10000,
-    revalidateOnFocus: true,
+    ...SWR_CONFIG.default,
     onError: () => {},
   })
 

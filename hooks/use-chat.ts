@@ -2,11 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import useSWR from "swr"
-
-// =============================================================================
-// API CONFIGURATION - Using local API routes
-// =============================================================================
-const API_BASE_URL = ""
+import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
 
 // =============================================================================
 // TYPES
@@ -39,28 +35,6 @@ interface ChatResponse {
   sessionId: string
   userMessage: { id: string; role: "user"; content: string }
   assistantMessage: { id: string; role: "assistant"; content: string; taskCard?: TaskCard }
-}
-
-// =============================================================================
-// API HELPERS
-// =============================================================================
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE_URL}${path}`
-
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  })
-
-  if (!res.ok) {
-    const error = await res.text().catch(() => "Unknown error")
-    throw new Error(`API error ${res.status}: ${error}`)
-  }
-
-  return res.json()
 }
 
 // =============================================================================
@@ -114,7 +88,7 @@ export function useChat() {
         return []
       }
     },
-    { revalidateOnFocus: false, refreshInterval: 5000 }, // Poll every 5s for cross-device sync
+    SWR_CONFIG.realtime, // Poll every 15s for cross-device sync
   )
 
   // Update messages when history loads

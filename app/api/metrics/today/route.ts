@@ -1,32 +1,25 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, and, gte, ne } from "drizzle-orm"
 import { calculateMomentum } from "@/lib/metrics"
 import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES } from "@/lib/constants"
+import { getESTNow, getESTTodayStart, estToUTC, calculateTotalMinutes } from "@/lib/domain"
 
 export async function GET() {
   try {
     const db = getDb()
 
     const now = new Date()
-    const estOffset = -5 * 60
-    const estNow = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60 * 1000)
-
-    const todayEST = new Date(estNow)
-    todayEST.setHours(0, 0, 0, 0)
-
-    const todayUTC = new Date(todayEST.getTime() - (now.getTimezoneOffset() + estOffset) * 60 * 1000)
+    const estNow = getESTNow(now)
+    const todayUTC = estToUTC(getESTTodayStart(now), now)
 
     const completedToday = await db
       .select()
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayUTC)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayUTC)))
 
-    const earnedMinutes = completedToday.reduce((sum, m) => {
-      const effort = m.effortEstimate || 2
-      return sum + effort * 20
-    }, 0)
+    const earnedMinutes = calculateTotalMinutes(completedToday)
 
     // Get all external clients (type != 'internal')
     const externalClients = await db.select({ id: clients.id }).from(clients).where(ne(clients.type, "internal"))

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves } from "@/lib/schema"
+import { tasks } from "@/lib/schema"
 import { eq, gte, and, lte } from "drizzle-orm"
+import {
+  getESTDayOfWeek,
+  getESTWeekStart,
+  estToUTC,
+  getWorkDaysPassed,
+  calculateTotalMinutes,
+} from "@/lib/domain"
 
 const MINIMUM_WEEKLY_GOAL = 900 // 15 hours in minutes
 const IDEAL_WEEKLY_GOAL = 1200 // 20 hours in minutes
@@ -9,56 +16,44 @@ const IDEAL_WEEKLY_GOAL = 1200 // 20 hours in minutes
 export async function GET() {
   try {
     const db = getDb()
-
-    // Get current time in EST
     const now = new Date()
-    const estOffset = -5 * 60
-    const estNow = new Date(now.getTime() + (now.getTimezoneOffset() + estOffset) * 60 * 1000)
 
-    // Get day of week (0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday)
-    const dayOfWeek = estNow.getDay()
+    // Get day of week in EST (0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday)
+    const dayOfWeek = getESTDayOfWeek(now)
 
     // Check if it's a workday (Mon-Fri)
     const isWorkday = dayOfWeek >= 1 && dayOfWeek <= 5
 
-    // Calculate Monday 12:00am EST for this week
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const weekStartEST = new Date(estNow)
-    weekStartEST.setDate(estNow.getDate() + mondayOffset)
-    weekStartEST.setHours(0, 0, 0, 0)
-
-    // Calculate Friday 11:59pm EST
+    // Calculate work week boundaries (Mon-Fri)
+    const weekStartEST = getESTWeekStart(now)
     const weekEndEST = new Date(weekStartEST)
     weekEndEST.setDate(weekStartEST.getDate() + 4) // Friday
     weekEndEST.setHours(23, 59, 59, 999)
 
     // Convert to UTC for database queries
-    const weekStartUTC = new Date(weekStartEST.getTime() - (now.getTimezoneOffset() + estOffset) * 60 * 1000)
-    const weekEndUTC = new Date(weekEndEST.getTime() - (now.getTimezoneOffset() + estOffset) * 60 * 1000)
+    const weekStartUTC = estToUTC(weekStartEST, now)
+    const weekEndUTC = estToUTC(weekEndEST, now)
 
     // Workdays passed (Mon = 1, Tue = 2, Wed = 3, Thu = 4, Fri = 5)
     // On weekends, all 5 workdays have passed
     const workdaysPassed = isWorkday ? dayOfWeek : 5
 
     // Workdays remaining (NOT including today)
-    // On Mon (day 1): 4 remaining, Tue: 3, Wed: 2, Thu: 1, Fri: 0, Sat/Sun: 0
     const workdaysRemaining = isWorkday ? 5 - dayOfWeek : 0
 
-    // Get completed moves this work week (Mon-Fri only)
+    // Get completed tasks this work week (Mon-Fri only)
     const completedThisWeek = await db
       .select({
-        effortEstimate: moves.effortEstimate,
-        completedAt: moves.completedAt,
+        effortEstimate: tasks.effortEstimate,
+        completedAt: tasks.completedAt,
       })
-      .from(moves)
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, weekStartUTC), lte(moves.completedAt, weekEndUTC)))
+      .from(tasks)
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, weekStartUTC), lte(tasks.completedAt, weekEndUTC)))
 
     // Calculate total minutes earned
-    const totalMinutes = completedThisWeek.reduce((sum, move) => {
-      return sum + (move.effortEstimate || 1) * 20
-    }, 0)
+    const totalMinutes = calculateTotalMinutes(completedThisWeek)
 
-    const movesCompleted = completedThisWeek.length
+    const tasksCompleted = completedThisWeek.length
 
     // Calculate daily average based on workdays passed
     const dailyAverage = workdaysPassed > 0 ? Math.round(totalMinutes / workdaysPassed) : 0
@@ -109,7 +104,7 @@ export async function GET() {
 
     return NextResponse.json({
       totalMinutes,
-      movesCompleted,
+      tasksCompleted,
       workdaysPassed, // renamed from daysElapsed
       workdaysRemaining, // renamed from daysRemaining
       daysElapsed: workdaysPassed, // Keep for backwards compat
@@ -130,7 +125,7 @@ export async function GET() {
     // Return mock data on error
     return NextResponse.json({
       totalMinutes: 540,
-      movesCompleted: 18,
+      tasksCompleted: 18,
       workdaysPassed: 3,
       workdaysRemaining: 2,
       daysElapsed: 3,

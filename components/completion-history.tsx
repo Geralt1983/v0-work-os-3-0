@@ -120,7 +120,7 @@ export function CompletionHistory() {
         ))}
 
         {days.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No completed moves in the past 30 days.</div>
+          <div className="text-center py-8 text-muted-foreground">No completed tasks in the past 30 days.</div>
         )}
       </CardContent>
     </Card>

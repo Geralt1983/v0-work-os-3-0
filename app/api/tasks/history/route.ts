@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, and, gte, desc } from "drizzle-orm"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const days = Number.parseInt(searchParams.get("days") || "30")
+  const days = Number.parseInt(searchParams.get("days") || "30", 10)
   const clientId = searchParams.get("clientId")
   const timezone = searchParams.get("timezone") || "America/New_York"
 
@@ -14,34 +14,34 @@ export async function GET(request: Request) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    const conditions = [eq(moves.status, "done"), gte(moves.completedAt, startDate)]
+    const conditions = [eq(tasks.status, "done"), gte(tasks.completedAt, startDate)]
 
     if (clientId) {
-      conditions.push(eq(moves.clientId, Number.parseInt(clientId)))
+      conditions.push(eq(tasks.clientId, Number.parseInt(clientId, 10)))
     }
 
-    const completedMoves = await db
+    const completedTasks = await db
       .select({
-        id: moves.id,
-        title: moves.title,
-        drainType: moves.drainType,
-        effortEstimate: moves.effortEstimate,
-        completedAt: moves.completedAt,
+        id: tasks.id,
+        title: tasks.title,
+        drainType: tasks.drainType,
+        effortEstimate: tasks.effortEstimate,
+        completedAt: tasks.completedAt,
         clientName: clients.name,
         clientColor: clients.color,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
       .where(and(...conditions))
-      .orderBy(desc(moves.completedAt))
+      .orderBy(desc(tasks.completedAt))
 
     // Group by date IN USER'S TIMEZONE
     const grouped: Record<string, any[]> = {}
 
-    for (const move of completedMoves) {
-      if (!move.completedAt) continue
+    for (const task of completedTasks) {
+      if (!task.completedAt) continue
 
-      const completedAt = move.completedAt instanceof Date ? move.completedAt : new Date(move.completedAt)
+      const completedAt = task.completedAt instanceof Date ? task.completedAt : new Date(task.completedAt)
 
       // Convert UTC timestamp to user's local date string
       const dateKey = completedAt.toLocaleDateString("en-CA", { timeZone: timezone }) // YYYY-MM-DD format
@@ -50,12 +50,12 @@ export async function GET(request: Request) {
         grouped[dateKey] = []
       }
       grouped[dateKey].push({
-        id: move.id,
-        title: move.title,
-        clientName: move.clientName,
-        clientColor: move.clientColor,
-        drainType: move.drainType,
-        effortEstimate: move.effortEstimate,
+        id: task.id,
+        title: task.title,
+        clientName: task.clientName,
+        clientColor: task.clientColor,
+        drainType: task.drainType,
+        effortEstimate: task.effortEstimate,
         completedAt: completedAt.toISOString(),
       })
     }
@@ -69,13 +69,13 @@ export async function GET(request: Request) {
     // Convert to array sorted by date
     const timeline = Object.entries(grouped)
       .sort(([a], [b]) => b.localeCompare(a))
-      .map(([date, moves]) => ({
+      .map(([date, tasks]) => ({
         date,
         // Add display label based on user's timezone
         displayLabel: date === todayKey ? "Today" : date === yesterdayKey ? "Yesterday" : null,
-        moves,
-        totalMinutes: moves.reduce((sum: number, m: any) => sum + (m.effortEstimate || 1) * 20, 0),
-        clientsTouched: [...new Set(moves.map((m: any) => m.clientName))].filter(Boolean),
+        tasks,
+        totalMinutes: tasks.reduce((sum: number, t: any) => sum + (t.effortEstimate || 1) * 20, 0),
+        clientsTouched: [...new Set(tasks.map((t: any) => t.clientName))].filter(Boolean),
       }))
 
     return NextResponse.json({ timeline, todayKey, yesterdayKey })
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       {
         date: new Date().toISOString().split("T")[0],
         displayLabel: "Today",
-        moves: [
+        tasks: [
           {
             id: 1,
             title: "Review contract",

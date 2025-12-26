@@ -1,28 +1,28 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients } from "@/lib/schema"
+import { tasks, clients } from "@/lib/schema"
 import { eq, ne } from "drizzle-orm"
 
 export async function GET() {
   try {
     const db = getDb()
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
-    const allMoves = await db.select().from(moves).where(ne(moves.status, "done"))
+    const allTasks = await db.select().from(tasks).where(ne(tasks.status, "done"))
 
     const issues: { clientName: string; issues: string[] }[] = []
-    const missingFields: { moveId: number; title: string; clientName: string; missing: string[] }[] = []
+    const missingFields: { taskId: number; title: string; clientName: string; missing: string[] }[] = []
 
     for (const client of allClients) {
       if (client.type === "internal") continue
 
-      const clientMoves = allMoves.filter((m) => m.clientId === client.id)
-      const active = clientMoves.filter((m) => m.status === "active")
-      const queued = clientMoves.filter((m) => m.status === "queued")
-      const backlog = clientMoves.filter((m) => m.status === "backlog")
+      const clientTasks = allTasks.filter((t) => t.clientId === client.id)
+      const active = clientTasks.filter((t) => t.status === "active")
+      const queued = clientTasks.filter((t) => t.status === "queued")
+      const backlog = clientTasks.filter((t) => t.status === "backlog")
 
       const clientIssues: string[] = []
-      if (active.length === 0) clientIssues.push("No active move")
-      if (queued.length === 0) clientIssues.push("No queued move")
+      if (active.length === 0) clientIssues.push("No active task")
+      if (queued.length === 0) clientIssues.push("No queued task")
       if (backlog.length === 0) clientIssues.push("Empty backlog")
 
       if (clientIssues.length > 0) {
@@ -30,15 +30,15 @@ export async function GET() {
       }
 
       // Check for missing fields
-      for (const move of clientMoves) {
+      for (const task of clientTasks) {
         const missing: string[] = []
-        if (!move.drainType) missing.push("drain type")
-        if (!move.effortEstimate) missing.push("effort estimate")
+        if (!task.drainType) missing.push("drain type")
+        if (!task.effortEstimate) missing.push("effort estimate")
 
         if (missing.length > 0) {
           missingFields.push({
-            moveId: move.id,
-            title: move.title,
+            taskId: task.id,
+            title: task.title,
             clientName: client.name,
             missing,
           })

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { moves, clients, clientMemory } from "@/lib/schema"
+import { tasks, clients, clientMemory } from "@/lib/schema"
 import { eq, asc, and, gte } from "drizzle-orm"
 
 interface BacklogTask {
@@ -25,23 +25,23 @@ export async function GET() {
   try {
     const db = getDb()
 
-    // Get all backlog moves grouped by client
-    const backlogMoves = await db
+    // Get all backlog tasks grouped by client
+    const backlogTasks = await db
       .select({
-        id: moves.id,
-        title: moves.title,
-        clientId: moves.clientId,
-        drainType: moves.drainType,
-        effortEstimate: moves.effortEstimate,
-        createdAt: moves.createdAt,
-        sortOrder: moves.sortOrder,
+        id: tasks.id,
+        title: tasks.title,
+        clientId: tasks.clientId,
+        drainType: tasks.drainType,
+        effortEstimate: tasks.effortEstimate,
+        createdAt: tasks.createdAt,
+        sortOrder: tasks.sortOrder,
         clientName: clients.name,
         clientColor: clients.color,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .where(eq(moves.status, "backlog"))
-      .orderBy(asc(moves.sortOrder))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .where(eq(tasks.status, "backlog"))
+      .orderBy(asc(tasks.sortOrder))
 
     // Get client memory for stale days
     const memories = await db.select().from(clientMemory)
@@ -54,37 +54,37 @@ export async function GET() {
     const todayStart = new Date(estNow)
     todayStart.setHours(0, 0, 0, 0)
 
-    const todayMoves = await db
+    const todayTasks = await db
       .select({
         clientName: clients.name,
       })
-      .from(moves)
-      .leftJoin(clients, eq(moves.clientId, clients.id))
-      .where(and(eq(moves.status, "done"), gte(moves.completedAt, todayStart)))
+      .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
+      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayStart)))
 
-    const touchedToday = new Set(todayMoves.map((m) => m.clientName))
+    const touchedToday = new Set(todayTasks.map((t) => t.clientName))
 
     // Group by client
     const grouped = new Map<number, ClientGroup>()
 
-    for (const move of backlogMoves) {
-      if (!move.clientId) continue
+    for (const task of backlogTasks) {
+      if (!task.clientId) continue
 
-      const clientId = move.clientId
+      const clientId = task.clientId
 
       if (!grouped.has(clientId)) {
-        const memory = memoryMap.get(move.clientName || "")
+        const memory = memoryMap.get(task.clientName || "")
         grouped.set(clientId, {
           clientId,
-          clientName: move.clientName || "Unknown",
-          clientColor: move.clientColor || "#6b7280",
+          clientName: task.clientName || "Unknown",
+          clientColor: task.clientColor || "#6b7280",
           staleDays: memory?.staleDays || 0,
-          touchedToday: touchedToday.has(move.clientName),
+          touchedToday: touchedToday.has(task.clientName),
           tasks: [],
         })
       }
 
-      const daysInBacklog = Math.floor((Date.now() - new Date(move.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      const daysInBacklog = Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24))
 
       let decayStatus: BacklogTask["decayStatus"] = "normal"
       if (daysInBacklog >= 21) decayStatus = "critical"
@@ -92,10 +92,10 @@ export async function GET() {
       else if (daysInBacklog >= 7) decayStatus = "aging"
 
       grouped.get(clientId)!.tasks.push({
-        id: move.id,
-        title: move.title,
-        drainType: move.drainType,
-        effortEstimate: move.effortEstimate,
+        id: task.id,
+        title: task.title,
+        drainType: task.drainType,
+        effortEstimate: task.effortEstimate,
         daysInBacklog,
         decayStatus,
       })
@@ -112,7 +112,7 @@ export async function GET() {
 
     return NextResponse.json({
       groups: result,
-      totalTasks: backlogMoves.length,
+      totalTasks: backlogTasks.length,
     })
   } catch (error) {
     console.error("Failed to get grouped backlog:", error)

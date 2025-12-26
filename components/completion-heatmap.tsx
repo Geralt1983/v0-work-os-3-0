@@ -39,7 +39,7 @@ export function CompletionHeatmap() {
     }
   }
 
-  const totalMoves = heatmap.reduce((sum, d) => sum + d.count, 0)
+  const totalTasks = heatmap.reduce((sum, d) => sum + d.count, 0)
   const totalMinutes = heatmap.reduce((sum, d) => sum + d.minutes, 0)
   const activeDays = heatmap.filter((d) => d.count > 0).length
 
@@ -78,7 +78,7 @@ export function CompletionHeatmap() {
             Activity
           </CardTitle>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-            <span>{totalMoves} moves</span>
+            <span>{totalTasks} tasks</span>
             <span>{Math.round(totalMinutes / 60)}h total</span>
             <span>{activeDays} active days</span>
             {currentStreak > 0 && <span className="text-orange-500 font-medium">{currentStreak} day streak</span>}
@@ -123,7 +123,7 @@ export function CompletionHeatmap() {
             Activity
           </CardTitle>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{totalMoves} moves</span>
+            <span>{totalTasks} tasks</span>
             <span>{Math.round(totalMinutes / 60)}h total</span>
             <span>{activeDays} active days</span>
             {currentStreak > 0 && <span className="text-orange-500 font-medium">{currentStreak} day streak</span>}
@@ -144,7 +144,7 @@ export function CompletionHeatmap() {
                       <p className="font-medium">{formatDate(day.date)}</p>
                       {day.count > 0 ? (
                         <p className="text-xs">
-                          {day.count} moves &bull; {day.minutes} min
+                          {day.count} tasks &bull; {day.minutes} min
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">No activity</p>

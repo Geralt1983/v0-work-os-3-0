@@ -13,7 +13,7 @@ export interface AvoidanceReport {
 interface StaleClient {
   name: string
   daysSinceTouch: number
-  lastMoveTitle: string | null
+  lastTaskTitle: string | null
   severity: "warning" | "critical" | "severe"
 }
 
@@ -61,7 +61,7 @@ async function detectStaleClients(): Promise<StaleClient[]> {
     return memories.map((m) => ({
       name: m.clientName,
       daysSinceTouch: m.staleDays || 0,
-      lastMoveTitle: m.lastTaskDescription || null,
+      lastTaskTitle: m.lastTaskDescription || null,
       severity: (m.staleDays || 0) >= 5 ? "severe" : (m.staleDays || 0) >= 3 ? "critical" : "warning",
     }))
   } catch (err) {
@@ -217,13 +217,13 @@ async function detectAvoidancePatterns(): Promise<AvoidancePattern[]> {
         patterns.push({
           type: "morning_avoidance",
           description: "Most work happens in the afternoon",
-          evidence: `Only ${Math.round((morningCount / totalTimeCount) * 100)}% of moves completed before noon`,
+          evidence: `Only ${Math.round((morningCount / totalTimeCount) * 100)}% of tasks completed before noon`,
         })
       } else if (afternoonCount < totalTimeCount * 0.2) {
         patterns.push({
           type: "afternoon_avoidance",
           description: "Most work happens in the morning",
-          evidence: `Only ${Math.round((afternoonCount / totalTimeCount) * 100)}% of moves completed after noon`,
+          evidence: `Only ${Math.round((afternoonCount / totalTimeCount) * 100)}% of tasks completed after noon`,
         })
       }
     }
