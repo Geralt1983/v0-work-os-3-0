@@ -3,8 +3,9 @@ import { getDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq, and, gte, ne } from "drizzle-orm"
 import { calculateMomentum } from "@/lib/metrics"
-import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES } from "@/lib/constants"
-import { getESTNow, getESTTodayStart, estToUTC, calculateTotalMinutes } from "@/lib/domain"
+import { DAILY_MINIMUM_POINTS, DAILY_TARGET_POINTS, WORK_START_HOUR, WORK_END_HOUR } from "@/lib/constants"
+import { getESTNow, getESTTodayStart, estToUTC } from "@/lib/domain"
+import { calculateTotalPoints } from "@/lib/domain/task-types"
 
 export async function GET() {
   try {
@@ -19,7 +20,8 @@ export async function GET() {
       .from(tasks)
       .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, todayUTC)))
 
-    const earnedMinutes = calculateTotalMinutes(completedToday)
+    // Calculate earned points (uses pointsFinal > pointsAiGuess > effortEstimate fallback)
+    const earnedPoints = calculateTotalPoints(completedToday)
 
     // Get all external clients (type != 'internal')
     const externalClients = await db.select({ id: clients.id }).from(clients).where(ne(clients.type, "internal"))
@@ -32,27 +34,25 @@ export async function GET() {
       completedToday.filter((m) => m.clientId && externalClientIds.has(m.clientId)).map((m) => m.clientId),
     ).size
 
-    const minimumMinutes = DAILY_MINIMUM_MINUTES // 180
-    const targetMinutes = DAILY_TARGET_MINUTES // 240
+    const minimumPoints = DAILY_MINIMUM_POINTS // 12 points
+    const targetPoints = DAILY_TARGET_POINTS // 18 points
 
-    const percentOfMinimum = Math.round((earnedMinutes / minimumMinutes) * 100)
-    const percentOfTarget = Math.round((earnedMinutes / targetMinutes) * 100)
+    const percentOfMinimum = Math.round((earnedPoints / minimumPoints) * 100)
+    const percentOfTarget = Math.round((earnedPoints / targetPoints) * 100)
 
-    const momentum = calculateMomentum(earnedMinutes)
+    const momentum = calculateMomentum(earnedPoints)
 
     let paceStatus: "ahead" | "on_track" | "behind" | "minimum_only"
     if (percentOfTarget >= 100) {
-      paceStatus = "ahead" // Hit target (4 hours)
+      paceStatus = "ahead" // Hit target
     } else if (percentOfMinimum >= 100) {
       paceStatus = "minimum_only" // Hit minimum but not target
-    } else if (earnedMinutes === 0) {
+    } else if (earnedPoints === 0) {
       paceStatus = "behind" // No progress yet
     } else {
       // Calculate day progress
       const estHour = estNow.getHours() + estNow.getMinutes() / 60
-      const workStartHour = 9
-      const workEndHour = 18
-      const dayProgress = Math.max(0, Math.min(100, ((estHour - workStartHour) / (workEndHour - workStartHour)) * 100))
+      const dayProgress = Math.max(0, Math.min(100, ((estHour - WORK_START_HOUR) / (WORK_END_HOUR - WORK_START_HOUR)) * 100))
 
       paceStatus = percentOfTarget >= dayProgress ? "on_track" : "behind"
     }
@@ -61,9 +61,8 @@ export async function GET() {
 
     return NextResponse.json({
       completedCount: completedToday.length,
-      earnedMinutes,
-      minimumMinutes,
-      targetMinutes,
+      earnedPoints,
+      targetPoints,
       percentOfMinimum,
       percentOfTarget,
       percent: percentOfTarget, // Keep for backwards compat

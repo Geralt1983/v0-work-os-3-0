@@ -95,7 +95,7 @@ export function CompletionTimeline() {
             {task.drainType}
           </Badge>
         )}
-        <span className="text-muted-foreground">{(task.effortEstimate || 1) * 20}m</span>
+        <span className="text-muted-foreground">{task.effortEstimate || 2}pt</span>
         <span className="text-muted-foreground ml-auto">{formatTime(task.completedAt)}</span>
       </div>
     </div>
@@ -176,7 +176,7 @@ export function CompletionTimeline() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{day.tasks.length} tasks</span>
                     <span>&bull;</span>
-                    <span>{day.totalMinutes} min</span>
+                    <span>{day.totalPoints} pts</span>
                     <span>&bull;</span>
                     <span>{day.clientsTouched.length} clients</span>
                   </div>
@@ -214,7 +214,7 @@ export function CompletionTimeline() {
                               {task.drainType}
                             </Badge>
                           )}
-                          <span className="text-xs text-muted-foreground">{(task.effortEstimate || 1) * 20}m</span>
+                          <span className="text-xs text-muted-foreground">{task.effortEstimate || 2}pt</span>
                         </div>
                       </div>
                     ))}

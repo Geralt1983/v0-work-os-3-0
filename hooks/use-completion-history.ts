@@ -6,6 +6,8 @@ interface CompletedTask {
   completedAt: Date | null
   effortActual: number | null
   effortEstimate: number | null
+  pointsFinal: number | null
+  pointsAiGuess: number | null
   drainType: string | null
   client: {
     id: number
@@ -18,7 +20,7 @@ interface DayGroup {
   date: string
   displayLabel: string
   tasks: CompletedTask[]
-  totalMinutes: number
+  totalPoints: number
   uniqueClients: number
 }
 

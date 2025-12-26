@@ -4,6 +4,7 @@ import { useCompletionHistory } from "@/hooks/use-completion-history"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "lucide-react"
+import { getTaskPoints, getPointsColor } from "@/lib/domain/task-types"
 
 export function CompletionHistory() {
   const { days, isLoading } = useCompletionHistory(30)
@@ -69,7 +70,7 @@ export function CompletionHistory() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{day.tasks.length} tasks</span>
                 <span>•</span>
-                <span>{day.totalMinutes} min</span>
+                <span>{day.totalPoints} pts</span>
                 <span>•</span>
                 <span>{day.uniqueClients} clients</span>
               </div>
@@ -85,7 +86,7 @@ export function CompletionHistory() {
                       hour12: true,
                     })
                   : ""
-                const minutes = (task.effortActual || task.effortEstimate || 1) * 20
+                const points = getTaskPoints(task)
 
                 return (
                   <div key={task.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
@@ -110,7 +111,7 @@ export function CompletionHistory() {
                           {task.drainType}
                         </Badge>
                       )}
-                      <span className="text-sm text-muted-foreground w-12 text-right">{minutes}m</span>
+                      <span className={`text-sm font-medium w-12 text-right ${getPointsColor(points)}`}>{points}pt</span>
                     </div>
                   </div>
                 )

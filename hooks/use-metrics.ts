@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { isPreviewEnvironment } from "@/lib/mock-data"
 import { SWR_CONFIG } from "@/lib/fetch-utils"
-import { MINUTES_PER_EFFORT, DAILY_TARGET_MINUTES } from "@/lib/domain"
+import { DEFAULT_POINTS, DAILY_TARGET_POINTS } from "@/lib/domain/task-types"
 
 const fetcher = async (url: string) => {
   const res = await fetch(url)
@@ -15,8 +15,8 @@ const fetcher = async (url: string) => {
 
 export interface TodayMetrics {
   completedCount: number
-  earnedMinutes: number
-  targetMinutes: number
+  earnedPoints: number
+  targetPoints: number
   percent: number
   paceStatus: "ahead" | "on_track" | "behind" | "minimum_only"
   momentum: {
@@ -25,12 +25,15 @@ export interface TodayMetrics {
     status: "crushing" | "on_track" | "behind" | "stalled"
     label: string
     expectedByNow: number
-    actualMinutes: number
+    actualPoints: number
     dayProgress: number
   }
   streak: number
   clientsTouchedToday: number
   totalExternalClients: number
+  // Legacy fields for backwards compatibility
+  earnedMinutes?: number
+  targetMinutes?: number
 }
 
 export interface ClientMetrics {
@@ -43,13 +46,13 @@ export interface ClientMetrics {
   isStale: boolean
 }
 
-let previewCompletedTasks: { id: number; completedAt: Date; effortEstimate: number }[] = []
+let previewCompletedTasks: { id: number; completedAt: Date; points: number }[] = []
 
-export function trackCompletedTask(task: { id: number; effortEstimate?: number }) {
+export function trackCompletedTask(task: { id: number; pointsFinal?: number; pointsAiGuess?: number; effortEstimate?: number }) {
   previewCompletedTasks.push({
     id: task.id,
     completedAt: new Date(),
-    effortEstimate: task.effortEstimate || 2,
+    points: task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate ?? DEFAULT_POINTS,
   })
 }
 
@@ -71,7 +74,7 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
       status: "stalled",
       label: "Stalled",
       expectedByNow: 0,
-      actualMinutes: 0,
+      actualPoints: 0,
       dayProgress: 0,
     }
   }
@@ -92,18 +95,18 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
     dayProgress = Math.round(((currentHour - workdayStart) / (workdayEnd - workdayStart)) * 100)
   }
 
-  const targetMinutes = 180
-  const expectedByNow = Math.round((dayProgress / 100) * targetMinutes)
-  const actualMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * 20, 0)
+  const targetPoints = DAILY_TARGET_POINTS
+  const expectedByNow = Math.round((dayProgress / 100) * targetPoints)
+  const actualPoints = previewCompletedTasks.reduce((sum, t) => sum + t.points, 0)
 
   // Score based on actual vs expected
-  const score = expectedByNow > 0 ? Math.round((actualMinutes / expectedByNow) * 100) : actualMinutes > 0 ? 100 : 0
+  const score = expectedByNow > 0 ? Math.round((actualPoints / expectedByNow) * 100) : actualPoints > 0 ? 100 : 0
 
   // Determine status
   let status: "crushing" | "on_track" | "behind" | "stalled" = "stalled"
   let label = "Stalled"
 
-  if (actualMinutes === 0) {
+  if (actualPoints === 0) {
     status = "stalled"
     label = "Stalled"
   } else if (score >= 120) {
@@ -119,24 +122,24 @@ function calculatePreviewMomentum(): TodayMetrics["momentum"] {
 
   return {
     score,
-    percent: Math.round((actualMinutes / targetMinutes) * 100),
+    percent: Math.round((actualPoints / targetPoints) * 100),
     status,
     label,
     expectedByNow,
-    actualMinutes,
+    actualPoints,
     dayProgress,
   }
 }
 
 function getPreviewMetrics(): TodayMetrics {
-  const earnedMinutes = previewCompletedTasks.reduce((sum, t) => sum + t.effortEstimate * MINUTES_PER_EFFORT, 0)
-  const targetMinutes = DAILY_TARGET_MINUTES
-  const percent = Math.round((earnedMinutes / targetMinutes) * 100)
+  const earnedPoints = previewCompletedTasks.reduce((sum, t) => sum + t.points, 0)
+  const targetPoints = DAILY_TARGET_POINTS
+  const percent = Math.round((earnedPoints / targetPoints) * 100)
 
   return {
     completedCount: previewCompletedTasks.length,
-    earnedMinutes,
-    targetMinutes,
+    earnedPoints,
+    targetPoints,
     percent,
     paceStatus: percent >= 100 ? "on_track" : "behind",
     momentum: calculatePreviewMomentum(),

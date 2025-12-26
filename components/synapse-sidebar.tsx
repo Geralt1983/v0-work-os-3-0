@@ -79,31 +79,38 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     console.error("Voice error:", error)
   }
 
-  // Collapsed state - floating button
+  // Collapsed state - floating button with glow
   if (isCollapsed) {
     return (
       <button
         onClick={() => updateCollapsed(false)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-fuchsia-600 px-4 py-3 text-white shadow-lg hover:bg-fuchsia-500 transition-all hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-3 text-white shadow-lg shadow-fuchsia-500/25 hover:shadow-fuchsia-500/40 hover:scale-105 transition-all duration-200 btn-press glow-ai"
       >
-        <Zap className="w-5 h-5" />
-        <span className="font-medium">Synapse</span>
-        {unreadCount > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">{unreadCount}</span>}
+        <Zap className="w-5 h-5 animate-pulse" />
+        <span className="font-semibold tracking-tight">Synapse</span>
+        {unreadCount > 0 && (
+          <span className="ml-1 px-2 py-0.5 text-xs font-medium bg-white/20 rounded-full animate-bounce">
+            {unreadCount}
+          </span>
+        )}
       </button>
     )
   }
 
   return (
-    <aside className="fixed top-0 right-0 bottom-0 w-[380px] bg-zinc-950 border-l border-zinc-800 flex flex-col z-40">
-      {/* Header */}
-      <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+    <aside className="fixed top-0 right-0 bottom-0 w-[380px] bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/50 flex flex-col z-40 animate-slide-in-right">
+      {/* Header with gradient accent */}
+      <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-r from-zinc-950 to-zinc-900">
         <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-fuchsia-400" />
-          <span className="font-semibold text-zinc-100">{ASSISTANT_NAME}</span>
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-lg shadow-fuchsia-500/20">
+            <Zap className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-semibold text-zinc-100 tracking-tight">{ASSISTANT_NAME}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 font-medium">AI</span>
         </div>
         <button
           onClick={() => updateCollapsed(true)}
-          className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
+          className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press"
           title="Collapse sidebar"
         >
           <ChevronRight className="w-5 h-5" />

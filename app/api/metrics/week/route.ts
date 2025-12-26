@@ -2,16 +2,9 @@ import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { tasks } from "@/lib/schema"
 import { eq, gte, and, lte } from "drizzle-orm"
-import {
-  getESTDayOfWeek,
-  getESTWeekStart,
-  estToUTC,
-  getWorkDaysPassed,
-  calculateTotalMinutes,
-} from "@/lib/domain"
-
-const MINIMUM_WEEKLY_GOAL = 900 // 15 hours in minutes
-const IDEAL_WEEKLY_GOAL = 1200 // 20 hours in minutes
+import { getESTDayOfWeek, getESTWeekStart, estToUTC } from "@/lib/domain"
+import { calculateTotalPoints } from "@/lib/domain/task-types"
+import { WEEKLY_MINIMUM_POINTS, WEEKLY_TARGET_POINTS } from "@/lib/constants"
 
 export async function GET() {
   try {
@@ -43,101 +36,95 @@ export async function GET() {
 
     // Get completed tasks this work week (Mon-Fri only)
     const completedThisWeek = await db
-      .select({
-        effortEstimate: tasks.effortEstimate,
-        completedAt: tasks.completedAt,
-      })
+      .select()
       .from(tasks)
       .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, weekStartUTC), lte(tasks.completedAt, weekEndUTC)))
 
-    // Calculate total minutes earned
-    const totalMinutes = calculateTotalMinutes(completedThisWeek)
-
+    // Calculate total points earned (uses pointsFinal > pointsAiGuess > effortEstimate fallback)
+    const totalPoints = calculateTotalPoints(completedThisWeek)
     const tasksCompleted = completedThisWeek.length
 
     // Calculate daily average based on workdays passed
-    const dailyAverage = workdaysPassed > 0 ? Math.round(totalMinutes / workdaysPassed) : 0
+    const dailyAveragePoints = workdaysPassed > 0 ? Math.round(totalPoints / workdaysPassed) : 0
 
     // Project to end of work week (5 total workdays)
-    const projectedTotal = workdaysPassed > 0 ? Math.round((totalMinutes / workdaysPassed) * 5) : totalMinutes
+    const projectedPoints = workdaysPassed > 0 ? Math.round((totalPoints / workdaysPassed) * 5) : totalPoints
 
     // Calculate pace needed to hit goals (based on remaining workdays)
-    const minutesNeededForMinimum = Math.max(0, MINIMUM_WEEKLY_GOAL - totalMinutes)
-    const minutesNeededForIdeal = Math.max(0, IDEAL_WEEKLY_GOAL - totalMinutes)
-    const paceForMinimum =
-      workdaysRemaining > 0 ? Math.round(minutesNeededForMinimum / workdaysRemaining) : minutesNeededForMinimum
-    const paceForIdeal =
-      workdaysRemaining > 0 ? Math.round(minutesNeededForIdeal / workdaysRemaining) : minutesNeededForIdeal
+    const pointsNeededForMinimum = Math.max(0, WEEKLY_MINIMUM_POINTS - totalPoints)
+    const pointsNeededForTarget = Math.max(0, WEEKLY_TARGET_POINTS - totalPoints)
+    const pacePointsNeeded =
+      workdaysRemaining > 0 ? Math.round(pointsNeededForMinimum / workdaysRemaining) : pointsNeededForMinimum
+    const pacePointsForTarget =
+      workdaysRemaining > 0 ? Math.round(pointsNeededForTarget / workdaysRemaining) : pointsNeededForTarget
 
     // Determine status
     let status: "behind" | "on_track" | "minimum_met" | "ideal_hit" | "week_complete"
 
     if (!isWorkday) {
       // It's Saturday or Sunday - week is complete
-      if (totalMinutes >= IDEAL_WEEKLY_GOAL) {
+      if (totalPoints >= WEEKLY_TARGET_POINTS) {
         status = "ideal_hit"
-      } else if (totalMinutes >= MINIMUM_WEEKLY_GOAL) {
+      } else if (totalPoints >= WEEKLY_MINIMUM_POINTS) {
         status = "minimum_met"
       } else {
         status = "week_complete" // Week ended but goals not met
       }
-    } else if (totalMinutes >= IDEAL_WEEKLY_GOAL) {
+    } else if (totalPoints >= WEEKLY_TARGET_POINTS) {
       status = "ideal_hit"
-    } else if (totalMinutes >= MINIMUM_WEEKLY_GOAL) {
+    } else if (totalPoints >= WEEKLY_MINIMUM_POINTS) {
       status = "minimum_met"
     } else if (workdaysRemaining === 0) {
       // It's Friday - if at 90%+ of minimum, consider it on track
-      if (totalMinutes >= MINIMUM_WEEKLY_GOAL * 0.9) {
+      if (totalPoints >= WEEKLY_MINIMUM_POINTS * 0.9) {
         status = "on_track"
       } else {
         status = "behind"
       }
-    } else if (projectedTotal >= MINIMUM_WEEKLY_GOAL) {
+    } else if (projectedPoints >= WEEKLY_MINIMUM_POINTS) {
       status = "on_track"
     } else {
       status = "behind"
     }
 
     // Calculate percentages
-    const minimumPercent = Math.min(100, Math.round((totalMinutes / MINIMUM_WEEKLY_GOAL) * 100))
-    const idealPercent = Math.min(100, Math.round((totalMinutes / IDEAL_WEEKLY_GOAL) * 100))
+    const minimumPercent = Math.min(100, Math.round((totalPoints / WEEKLY_MINIMUM_POINTS) * 100))
+    const idealPercent = Math.min(100, Math.round((totalPoints / WEEKLY_TARGET_POINTS) * 100))
 
     return NextResponse.json({
-      totalMinutes,
+      totalPoints,
       tasksCompleted,
-      workdaysPassed, // renamed from daysElapsed
-      workdaysRemaining, // renamed from daysRemaining
-      daysElapsed: workdaysPassed, // Keep for backwards compat
+      workdaysPassed,
+      workdaysRemaining,
       daysRemaining: workdaysRemaining, // Keep for backwards compat
-      dailyAverage,
-      projectedTotal,
-      minimumGoal: MINIMUM_WEEKLY_GOAL,
-      idealGoal: IDEAL_WEEKLY_GOAL,
+      dailyAveragePoints,
+      projectedPoints,
+      minimumGoal: WEEKLY_MINIMUM_POINTS,
+      idealGoal: WEEKLY_TARGET_POINTS,
       minimumPercent,
       idealPercent,
-      paceForMinimum,
-      paceForIdeal,
+      pacePointsNeeded,
+      pacePointsForTarget,
       status,
-      isWorkday: true, // Let UI know if it's a workday
+      isWorkday,
     })
   } catch (error) {
     console.error("Failed to fetch weekly metrics:", error)
     // Return mock data on error
     return NextResponse.json({
-      totalMinutes: 540,
-      tasksCompleted: 18,
+      totalPoints: 27,
+      tasksCompleted: 9,
       workdaysPassed: 3,
       workdaysRemaining: 2,
-      daysElapsed: 3,
       daysRemaining: 2,
-      dailyAverage: 180,
-      projectedTotal: 900,
-      minimumGoal: MINIMUM_WEEKLY_GOAL,
-      idealGoal: IDEAL_WEEKLY_GOAL,
-      minimumPercent: 60,
-      idealPercent: 45,
-      paceForMinimum: 180,
-      paceForIdeal: 330,
+      dailyAveragePoints: 9,
+      projectedPoints: 45,
+      minimumGoal: WEEKLY_MINIMUM_POINTS,
+      idealGoal: WEEKLY_TARGET_POINTS,
+      minimumPercent: 45,
+      idealPercent: 30,
+      pacePointsNeeded: 17,
+      pacePointsForTarget: 32,
       status: "on_track",
       isWorkday: true,
     })

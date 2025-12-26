@@ -53,7 +53,7 @@ export function WorkOSNav() {
   ]
 
   return (
-    <div className="flex items-center gap-4">
+    <nav className="flex items-center gap-2 p-1 rounded-2xl glass" role="navigation" aria-label="Main navigation">
       {items.map(({ href, icon: Icon, label }) => {
         const active = pathname.startsWith(href)
 
@@ -64,16 +64,19 @@ export function WorkOSNav() {
             aria-label={label}
             title={label}
             className={cn(
-              "relative h-10 w-10 flex items-center justify-center rounded-xl border border-white/10 bg-black/40 text-white/70 transition",
-              "hover:text-white hover:border-white/30",
-              active && "text-fuchsia-300 border-fuchsia-500/60 bg-fuchsia-500/10",
+              "relative h-10 w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
+              "text-white/60 hover:text-white hover:bg-white/10",
+              active && "text-fuchsia-300 bg-fuchsia-500/20 glow-brand",
             )}
           >
-            <Icon className="h-5 w-5" aria-hidden="true" />
+            <Icon className={cn("h-5 w-5 transition-transform", active && "scale-110")} aria-hidden="true" />
             <span className="sr-only">{label}</span>
+            {active && (
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-fuchsia-400" />
+            )}
           </Link>
         )
       })}
-    </div>
+    </nav>
   )
 }

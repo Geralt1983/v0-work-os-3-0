@@ -72,6 +72,28 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* Semantic Colors - WorkOS Design System */
+  --brand: oklch(0.7 0.25 320);           /* Fuchsia - primary brand */
+  --brand-muted: oklch(0.5 0.15 320);     /* Fuchsia muted */
+  --success: oklch(0.7 0.18 160);         /* Emerald - completed/done */
+  --success-muted: oklch(0.35 0.1 160);   /* Emerald muted */
+  --warning: oklch(0.75 0.15 85);         /* Amber - attention needed */
+  --warning-muted: oklch(0.4 0.1 85);     /* Amber muted */
+  --urgent: oklch(0.65 0.2 25);           /* Rose - overdue/critical */
+  --urgent-muted: oklch(0.35 0.12 25);    /* Rose muted */
+  --ai: oklch(0.65 0.2 280);              /* Violet - AI/Synapse */
+  --ai-muted: oklch(0.4 0.15 280);        /* Violet muted */
+
+  /* Status-specific card backgrounds */
+  --card-today: oklch(0.18 0.02 320);     /* Subtle fuchsia tint */
+  --card-queued: oklch(0.16 0 0);         /* Neutral */
+  --card-backlog: oklch(0.14 0 0);        /* Slightly darker */
+  --card-done: oklch(0.16 0.015 160);     /* Subtle emerald tint */
+
+  /* Glass effect variables */
+  --glass-bg: oklch(0.12 0 0 / 0.8);
+  --glass-border: oklch(0.3 0 0 / 0.5);
 }
 
 @theme inline {
@@ -160,4 +182,195 @@
   transform: scale(1.05) rotate(2deg);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(217, 70, 239, 0.5);
   cursor: grabbing;
+}
+
+/* ========================================
+   Visual Polish - Utility Classes
+   ======================================== */
+
+/* Glass morphism effect */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-subtle {
+  background: oklch(0.1 0 0 / 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Status-based card styles */
+.card-today {
+  background: var(--card-today);
+  border-color: oklch(0.5 0.15 320 / 0.3);
+  box-shadow: 0 0 20px -5px oklch(0.6 0.2 320 / 0.15);
+}
+
+.card-queued {
+  background: var(--card-queued);
+  border-color: oklch(0.3 0 0);
+}
+
+.card-backlog {
+  background: var(--card-backlog);
+  border-color: oklch(0.25 0 0);
+  opacity: 0.85;
+}
+
+.card-done {
+  background: var(--card-done);
+  border-color: oklch(0.4 0.1 160 / 0.3);
+}
+
+/* Glow effects */
+.glow-brand {
+  box-shadow: 0 0 20px -5px var(--brand);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px -5px var(--success);
+}
+
+.glow-ai {
+  box-shadow: 0 0 20px -5px var(--ai);
+}
+
+/* Button press animation */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.2 0 0) 0%,
+    oklch(0.25 0 0) 50%,
+    oklch(0.2 0 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Pulse glow for active/focus states */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px -3px var(--brand);
+  }
+  50% {
+    box-shadow: 0 0 25px -3px var(--brand);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Smooth hover lift */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px oklch(0 0 0 / 0.3);
+}
+
+/* Focus ring styles */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--brand);
+}
+
+/* Text gradient for headings */
+.text-gradient-brand {
+  background: linear-gradient(135deg, var(--brand), var(--ai));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtle noise texture overlay */
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Completion celebration */
+@keyframes celebrate {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-celebrate {
+  animation: celebrate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Slide in from right for sidebar */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Fade in up for cards */
+@keyframes fade-in-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out;
 }

@@ -362,16 +362,20 @@ export default function MovesPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Tasks</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
-          </div>
-          <div className="flex-shrink-0 pt-1">
+      {/* Sticky glass header */}
+      <header className="sticky top-0 z-30 glass-subtle border-b border-zinc-800/50">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
+              <p className="hidden sm:block text-sm text-white/50 mt-0.5">One task per client, every day.</p>
+            </div>
             <WorkOSNav />
           </div>
         </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Select value={clientFilter} onValueChange={setClientFilter}>
@@ -392,11 +396,11 @@ export default function MovesPage() {
 
           <Button
             size="sm"
-            className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white h-9 px-3"
+            className="bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-fuchsia-500/20 hover:shadow-fuchsia-500/30 btn-press transition-all"
             onClick={() => setIsNewTaskOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-1" />
-            New
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Task
           </Button>
         </div>
 
@@ -815,6 +819,23 @@ function TaskCard({
     return "text-red-400"
   }
 
+  // Status-based card styling
+  const getStatusStyles = () => {
+    if (isDragging) {
+      return "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20 ring-2 ring-fuchsia-500/30"
+    }
+    switch (task.status) {
+      case "today":
+        return "card-today border hover:border-fuchsia-500/40 hover:shadow-lg hover:shadow-fuchsia-500/10"
+      case "upnext":
+        return "card-queued border hover:border-zinc-600 hover:shadow-lg"
+      case "done":
+        return "card-done border hover:border-emerald-500/40"
+      default:
+        return "card-backlog border hover:border-zinc-700"
+    }
+  }
+
   const subtasks = task.subtasks || []
   const completedSubtasks = subtasks.filter((s) => s.completed).length
   const totalSubtasks = subtasks.length
@@ -836,11 +857,7 @@ function TaskCard({
         damping: 30,
       }}
       style={{ perspective: 1000 }}
-      className={`group relative rounded-2xl border transition-all ${onClick ? "cursor-pointer" : "cursor-grab"} active:cursor-grabbing ${
-        isDragging
-          ? "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20"
-          : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 hover:shadow-lg"
-      } ${isCompact ? "p-3" : "p-4"}`}
+      className={`group relative rounded-2xl transition-all ${onClick ? "cursor-pointer" : "cursor-grab"} active:cursor-grabbing ${getStatusStyles()} ${isCompact ? "p-3" : "p-4"}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -871,10 +888,10 @@ function TaskCard({
             disabled={completing}
             aria-label={`Complete task: ${task.title}`}
             title={`Complete: ${task.title}`}
-            className={`flex-shrink-0 p-2 rounded-xl transition-all ${
+            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${
               completing
-                ? "bg-emerald-500 text-white scale-90"
-                : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400"
+                ? "bg-emerald-500 text-white animate-celebrate glow-success"
+                : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
             }`}
           >
             <Check className={`${isCompact ? "h-4 w-4" : "h-5 w-5"} ${completing ? "animate-pulse" : ""}`} />
@@ -898,14 +915,22 @@ function TaskCard({
       )}
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
-        {task.points ? (
-          <span className={`flex items-center gap-1.5 text-sm font-medium ${getPointsColor(task.points)}`}>
-            <span className="text-base tabular-nums">{task.points}</span>
-            <span className="text-zinc-500 font-normal">pts</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            task.type === "Quick" ? "bg-emerald-500/20 text-emerald-400" :
+            task.type === "Standard" ? "bg-green-500/20 text-green-400" :
+            task.type === "Chunky" ? "bg-yellow-500/20 text-yellow-400" :
+            task.type === "Deep" ? "bg-orange-500/20 text-orange-400" :
+            "bg-zinc-700 text-zinc-400"
+          }`}>
+            {task.type}
           </span>
-        ) : (
-          <span className="text-sm text-zinc-500">—</span>
-        )}
+          {task.points ? (
+            <span className={`text-sm font-medium ${getPointsColor(task.points)}`}>
+              {task.points}pt
+            </span>
+          ) : null}
+        </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>
     </motion.div>
@@ -956,17 +981,45 @@ function DroppableColumn({
     data: { type: "column" },
   })
 
+  const getColumnIcon = () => {
+    switch (id) {
+      case "today-column":
+        return <Zap className="h-5 w-5 text-fuchsia-400" />
+      case "upnext-column":
+        return <Clock className="h-5 w-5 text-zinc-400" />
+      default:
+        return null
+    }
+  }
+
+  const getEmptyMessage = () => {
+    switch (id) {
+      case "today-column":
+        return { title: "Ready for action", subtitle: "Drag tasks here to tackle today" }
+      case "upnext-column":
+        return { title: "Queue is clear", subtitle: "Add tasks for later" }
+      default:
+        return { title: "Empty", subtitle: "Drop tasks here" }
+    }
+  }
+
+  const emptyMsg = getEmptyMessage()
+
   return (
     <div
       ref={setNodeRef}
-      className={`col-span-1 min-h-[200px] rounded-xl transition-colors ${
-        isOver ? "bg-fuchsia-500/5 ring-2 ring-fuchsia-500/30" : ""
+      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
+        isOver ? "bg-fuchsia-500/5 ring-2 ring-fuchsia-500/30 scale-[1.01]" : ""
       }`}
     >
-      <h2 className="text-xl font-bold text-zinc-100 mb-3">{title}</h2>
+      <div className="flex items-center gap-2 mb-3">
+        {getColumnIcon()}
+        <h2 className="text-xl font-bold text-zinc-100">{title}</h2>
+      </div>
       {isEmpty && !isOver ? (
-        <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-xl">
-          <p className="text-zinc-500 text-sm">Drop tasks here</p>
+        <div className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
+          <p className="text-zinc-400 text-sm font-medium">{emptyMsg.title}</p>
+          <p className="text-zinc-600 text-xs mt-1">{emptyMsg.subtitle}</p>
         </div>
       ) : (
         <div className="space-y-3">{children}</div>

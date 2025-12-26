@@ -37,10 +37,10 @@ interface EditTaskDialogProps {
 }
 
 const effortOptions = [
-  { value: 1, label: "Quick", description: "~20 min" },
-  { value: 2, label: "Standard", description: "~40 min" },
-  { value: 3, label: "Chunky", description: "~60 min" },
-  { value: 4, label: "Deep", description: "~80+ min" },
+  { value: 2, label: "Quick", description: "2 pts" },
+  { value: 3, label: "Standard", description: "3 pts" },
+  { value: 5, label: "Chunky", description: "5 pts" },
+  { value: 8, label: "Deep", description: "8 pts" },
 ]
 
 const drainOptions = [
@@ -55,18 +55,18 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: "today", label: "Today" },
 ]
 
-function typeToEffort(type: Task["type"]): number {
+function typeToPoints(type: Task["type"]): number {
   switch (type) {
     case "Quick":
-      return 1
+      return 2
     case "Standard":
-      return 2
-    case "Chunky":
       return 3
+    case "Chunky":
+      return 5
     case "Deep":
-      return 4
+      return 8
     default:
-      return 2
+      return 3
   }
 }
 
@@ -85,7 +85,7 @@ export function EditTaskDialog({
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [effortEstimate, setEffortEstimate] = useState(2)
+  const [effortEstimate, setEffortEstimate] = useState(3)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -126,7 +126,7 @@ export function EditTaskDialog({
       setClientId(task.clientId)
       setDescription(task.description || "")
       setStatus(task.status === "done" ? "today" : task.status)
-      setEffortEstimate(typeToEffort(task.type))
+      setEffortEstimate(typeToPoints(task.type))
       setDrainType("shallow")
       setSubtasks(task.subtasks || [])
     }
@@ -169,7 +169,7 @@ export function EditTaskDialog({
           context: {
             client: selectedClient?.name,
             type: effortOptions.find((e) => e.value === effortEstimate)?.label,
-            timebox_minutes: effortEstimate * 20,
+            points: effortEstimate,
           },
         }),
       })
@@ -380,9 +380,9 @@ export function EditTaskDialog({
                     </div>
                   </div>
 
-                  {/* Effort */}
+                  {/* Points */}
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">Effort</label>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity Points</label>
                     <div className="grid grid-cols-4 gap-2">
                       {effortOptions.map((opt) => (
                         <button

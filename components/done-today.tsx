@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { useState, memo, useCallback } from "react"
+import { getTaskPoints, getPointsColor } from "@/lib/domain/task-types"
 
 // Memoized task item to prevent re-renders when other tasks change
 const TaskItem = memo(function TaskItem({
@@ -14,6 +15,8 @@ const TaskItem = memo(function TaskItem({
   task: Task
   formatTime: (date: number) => string
 }) {
+  const points = getTaskPoints(task)
+
   return (
     <div
       className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-emerald-500/10 transition-colors"
@@ -33,8 +36,8 @@ const TaskItem = memo(function TaskItem({
         >
           {task.client}
         </Badge>
-        <span className="text-xs text-muted-foreground w-8 text-right">
-          {(task.effortEstimate || 2) * 20}m
+        <span className={`text-xs font-medium w-8 text-right ${getPointsColor(points)}`}>
+          {points}pt
         </span>
       </div>
     </div>
@@ -58,7 +61,7 @@ export function DoneToday() {
       return bTime - aTime // Most recent first
     })
 
-  const totalMinutes = doneTodayTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
+  const totalPoints = doneTodayTasks.reduce((sum, t) => sum + getTaskPoints(t), 0)
 
   if (doneTodayTasks.length === 0) {
     return (
@@ -91,7 +94,7 @@ export function DoneToday() {
             <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             Done Today
             <Badge variant="secondary" className="ml-2 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-              {doneTodayTasks.length} tasks &bull; {totalMinutes} min
+              {doneTodayTasks.length} tasks &bull; {totalPoints} pts
             </Badge>
           </CardTitle>
           {expanded ? (

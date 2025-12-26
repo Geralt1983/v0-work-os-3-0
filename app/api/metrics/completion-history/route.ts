@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq, desc, gte, and } from "drizzle-orm"
+import { getTaskPoints } from "@/lib/domain/task-types"
 
 interface CompletedTask {
   id: number
@@ -9,6 +10,8 @@ interface CompletedTask {
   completedAt: Date | null
   effortActual: number | null
   effortEstimate: number | null
+  pointsFinal: number | null
+  pointsAiGuess: number | null
   drainType: string | null
   clientId: number | null
   clientName: string | null
@@ -19,7 +22,7 @@ interface DayGroup {
   date: string
   displayLabel: string
   tasks: CompletedTask[]
-  totalMinutes: number
+  totalPoints: number
   uniqueClients: number
 }
 
@@ -43,6 +46,8 @@ export async function GET(request: Request) {
         completedAt: tasks.completedAt,
         effortActual: tasks.effortActual,
         effortEstimate: tasks.effortEstimate,
+        pointsFinal: tasks.pointsFinal,
+        pointsAiGuess: tasks.pointsAiGuess,
         drainType: tasks.drainType,
         clientId: tasks.clientId,
         clientName: clients.name,
@@ -100,16 +105,14 @@ export async function GET(request: Request) {
           date: dateKey,
           displayLabel,
           tasks: [],
-          totalMinutes: 0,
+          totalPoints: 0,
           uniqueClients: 0,
         })
       }
 
       const group = grouped.get(dateKey)!
       group.tasks.push(task)
-
-      const minutes = (task.effortActual || task.effortEstimate || 1) * 20
-      group.totalMinutes += minutes
+      group.totalPoints += getTaskPoints(task)
     }
 
     // Calculate unique clients per day

@@ -14,14 +14,14 @@ interface TimelineDay {
   date: string
   displayLabel: string | null
   tasks: HistoryTask[]
-  totalMinutes: number
+  totalPoints: number
   clientsTouched: string[]
 }
 
 interface HeatmapDay {
   date: string
   count: number
-  minutes: number
+  points: number
   level: number
 }
 

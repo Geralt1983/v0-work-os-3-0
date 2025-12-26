@@ -152,20 +152,21 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
   return (
     <div className="w-full space-y-3">
-      {/* Input Section */}
-      <div className="relative">
+      {/* Input Section with glow effect */}
+      <div className="relative group">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-fuchsia-500/20 to-violet-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="What needs to get done?"
+          placeholder="What needs to get done? Press Enter to estimate..."
           disabled={isEstimating || !!estimate}
           className={cn(
-            "w-full px-4 py-3 rounded-lg",
-            "bg-zinc-900 border border-zinc-800",
+            "relative w-full px-4 py-3.5 rounded-xl",
+            "bg-zinc-900/80 border border-zinc-700/50",
             "text-zinc-100 placeholder:text-zinc-500",
-            "focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500",
+            "focus:outline-none focus:border-violet-500/50 focus:bg-zinc-900",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "transition-all duration-200"
           )}
@@ -176,10 +177,11 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             disabled={!input.trim() || isEstimating}
             className={cn(
               "absolute right-2 top-1/2 -translate-y-1/2",
-              "p-2 rounded-md",
-              "bg-violet-600 hover:bg-violet-500",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              "transition-colors duration-200"
+              "p-2.5 rounded-lg btn-press",
+              "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500",
+              "shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
+              "transition-all duration-200"
             )}
           >
             {isEstimating ? (
@@ -200,7 +202,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
       {/* Estimate Result */}
       {estimate && (
-        <div className="p-4 rounded-lg bg-zinc-900 border border-zinc-800 space-y-4">
+        <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-700/50 space-y-4 animate-fade-in-up">
           {/* Client Selector & Title */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -279,17 +281,17 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
           <p className="text-sm text-zinc-400">{estimate.reasoning}</p>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-2">
             <Button
               onClick={handleAddToBacklog}
               disabled={isAdding}
-              className="flex-1 bg-violet-600 hover:bg-violet-500 text-white"
+              className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 btn-press transition-all"
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 mr-2" />
                   Add to Backlog
                 </>
               )}
@@ -298,7 +300,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
               variant="outline"
               onClick={resetCapture}
               disabled={isAdding}
-              className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300"
+              className="bg-zinc-800/50 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 text-zinc-300 btn-press transition-all"
             >
               Cancel
             </Button>

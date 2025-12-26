@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DAILY_TARGET_MINUTES } from "@/lib/constants"
+import { DAILY_TARGET_POINTS } from "@/lib/constants"
 
 function isWeekday(dateStr: string): boolean {
   const date = new Date(dateStr + "T12:00:00") // Add noon to avoid timezone shifts
@@ -31,8 +31,8 @@ export function CompletionHeatmap() {
     const day = heatmap[i]
     // Skip weekends for streak calculation
     if (!isWeekday(day.date)) continue
-    // Check if weekday has 180+ minutes
-    if (day.minutes >= 180) {
+    // Check if weekday has 18+ points (target)
+    if (day.points >= DAILY_TARGET_POINTS) {
       currentStreak++
     } else {
       break
@@ -40,7 +40,7 @@ export function CompletionHeatmap() {
   }
 
   const totalTasks = heatmap.reduce((sum, d) => sum + d.count, 0)
-  const totalMinutes = heatmap.reduce((sum, d) => sum + d.minutes, 0)
+  const totalPoints = heatmap.reduce((sum, d) => sum + d.points, 0)
   const activeDays = heatmap.filter((d) => d.count > 0).length
 
   const levelColors = ["bg-muted/50", "bg-emerald-900", "bg-emerald-700", "bg-emerald-500", "bg-emerald-400"]
@@ -67,7 +67,6 @@ export function CompletionHeatmap() {
   }
 
   if (isMobile) {
-    const DAILY_GOAL = DAILY_TARGET_MINUTES
     const last14Days = heatmap.slice(-14).reverse()
 
     return (
@@ -79,14 +78,14 @@ export function CompletionHeatmap() {
           </CardTitle>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
             <span>{totalTasks} tasks</span>
-            <span>{Math.round(totalMinutes / 60)}h total</span>
+            <span>{totalPoints} pts total</span>
             <span>{activeDays} active days</span>
             {currentStreak > 0 && <span className="text-orange-500 font-medium">{currentStreak} day streak</span>}
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {last14Days.map((day, index) => {
-            const percentage = Math.min((day.minutes / DAILY_GOAL) * 100, 100)
+            const percentage = Math.min((day.points / DAILY_TARGET_POINTS) * 100, 100)
             return (
               <div key={day.date} className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground w-10 shrink-0">
@@ -99,7 +98,7 @@ export function CompletionHeatmap() {
                   />
                 </div>
                 <span className="text-xs text-muted-foreground w-12 text-right">
-                  {day.minutes > 0 ? `${day.minutes}m` : "-"}
+                  {day.points > 0 ? `${day.points}pt` : "-"}
                 </span>
               </div>
             )
@@ -124,7 +123,7 @@ export function CompletionHeatmap() {
           </CardTitle>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{totalTasks} tasks</span>
-            <span>{Math.round(totalMinutes / 60)}h total</span>
+            <span>{totalPoints} pts total</span>
             <span>{activeDays} active days</span>
             {currentStreak > 0 && <span className="text-orange-500 font-medium">{currentStreak} day streak</span>}
           </div>
@@ -144,7 +143,7 @@ export function CompletionHeatmap() {
                       <p className="font-medium">{formatDate(day.date)}</p>
                       {day.count > 0 ? (
                         <p className="text-xs">
-                          {day.count} tasks &bull; {day.minutes} min
+                          {day.count} tasks &bull; {day.points} pts
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">No activity</p>

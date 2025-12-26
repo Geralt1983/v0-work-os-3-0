@@ -50,71 +50,108 @@ export function toBackendStatus(status: FrontendTaskStatus): BackendTaskStatus {
 }
 
 // -----------------------------------------------------------------------------
-// Effort/Size Mappings
+// Points System (Complexity-based, not time-based)
 // -----------------------------------------------------------------------------
 
-/** Minutes per effort unit */
-export const MINUTES_PER_EFFORT = 20
+/** Default points when not specified */
+export const DEFAULT_POINTS = 2
 
-/** Default effort estimate when not specified */
-export const DEFAULT_EFFORT = 2
-
-/** Daily target in minutes */
-export const DAILY_TARGET_MINUTES = 180
-
-/** Map effort level (1-4) to task size type */
-export const EFFORT_TO_SIZE: Record<number, TaskSizeType> = {
-  1: "Quick",
-  2: "Standard",
-  3: "Chunky",
-  4: "Deep",
-}
-
-/** Map task size type to effort level */
-export const SIZE_TO_EFFORT: Record<TaskSizeType, number> = {
-  Quick: 1,
-  Standard: 2,
-  Chunky: 3,
-  Deep: 4,
-}
-
-/** Convert effort level to task size type */
-export function effortToSize(effort: number | null | undefined): TaskSizeType {
-  if (!effort) return "Standard"
-  return EFFORT_TO_SIZE[effort] ?? "Standard"
-}
-
-/** Convert task size type to effort level */
-export function sizeToEffort(size: TaskSizeType): number {
-  return SIZE_TO_EFFORT[size]
-}
-
-/** Convert effort to minutes */
-export function effortToMinutes(effort: number | null | undefined): number {
-  return (effort ?? DEFAULT_EFFORT) * MINUTES_PER_EFFORT
-}
-
-/** Calculate total minutes from effort estimates */
-export function calculateTotalMinutes(
-  tasks: Array<{ effortEstimate?: number | null; effortActual?: number | null }>,
-  useActual = false
-): number {
-  return tasks.reduce((sum, task) => {
-    const effort = useActual
-      ? (task.effortActual ?? task.effortEstimate ?? DEFAULT_EFFORT)
-      : (task.effortEstimate ?? DEFAULT_EFFORT)
-    return sum + effort * MINUTES_PER_EFFORT
-  }, 0)
-}
-
-// -----------------------------------------------------------------------------
-// Points System
-// -----------------------------------------------------------------------------
-
-/** Default daily points target */
+/** Daily target in points (complexity units) */
 export const DAILY_TARGET_POINTS = 18
 
-/** Calculate points from effort (1 effort = 1 point for now) */
+/** Points thresholds for size labels */
+export const POINTS_TO_SIZE: Record<number, TaskSizeType> = {
+  1: "Quick",     // 1-2 points
+  2: "Quick",
+  3: "Standard",  // 3-4 points
+  4: "Standard",
+  5: "Chunky",    // 5-7 points
+  6: "Chunky",
+  7: "Chunky",
+  8: "Deep",      // 8-10 points
+  9: "Deep",
+  10: "Deep",
+}
+
+/** Get task size label from points */
+export function pointsToSize(points: number | null | undefined): TaskSizeType {
+  if (!points) return "Standard"
+  const clamped = Math.max(1, Math.min(10, points))
+  return POINTS_TO_SIZE[clamped] ?? "Standard"
+}
+
+/** Get points from task (prefers pointsFinal, falls back to pointsAiGuess, then effortEstimate for legacy) */
+export function getTaskPoints(task: {
+  pointsFinal?: number | null
+  pointsAiGuess?: number | null
+  effortEstimate?: number | null
+}): number {
+  return task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate ?? DEFAULT_POINTS
+}
+
+/** Calculate total points from tasks */
+export function calculateTotalPoints(
+  tasks: Array<{
+    pointsFinal?: number | null
+    pointsAiGuess?: number | null
+    effortEstimate?: number | null
+  }>
+): number {
+  return tasks.reduce((sum, task) => sum + getTaskPoints(task), 0)
+}
+
+/** Get progress percentage towards daily goal */
+export function getPointsProgress(earnedPoints: number, targetPoints: number = DAILY_TARGET_POINTS): number {
+  return Math.min(100, Math.round((earnedPoints / targetPoints) * 100))
+}
+
+/** Get color class based on points (for UI) */
+export function getPointsColor(points: number): string {
+  if (points <= 2) return "text-emerald-400"
+  if (points <= 4) return "text-green-400"
+  if (points <= 6) return "text-yellow-400"
+  if (points <= 8) return "text-orange-400"
+  return "text-red-400"
+}
+
+/** Get complexity label for points */
+export function getPointsLabel(points: number): string {
+  if (points <= 2) return "Quick"
+  if (points <= 4) return "Routine"
+  if (points <= 6) return "Meaningful"
+  if (points <= 8) return "Heavy"
+  return "Major"
+}
+
+// -----------------------------------------------------------------------------
+// Legacy compatibility (deprecated, prefer points-based functions)
+// -----------------------------------------------------------------------------
+
+/** @deprecated Use DEFAULT_POINTS instead */
+export const DEFAULT_EFFORT = DEFAULT_POINTS
+
+/** @deprecated Use pointsToSize instead */
+export function effortToSize(effort: number | null | undefined): TaskSizeType {
+  return pointsToSize(effort)
+}
+
+/** @deprecated Use getTaskPoints instead */
 export function effortToPoints(effort: number | null | undefined): number {
-  return effort ?? DEFAULT_EFFORT
+  return effort ?? DEFAULT_POINTS
+}
+
+/** Convert size type to effort points (legacy compatibility) */
+export function sizeToEffort(size: TaskSizeType): number {
+  switch (size) {
+    case "Quick":
+      return 2
+    case "Standard":
+      return 3
+    case "Chunky":
+      return 5
+    case "Deep":
+      return 8
+    default:
+      return DEFAULT_POINTS
+  }
 }

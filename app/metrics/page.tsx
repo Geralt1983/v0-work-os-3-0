@@ -146,9 +146,9 @@ export default function MetricsDashboard() {
     }
   }, [])
 
-  const earnedMinutes = today?.earnedMinutes || 0
-  const targetMinutes = today?.targetMinutes || 180
-  const pacingPercent = Math.min(Math.round((earnedMinutes / targetMinutes) * 100), 100)
+  const earnedPoints = today?.earnedPoints || 0
+  const targetPoints = today?.targetPoints || 18
+  const pacingPercent = Math.min(Math.round((earnedPoints / targetPoints) * 100), 100)
   const fullPercent = today?.percent || pacingPercent
   const pacingWidth = `${pacingPercent}%`
   const completedCount = today?.completedCount || 0
@@ -162,7 +162,7 @@ export default function MetricsDashboard() {
     status: "stalled" as const,
     label: "Stalled",
     expectedByNow: 0,
-    actualMinutes: 0,
+    actualPoints: 0,
     dayProgress: 0,
   }
 
@@ -263,7 +263,7 @@ export default function MetricsDashboard() {
                     </span>
                   </div>
                   <p className="mt-3 text-sm text-zinc-300">
-                    {earnedMinutes} min of {targetMinutes} min target
+                    {earnedPoints} pts of {targetPoints} pts target
                   </p>
                   <div className="mt-3 h-2 rounded-full bg-zinc-800">
                     <div
@@ -334,13 +334,13 @@ export default function MetricsDashboard() {
                         ? "Target exceeded! Excellent work."
                         : "Target reached! Great work today."}
                     </p>
-                  ) : earnedMinutes === 0 ? (
+                  ) : earnedPoints === 0 ? (
                     <p className="mt-4 text-center text-sm text-zinc-400">No tasks completed yet today.</p>
                   ) : paceStatus === "on_track" ? (
                     <p className="mt-4 text-center text-sm text-emerald-400">On track to reach target!</p>
                   ) : (
                     <p className="mt-4 text-center text-sm text-amber-400">
-                      {Math.ceil((targetMinutes - earnedMinutes) / 20)} more tasks to hit target
+                      {targetPoints - earnedPoints} more pts to hit target
                     </p>
                   )}
                 </div>

@@ -1,20 +1,19 @@
 import useSWR from "swr"
 
 interface WeeklyGoals {
-  totalMinutes: number
+  totalPoints: number
   tasksCompleted: number
-  daysElapsed: number
-  daysRemaining: number
   workdaysPassed: number
   workdaysRemaining: number
-  dailyAverage: number
-  projectedTotal: number
+  daysRemaining: number
+  dailyAveragePoints: number
+  projectedPoints: number
   minimumGoal: number
   idealGoal: number
   minimumPercent: number
   idealPercent: number
-  paceForMinimum: number
-  paceForIdeal: number
+  pacePointsNeeded: number
+  pacePointsForTarget: number
   status: "behind" | "on_track" | "minimum_met" | "ideal_hit" | "week_complete"
   isWorkday: boolean
 }

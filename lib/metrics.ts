@@ -1,15 +1,17 @@
-// Time-aware pacing and momentum calculations
+// Time-aware pacing and momentum calculations (points-based)
+import { DAILY_TARGET_POINTS } from "./constants"
+import { WORK_START_HOUR, WORK_END_HOUR } from "./constants"
 
 export interface MomentumResult {
   percent: number
   status: "crushing" | "on_track" | "behind" | "stalled"
   label: string
   expectedByNow: number
-  actualMinutes: number
+  actualPoints: number
   dayProgress: number
 }
 
-export function calculateMomentum(completedMinutes: number): MomentumResult {
+export function calculateMomentum(earnedPoints: number): MomentumResult {
   // Work day: 9am - 6pm EST (9 hours)
   const now = new Date()
 
@@ -20,31 +22,28 @@ export function calculateMomentum(completedMinutes: number): MomentumResult {
   const minute = estNow.getMinutes()
   const currentTimeDecimal = hour + minute / 60
 
-  const workDayStart = 9 // 9am
-  const workDayEnd = 18 // 6pm
-  const workDayHours = workDayEnd - workDayStart // 9 hours
-  const targetMinutes = 180
+  const workDayHours = WORK_END_HOUR - WORK_START_HOUR // 9 hours
 
   // Calculate how far through the work day we are (0-1)
   let dayProgress = 0
-  if (currentTimeDecimal < workDayStart) {
+  if (currentTimeDecimal < WORK_START_HOUR) {
     dayProgress = 0
-  } else if (currentTimeDecimal >= workDayEnd) {
+  } else if (currentTimeDecimal >= WORK_END_HOUR) {
     dayProgress = 1
   } else {
-    dayProgress = (currentTimeDecimal - workDayStart) / workDayHours
+    dayProgress = (currentTimeDecimal - WORK_START_HOUR) / workDayHours
   }
 
-  // Expected minutes by now
-  const expectedMinutes = Math.round(targetMinutes * dayProgress)
+  // Expected points by now
+  const expectedPoints = Math.round(DAILY_TARGET_POINTS * dayProgress)
 
   // Calculate momentum percentage
   let percent: number
-  if (expectedMinutes > 0) {
-    percent = Math.round((completedMinutes / expectedMinutes) * 100)
+  if (expectedPoints > 0) {
+    percent = Math.round((earnedPoints / expectedPoints) * 100)
   } else {
     // Before work day starts
-    percent = completedMinutes > 0 ? 100 : 0
+    percent = earnedPoints > 0 ? 100 : 0
   }
 
   // Determine status and label
@@ -69,8 +68,8 @@ export function calculateMomentum(completedMinutes: number): MomentumResult {
     percent,
     status,
     label,
-    expectedByNow: expectedMinutes,
-    actualMinutes: completedMinutes,
+    expectedByNow: expectedPoints,
+    actualPoints: earnedPoints,
     dayProgress: Math.round(dayProgress * 100),
   }
 }

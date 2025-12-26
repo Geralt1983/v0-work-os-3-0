@@ -11,6 +11,7 @@ import {
   STATUS_TO_FRONTEND,
   STATUS_TO_BACKEND,
   effortToSize,
+  pointsToSize,
   sizeToEffort,
 } from "@/lib/domain"
 
@@ -146,7 +147,7 @@ export function useTasks() {
         clientColor: task.client?.color ?? undefined,
         title: task.title,
         description: task.description ?? undefined,
-        type: effortToSize(task.effortEstimate),
+        type: pointsToSize(task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate),
         effortEstimate: task.effortEstimate ?? 2,
         status: STATUS_TO_FRONTEND[task.status],
         subtasks: (task.subtasks as Subtask[]) ?? [],
@@ -155,7 +156,7 @@ export function useTasks() {
         completedAt: task.completedAt ? new Date(task.completedAt).getTime() : undefined,
         sortOrder: task.sortOrder ?? undefined,
         drainType: task.drainType ?? undefined,
-        points: task.pointsFinal ?? task.pointsAiGuess ?? undefined,
+        points: task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate ?? undefined,
         pointsAiGuess: task.pointsAiGuess ?? undefined,
         pointsFinal: task.pointsFinal ?? undefined,
       }))
@@ -348,12 +349,12 @@ export function useTasks() {
       clientColor: undefined,
       title: taskData.title,
       description: taskData.description,
-      type: effortToSize(taskData.effortEstimate || 2),
+      type: pointsToSize(taskData.pointsFinal ?? taskData.pointsAiGuess ?? taskData.effortEstimate ?? 2),
       effortEstimate: taskData.effortEstimate || 2,
       status: targetStatus,
       ageLabel: "today",
       sortOrder: -1,
-      points: taskData.pointsFinal ?? taskData.pointsAiGuess,
+      points: taskData.pointsFinal ?? taskData.pointsAiGuess ?? taskData.effortEstimate,
       pointsAiGuess: taskData.pointsAiGuess,
       pointsFinal: taskData.pointsFinal,
     }
@@ -443,7 +444,7 @@ export function useTasks() {
           clientId: taskData.clientId ?? t.clientId,
           description: taskData.description ?? t.description,
           status: taskData.status ?? t.status,
-          type: taskData.effortEstimate ? effortToSize(taskData.effortEstimate) : t.type,
+          type: taskData.effortEstimate ? pointsToSize(taskData.effortEstimate) : t.type,
           effortEstimate: taskData.effortEstimate ?? t.effortEstimate,
         }
       })
