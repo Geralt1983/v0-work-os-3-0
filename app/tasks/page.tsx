@@ -377,7 +377,7 @@ export default function MovesPage() {
 
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-8 flex flex-wrap items-center gap-2">
           <Select value={clientFilter} onValueChange={setClientFilter}>
             <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-700 text-zinc-100">
               <SelectValue placeholder="All Clients" />
