@@ -16,8 +16,8 @@ export type FrontendTaskStatus = "today" | "upnext" | "backlog" | "done"
 /** Drain type for energy management */
 export type DrainType = "deep" | "shallow" | "admin"
 
-/** Task complexity/size type */
-export type TaskSizeType = "Quick" | "Standard" | "Chunky" | "Deep"
+/** Task complexity/size type (matches AI scoring labels) */
+export type TaskSizeType = "Quick" | "Routine" | "Meaningful" | "Heavy" | "Major"
 
 // -----------------------------------------------------------------------------
 // Status Mappings
@@ -59,25 +59,25 @@ export const DEFAULT_POINTS = 2
 /** Daily target in points (complexity units) */
 export const DAILY_TARGET_POINTS = 18
 
-/** Points thresholds for size labels */
+/** Points thresholds for size labels (matches AI scoring) */
 export const POINTS_TO_SIZE: Record<number, TaskSizeType> = {
-  1: "Quick",     // 1-2 points
+  1: "Quick",       // 1-2 points - <5 min
   2: "Quick",
-  3: "Standard",  // 3-4 points
-  4: "Standard",
-  5: "Chunky",    // 5-7 points
-  6: "Chunky",
-  7: "Chunky",
-  8: "Deep",      // 8-10 points
-  9: "Deep",
-  10: "Deep",
+  3: "Routine",     // 3-4 points - 15-30 min
+  4: "Routine",
+  5: "Meaningful",  // 5-6 points - 30-60 min
+  6: "Meaningful",
+  7: "Heavy",       // 7-8 points - 1-2 hours
+  8: "Heavy",
+  9: "Major",       // 9-10 points - 2+ hours
+  10: "Major",
 }
 
 /** Get task size label from points */
 export function pointsToSize(points: number | null | undefined): TaskSizeType {
-  if (!points) return "Standard"
+  if (!points) return "Routine"
   const clamped = Math.max(1, Math.min(10, points))
-  return POINTS_TO_SIZE[clamped] ?? "Standard"
+  return POINTS_TO_SIZE[clamped] ?? "Routine"
 }
 
 /** Get points from task (prefers pointsFinal, falls back to pointsAiGuess, then effortEstimate for legacy) */
@@ -140,17 +140,19 @@ export function effortToPoints(effort: number | null | undefined): number {
   return effort ?? DEFAULT_POINTS
 }
 
-/** Convert size type to effort points (legacy compatibility) */
+/** Convert size type to effort points */
 export function sizeToEffort(size: TaskSizeType): number {
   switch (size) {
     case "Quick":
       return 2
-    case "Standard":
-      return 3
-    case "Chunky":
-      return 5
-    case "Deep":
+    case "Routine":
+      return 4
+    case "Meaningful":
+      return 6
+    case "Heavy":
       return 8
+    case "Major":
+      return 10
     default:
       return DEFAULT_POINTS
   }
