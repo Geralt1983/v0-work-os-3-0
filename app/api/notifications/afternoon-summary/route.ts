@@ -5,7 +5,8 @@ import { sendNotification, formatAfternoonSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq, gte, and, ne, inArray } from "drizzle-orm"
-import { DAILY_TARGET_MINUTES } from "@/lib/constants"
+import { DAILY_TARGET_POINTS } from "@/lib/constants"
+import { getTaskPoints } from "@/lib/domain"
 
 export async function GET() {
   console.log("[Afternoon Summary] Starting")
@@ -36,7 +37,7 @@ export async function GET() {
       todayTasksTimeoutPromise,
     ])
 
-    const todayMinutes = todayTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
+    const todayPoints = todayTasks.reduce((sum, t) => sum + getTaskPoints(t), 0)
 
     // Get unique clients touched - batch query instead of N+1
     const clientIds = [...new Set(todayTasks.map((t) => t.clientId).filter((id): id is number => id !== null))]
@@ -59,8 +60,8 @@ export async function GET() {
 
     const message = formatAfternoonSummary({
       todayTasks: todayTasks.length,
-      todayMinutes,
-      targetMinutes: DAILY_TARGET_MINUTES,
+      todayPoints,
+      targetPoints: DAILY_TARGET_POINTS,
       clientsTouched,
       remainingActive: activeTasks.length,
     })

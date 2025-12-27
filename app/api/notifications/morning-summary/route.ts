@@ -5,6 +5,8 @@ import { sendNotification, formatMorningSummary } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
 import { tasks, clients, taskEvents } from "@/lib/schema"
 import { eq, gte, and, desc, sql } from "drizzle-orm"
+import { DAILY_TARGET_POINTS } from "@/lib/constants"
+import { getTaskPoints } from "@/lib/domain"
 
 export async function GET() {
   console.log("[Morning Summary] Starting")
@@ -41,11 +43,11 @@ export async function GET() {
       taskTimeoutPromise,
     ])
 
-    const weekMinutes = weekTasks.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
+    const weekPoints = weekTasks.reduce((sum, t) => sum + getTaskPoints(t), 0)
     const daysInWeek = Math.min(dayOfWeek === 0 ? 7 : dayOfWeek, 5)
-    const weekTarget = daysInWeek * 180
+    const weekTarget = daysInWeek * DAILY_TARGET_POINTS
 
-    console.log("[Morning Summary] Week stats:", { tasksCount: weekTasks.length, weekMinutes, weekTarget })
+    console.log("[Morning Summary] Week stats:", { tasksCount: weekTasks.length, weekPoints, weekTarget })
 
     // Get stale clients (no activity in 2+ days)
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
@@ -114,7 +116,7 @@ export async function GET() {
 
     const message = formatMorningSummary({
       weekTasks: weekTasks.length,
-      weekMinutes,
+      weekPoints,
       weekTarget,
       bestDay: null,
       worstDay: null,

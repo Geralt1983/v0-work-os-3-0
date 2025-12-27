@@ -1,5 +1,5 @@
 // Notification service with ntfy.sh integration for progress milestones and summaries
-import { DAILY_MINIMUM_MINUTES, DAILY_TARGET_MINUTES } from "@/lib/constants"
+import { DAILY_MINIMUM_POINTS, DAILY_TARGET_POINTS } from "@/lib/constants"
 
 const NTFY_TOPIC = "Jeremys-Impressive-Work-Updates"
 const NTFY_SERVER = "https://ntfy.sh"
@@ -182,19 +182,19 @@ export async function sendMilestoneAlert({
 
 export function formatMorningSummary(stats: {
   weekTasks: number
-  weekMinutes: number
+  weekPoints: number
   weekTarget: number
   bestDay: { day: string; tasks: number } | null
   worstDay: { day: string; tasks: number } | null
   staleClients: string[]
   deferredTasks?: Array<{ title: string; deferCount: number }>
 }) {
-  const pct = Math.round((stats.weekMinutes / stats.weekTarget) * 100)
+  const pct = Math.round((stats.weekPoints / stats.weekTarget) * 100)
   let msg = `☀️ Good morning!\n\n`
-  msg += `📊 Week so far: ${stats.weekTasks} tasks (${stats.weekMinutes}/${stats.weekTarget} min = ${pct}%)\n\n`
+  msg += `📊 Week so far: ${stats.weekTasks} tasks (${stats.weekPoints}/${stats.weekTarget} pts = ${pct}%)\n\n`
   msg += `🎯 Today's goals:\n`
-  msg += `   • Minimum: ${DAILY_MINIMUM_MINUTES} min (3 hours)\n`
-  msg += `   • Target: ${DAILY_TARGET_MINUTES} min (4 hours)\n`
+  msg += `   • Minimum: ${DAILY_MINIMUM_POINTS} pts\n`
+  msg += `   • Target: ${DAILY_TARGET_POINTS} pts\n`
 
   if (stats.bestDay) {
     msg += `\n🏆 Best day: ${stats.bestDay.day} (${stats.bestDay.tasks} tasks)`
@@ -218,27 +218,27 @@ export function formatMorningSummary(stats: {
 
 export function formatAfternoonSummary(stats: {
   todayTasks: number
-  todayMinutes: number
-  targetMinutes: number
+  todayPoints: number
+  targetPoints: number
   clientsTouched: string[]
   remainingActive: number
 }) {
-  const minimumMet = stats.todayMinutes >= DAILY_MINIMUM_MINUTES
-  const targetMet = stats.todayMinutes >= DAILY_TARGET_MINUTES
-  const percentOfTarget = Math.round((stats.todayMinutes / DAILY_TARGET_MINUTES) * 100)
+  const minimumMet = stats.todayPoints >= DAILY_MINIMUM_POINTS
+  const targetMet = stats.todayPoints >= DAILY_TARGET_POINTS
+  const percentOfTarget = Math.round((stats.todayPoints / DAILY_TARGET_POINTS) * 100)
 
   let msg = `🌤️ Afternoon Check-in\n\n`
-  msg += `📊 Today: ${stats.todayMinutes} min earned (${stats.todayTasks} tasks) - ${percentOfTarget}%\n`
+  msg += `📊 Today: ${stats.todayPoints} pts earned (${stats.todayTasks} tasks) - ${percentOfTarget}%\n`
 
   if (targetMet) {
     msg += `🎯 TARGET HIT! You've crushed today.\n`
   } else if (minimumMet) {
-    const remaining = DAILY_TARGET_MINUTES - stats.todayMinutes
-    msg += `✅ Minimum met! ${remaining} min more for target.\n`
+    const remaining = DAILY_TARGET_POINTS - stats.todayPoints
+    msg += `✅ Minimum met! ${remaining} pts more for target.\n`
   } else {
-    const toMinimum = DAILY_MINIMUM_MINUTES - stats.todayMinutes
-    const toTarget = DAILY_TARGET_MINUTES - stats.todayMinutes
-    msg += `⏳ ${toMinimum} min to minimum, ${toTarget} min to target\n`
+    const toMinimum = DAILY_MINIMUM_POINTS - stats.todayPoints
+    const toTarget = DAILY_TARGET_POINTS - stats.todayPoints
+    msg += `⏳ ${toMinimum} pts to minimum, ${toTarget} pts to target\n`
   }
 
   if (stats.clientsTouched.length > 0) {

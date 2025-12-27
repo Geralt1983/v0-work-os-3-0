@@ -1,5 +1,6 @@
 // Find the card wrapper div and update the className/style for drag physics
-import cn from "classnames" // Ensure cn is imported
+import classnames from "classnames"
+const cn = classnames // Ensure cn is imported
 
 interface TaskCardProps {
   variant: "primary" | "secondary"
