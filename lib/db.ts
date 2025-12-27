@@ -1,26 +1,15 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle } from "drizzle-orm/neon-http"
+import { sql } from "@vercel/postgres"
+import { drizzle } from "drizzle-orm/vercel-postgres"
 import * as schema from "./schema"
 
+// Singleton pattern for connection reuse
+let db: ReturnType<typeof drizzle> | null = null
+
 export function getDb() {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    console.error("[v0] DATABASE_URL is not set")
-    throw new Error("DATABASE_URL environment variable is not set")
-  }
+  if (db) return db
 
-  // Clean up common copy-paste mistakes
-  let connectionString = url.trim()
-  if (connectionString.startsWith("psql ")) {
-    connectionString = connectionString.replace(/^psql\s+['"]?/, "").replace(/['"]?\s*$/, "")
-  }
-
-  try {
-    // Use HTTP driver for serverless - no persistent connections
-    const sql = neon(connectionString)
-    return drizzle(sql, { schema })
-  } catch (error) {
-    console.error("[v0] Failed to initialize database:", error)
-    throw error
-  }
+  // @vercel/postgres uses POSTGRES_URL env var automatically
+  // It also supports DATABASE_URL as fallback
+  db = drizzle(sql, { schema })
+  return db
 }
