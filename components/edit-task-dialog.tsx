@@ -37,10 +37,10 @@ interface EditTaskDialogProps {
 }
 
 const effortOptions = [
-  { value: 2, label: "Quick", description: "2 pts" },
-  { value: 3, label: "Standard", description: "3 pts" },
-  { value: 5, label: "Chunky", description: "5 pts" },
-  { value: 8, label: "Deep", description: "8 pts" },
+  { value: 2, label: "Quick", description: "<5 min", color: "bg-emerald-500" },
+  { value: 4, label: "Routine", description: "15-30 min", color: "bg-green-500" },
+  { value: 6, label: "Meaningful", description: "30-60 min", color: "bg-yellow-500" },
+  { value: 8, label: "Heavy", description: "1-2 hours", color: "bg-orange-500" },
 ]
 
 const drainOptions = [
@@ -59,14 +59,16 @@ function typeToPoints(type: Task["type"]): number {
   switch (type) {
     case "Quick":
       return 2
-    case "Standard":
-      return 3
-    case "Chunky":
-      return 5
-    case "Deep":
+    case "Routine":
+      return 4
+    case "Meaningful":
+      return 6
+    case "Heavy":
       return 8
+    case "Major":
+      return 10
     default:
-      return 3
+      return 4
   }
 }
 
@@ -380,22 +382,25 @@ export function EditTaskDialog({
                     </div>
                   </div>
 
-                  {/* Points */}
+                  {/* Complexity Points */}
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity Points</label>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity</label>
                     <div className="grid grid-cols-4 gap-2">
                       {effortOptions.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setEffortEstimate(opt.value)}
-                          className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center ${
+                          className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
                             effortEstimate === opt.value
-                              ? "bg-fuchsia-500 text-white"
+                              ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
-                          <span>{opt.label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                            <span>{opt.label}</span>
+                          </div>
                           <span className="text-xs opacity-70">{opt.description}</span>
                         </button>
                       ))}

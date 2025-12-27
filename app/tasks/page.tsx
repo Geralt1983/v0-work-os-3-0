@@ -922,13 +922,15 @@ function TaskCard({
             className={`text-xs px-2 py-0.5 rounded-full ${
               task.type === "Quick"
                 ? "bg-emerald-500/20 text-emerald-400"
-                : task.type === "Standard"
+                : task.type === "Routine"
                   ? "bg-green-500/20 text-green-400"
-                  : task.type === "Chunky"
+                  : task.type === "Meaningful"
                     ? "bg-yellow-500/20 text-yellow-400"
-                    : task.type === "Deep"
+                    : task.type === "Heavy"
                       ? "bg-orange-500/20 text-orange-400"
-                      : "bg-zinc-700 text-zinc-400"
+                      : task.type === "Major"
+                        ? "bg-red-500/20 text-red-400"
+                        : "bg-zinc-700 text-zinc-400"
             }`}
           >
             {task.type}

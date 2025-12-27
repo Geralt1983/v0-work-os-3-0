@@ -22,10 +22,10 @@ interface NewTaskDialogProps {
 }
 
 const effortOptions = [
-  { value: 1, label: "Quick", description: "~20 min" },
-  { value: 2, label: "Standard", description: "~40 min" },
-  { value: 3, label: "Chunky", description: "~60 min" },
-  { value: 4, label: "Deep", description: "~80+ min" },
+  { value: 2, label: "Quick", description: "<5 min", color: "bg-emerald-500" },
+  { value: 4, label: "Routine", description: "15-30 min", color: "bg-green-500" },
+  { value: 6, label: "Meaningful", description: "30-60 min", color: "bg-yellow-500" },
+  { value: 8, label: "Heavy", description: "1-2 hours", color: "bg-orange-500" },
 ]
 
 const drainOptions = [
@@ -211,22 +211,25 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                   </div>
                 </div>
 
-                {/* Effort */}
+                {/* Complexity Points */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Effort</label>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity</label>
                   <div className="grid grid-cols-4 gap-2">
                     {effortOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setEffortEstimate(opt.value)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center ${
+                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
                           effortEstimate === opt.value
-                            ? "bg-fuchsia-500 text-white"
+                            ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
-                        <span>{opt.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                          <span>{opt.label}</span>
+                        </div>
                         <span className="text-xs opacity-70">{opt.description}</span>
                       </button>
                     ))}
