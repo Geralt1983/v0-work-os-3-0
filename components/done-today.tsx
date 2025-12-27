@@ -63,6 +63,17 @@ export function DoneToday() {
 
   const totalPoints = doneTodayTasks.reduce((sum, t) => sum + getTaskPoints(t), 0)
 
+  // Hook must be called before any conditional returns
+  const formatTime = useCallback((date: number) => {
+    return new Date(date)
+      .toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase()
+  }, [])
+
   if (doneTodayTasks.length === 0) {
     return (
       <Card className="border-dashed border-border/50 bg-muted/30">
@@ -75,16 +86,6 @@ export function DoneToday() {
       </Card>
     )
   }
-
-  const formatTime = useCallback((date: number) => {
-    return new Date(date)
-      .toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-      .toLowerCase()
-  }, [])
 
   return (
     <Card className="border-emerald-500/30 bg-emerald-950/20">
