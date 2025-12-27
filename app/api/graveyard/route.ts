@@ -10,7 +10,6 @@ export async function GET() {
     const archived = await db
       .select({
         id: taskGraveyard.id,
-        originalTaskId: taskGraveyard.originalTaskId,
         title: taskGraveyard.title,
         description: taskGraveyard.description,
         effortEstimate: taskGraveyard.effortEstimate,

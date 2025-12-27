@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { SWRConfig } from "swr"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { SynapseSidebar } from "@/components/synapse-sidebar"
@@ -62,11 +63,22 @@ export function TasksLayout({ children }: TasksLayoutProps) {
       : null
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className={isMobile ? "" : isCollapsed ? "" : "mr-[380px] transition-[margin] duration-300"}>{children}</div>
+    <SWRConfig
+      value={{
+        keepPreviousData: true,
+        revalidateOnFocus: true,
+        revalidateIfStale: true,
+        dedupingInterval: 5000,
+      }}
+    >
+      <div className="min-h-screen bg-black">
+        <div className={isMobile ? "" : isCollapsed ? "" : "mr-[380px] transition-[margin] duration-300"}>
+          {children}
+        </div>
 
-      {/* Synapse chat - sidebar on desktop, floating sheet on mobile */}
-      {isMobile ? <SynapseMobileSheet /> : <SynapseSidebar avoidanceWarning={avoidanceWarning} />}
-    </div>
+        {/* Synapse chat - sidebar on desktop, floating sheet on mobile */}
+        {isMobile ? <SynapseMobileSheet /> : <SynapseSidebar avoidanceWarning={avoidanceWarning} />}
+      </div>
+    </SWRConfig>
   )
 }

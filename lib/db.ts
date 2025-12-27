@@ -1,8 +1,8 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle } from "drizzle-orm/neon-http"
+import { Pool } from "@neondatabase/serverless"
+import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless"
 import * as schema from "./schema"
 
-let cachedDb: ReturnType<typeof drizzle> | null = null
+let cachedDb: NeonDatabase<typeof schema> | null = null
 
 export function getDb() {
   if (cachedDb) return cachedDb
@@ -13,8 +13,6 @@ export function getDb() {
     throw new Error("DATABASE_URL environment variable is not set")
   }
 
-  console.log("[v0] Initializing database connection")
-
   // Clean up common copy-paste mistakes
   let connectionString = url.trim()
   if (connectionString.startsWith("psql ")) {
@@ -22,9 +20,9 @@ export function getDb() {
   }
 
   try {
-    const sql = neon(connectionString)
-    cachedDb = drizzle(sql, { schema })
-    console.log("[v0] Database connection initialized successfully")
+    // This is compatible with newer @neondatabase/serverless versions
+    const pool = new Pool({ connectionString })
+    cachedDb = drizzle(pool, { schema })
     return cachedDb
   } catch (error) {
     console.error("[v0] Failed to initialize database:", error)

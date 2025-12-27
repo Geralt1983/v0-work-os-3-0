@@ -58,7 +58,7 @@ Tasks are scored on a **1-10 point scale** based on time, cognitive load, and st
 
 ## Project Structure
 
-```
+\`\`\`
 app/
 ├── api/
 │   ├── ai/              # AI endpoints (estimate-points, rewrite, breakdown)
@@ -88,11 +88,11 @@ lib/
 ├── schema.ts            # Drizzle database schema
 ├── constants.ts         # App-wide constants
 └── ai/                  # AI prompts and tool execution
-```
+\`\`\`
 
 ## Key Constants
 
-```typescript
+\`\`\`typescript
 // Daily goals (points-based)
 DAILY_MINIMUM_POINTS = 12
 DAILY_TARGET_POINTS = 18
@@ -112,7 +112,7 @@ POINTS_TO_SIZE = {
   5-7: "Chunky",
   8-10: "Deep"
 }
-```
+\`\`\`
 
 ## Database Schema
 
@@ -129,14 +129,14 @@ Points columns in tasks:
 
 ## Environment Variables
 
-```env
+\`\`\`env
 DATABASE_URL=postgresql://...
 GROQ_API_KEY=gsk_...
-```
+\`\`\`
 
 ## Development
 
-```bash
+\`\`\`bash
 # Install dependencies
 pnpm install
 
@@ -148,7 +148,7 @@ pnpm db:push
 
 # Run type checking
 pnpm exec tsc --noEmit
-```
+\`\`\`
 
 ## Recent Changes
 

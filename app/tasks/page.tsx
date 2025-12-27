@@ -362,20 +362,16 @@ export default function MovesPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Sticky glass header */}
-      <header className="sticky top-0 z-30 glass-subtle border-b border-zinc-800/50">
-        <div className="mx-auto max-w-6xl px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
-              <p className="hidden sm:block text-sm text-white/50 mt-0.5">One task per client, every day.</p>
-            </div>
+      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
+            <p className="hidden sm:block text-sm text-white/50 mt-0.5">One task per client, every day.</p>
+          </div>
+          <div className="flex-shrink-0 pt-1">
             <WorkOSNav />
           </div>
         </div>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
           <Select value={clientFilter} onValueChange={setClientFilter}>
@@ -606,15 +602,21 @@ export default function MovesPage() {
                         <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
 
                         {/* Points */}
-                        <span className={`text-xs w-10 shrink-0 text-right font-medium ${
-                          task.points
-                            ? task.points <= 2 ? "text-emerald-400"
-                              : task.points <= 4 ? "text-green-400"
-                              : task.points <= 6 ? "text-yellow-400"
-                              : task.points <= 8 ? "text-orange-400"
-                              : "text-red-400"
-                            : "text-zinc-500"
-                        }`}>
+                        <span
+                          className={`text-xs w-10 shrink-0 text-right font-medium ${
+                            task.points
+                              ? task.points <= 2
+                                ? "text-emerald-400"
+                                : task.points <= 4
+                                  ? "text-green-400"
+                                  : task.points <= 6
+                                    ? "text-yellow-400"
+                                    : task.points <= 8
+                                      ? "text-orange-400"
+                                      : "text-red-400"
+                              : "text-zinc-500"
+                          }`}
+                        >
                           {task.points || "—"}
                         </span>
 
@@ -916,19 +918,23 @@ function TaskCard({
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
         <div className="flex items-center gap-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full ${
-            task.type === "Quick" ? "bg-emerald-500/20 text-emerald-400" :
-            task.type === "Standard" ? "bg-green-500/20 text-green-400" :
-            task.type === "Chunky" ? "bg-yellow-500/20 text-yellow-400" :
-            task.type === "Deep" ? "bg-orange-500/20 text-orange-400" :
-            "bg-zinc-700 text-zinc-400"
-          }`}>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${
+              task.type === "Quick"
+                ? "bg-emerald-500/20 text-emerald-400"
+                : task.type === "Standard"
+                  ? "bg-green-500/20 text-green-400"
+                  : task.type === "Chunky"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : task.type === "Deep"
+                      ? "bg-orange-500/20 text-orange-400"
+                      : "bg-zinc-700 text-zinc-400"
+            }`}
+          >
             {task.type}
           </span>
           {task.points ? (
-            <span className={`text-sm font-medium ${getPointsColor(task.points)}`}>
-              {task.points}pt
-            </span>
+            <span className={`text-sm font-medium ${getPointsColor(task.points)}`}>{task.points}pt</span>
           ) : null}
         </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>

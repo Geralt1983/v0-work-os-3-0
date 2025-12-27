@@ -8,10 +8,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 /**
  * Type-safe API fetch wrapper with error handling
  */
-export async function apiFetch<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`
 
   const res = await fetch(url, {
@@ -33,38 +30,41 @@ export async function apiFetch<T>(
 /**
  * SWR fetcher function for GET requests
  */
-export const swrFetcher = <T>(url: string): Promise<T> => apiFetch<T>(url)
+export const swrFetcher = (url: string): Promise<unknown> => apiFetch(url)
 
 /**
  * Shared SWR configuration presets
  */
 export const SWR_CONFIG = {
-  /** Default config for most data */
   default: {
-    refreshInterval: 30000, // 30s instead of 10s
+    refreshInterval: 30000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
+    keepPreviousData: true,
+    dedupingInterval: 5000,
   },
-  /** Config for real-time data like chat */
   realtime: {
-    refreshInterval: 15000, // 15s instead of 5s
+    refreshInterval: 15000,
     revalidateOnFocus: false,
+    keepPreviousData: true,
+    dedupingInterval: 2000,
   },
-  /** Config for less frequently changing data */
   slow: {
-    refreshInterval: 60000, // 60s
+    refreshInterval: 60000,
     revalidateOnFocus: true,
+    keepPreviousData: true,
+    dedupingInterval: 10000,
   },
-  /** Config for rarely changing data */
   static: {
-    refreshInterval: 120000, // 2 minutes
+    refreshInterval: 120000,
     revalidateOnFocus: false,
+    keepPreviousData: true,
+    dedupingInterval: 30000,
   },
 } as const
 
 /**
  * Parse and validate an ID parameter
- * Returns the parsed number or throws an error
  */
 export function parseId(id: string | number): number {
   const parsed = typeof id === "number" ? id : Number.parseInt(id, 10)
@@ -76,7 +76,6 @@ export function parseId(id: string | number): number {
 
 /**
  * Safely parse an optional ID parameter
- * Returns the parsed number or undefined if invalid
  */
 export function parseOptionalId(id: string | number | undefined | null): number | undefined {
   if (id === undefined || id === null || id === "") return undefined

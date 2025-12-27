@@ -1,14 +1,38 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { ListTodo, BarChart3, Users, History } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import { preload } from "swr"
+import { swrFetcher } from "@/lib/fetch-utils"
+
+const ROUTE_PREFETCH_KEYS: Record<string, string[]> = {
+  "/tasks": ["/api/tasks", "/api/clients", "/api/backlog/grouped", "/api/backlog/recommendations"],
+  "/metrics": ["/api/metrics/today", "/api/metrics/clients"],
+  "/clients": ["/api/clients"],
+  "/history": ["/api/moves/heatmap", "/api/moves/history"],
+}
 
 export function WorkOSNav() {
   const pathname = usePathname()
+  const router = useRouter()
   const [hasUnread, setHasUnread] = useState(false)
+
+  const prefetchRoute = useCallback(
+    (href: string) => {
+      const keys = ROUTE_PREFETCH_KEYS[href]
+      if (keys) {
+        keys.forEach((key) => {
+          preload(key, swrFetcher)
+        })
+      }
+      // Also prefetch the page itself
+      router.prefetch(href)
+    },
+    [router],
+  )
 
   useEffect(() => {
     // Check for unread messages on mount and when pathname changes
@@ -63,6 +87,9 @@ export function WorkOSNav() {
             href={href}
             aria-label={label}
             title={label}
+            prefetch={true}
+            onMouseEnter={() => prefetchRoute(href)}
+            onFocus={() => prefetchRoute(href)}
             className={cn(
               "relative h-10 w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
               "text-white/60 hover:text-white hover:bg-white/10",
