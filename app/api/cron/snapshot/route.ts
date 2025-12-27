@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { tasks, clients, clientMemory, dailySnapshots } from "@/lib/schema"
-import { eq, and, gte, lt, inArray } from "drizzle-orm"
+import { tasks, clients, clientMemory, dailySnapshots, taskEvents } from "@/lib/schema"
+import { eq, and, gte, lt, inArray, sql } from "drizzle-orm"
+import { getTaskPoints } from "@/lib/domain"
+import { DAILY_TARGET_POINTS } from "@/lib/constants"
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -25,17 +27,12 @@ export async function GET(request: Request) {
 
     // Get completed tasks today
     const completedToday = await db
-      .select({
-        id: tasks.id,
-        clientId: tasks.clientId,
-        effortEstimate: tasks.effortEstimate,
-        drainType: tasks.drainType,
-      })
+      .select()
       .from(tasks)
       .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfDay), lt(tasks.completedAt, endOfDay)))
 
     const tasksCompleted = completedToday.length
-    const minutesEarned = completedToday.reduce((sum, t) => sum + (t.effortEstimate || 2) * 20, 0)
+    const pointsEarned = completedToday.reduce((sum, t) => sum + getTaskPoints(t), 0)
 
     // Get unique clients touched - batch query instead of N+1
     const clientIds = [...new Set(completedToday.map((t) => t.clientId).filter((id): id is number => id !== null))]
@@ -50,9 +47,21 @@ export async function GET(request: Request) {
     const staleMemories = await db.select().from(clientMemory).where(gte(clientMemory.staleDays, 2))
     const staleClients = staleMemories.map((m) => m.clientName)
 
-    // Calculate average momentum (simplified - just use completion percentage)
-    const targetMinutes = 180
-    const avgMomentum = Math.round((minutesEarned / targetMinutes) * 100)
+    // Calculate average momentum (percentage of target points)
+    const avgMomentum = Math.round((pointsEarned / DAILY_TARGET_POINTS) * 100)
+
+    // Count avoidance incidents (deferred/demoted events today)
+    const avoidanceEvents = await db
+      .select({ count: sql<number>`count(*)`.as("count") })
+      .from(taskEvents)
+      .where(
+        and(
+          sql`${taskEvents.eventType} IN ('deferred', 'demoted', 'avoided', 'skipped')`,
+          gte(taskEvents.createdAt, startOfDay),
+          lt(taskEvents.createdAt, endOfDay)
+        )
+      )
+    const avoidanceIncidents = Number(avoidanceEvents[0]?.count ?? 0)
 
     // Upsert the snapshot
     await db
@@ -60,22 +69,23 @@ export async function GET(request: Request) {
       .values({
         snapshotDate: today,
         tasksCompleted,
-        minutesEarned,
+        minutesEarned: pointsEarned, // Legacy field name, now stores points
         clientsTouched,
         drainTypesUsed,
         avgMomentum: String(avgMomentum),
         staleClients,
-        avoidanceIncidents: 0, // TODO: Calculate from task_events
+        avoidanceIncidents,
       })
       .onConflictDoUpdate({
         target: dailySnapshots.snapshotDate,
         set: {
           tasksCompleted,
-          minutesEarned,
+          minutesEarned: pointsEarned,
           clientsTouched,
           drainTypesUsed,
           avgMomentum: String(avgMomentum),
           staleClients,
+          avoidanceIncidents,
         },
       })
 
@@ -84,11 +94,12 @@ export async function GET(request: Request) {
       snapshot: {
         date: today,
         tasksCompleted,
-        minutesEarned,
+        pointsEarned,
         clientsTouched,
         drainTypesUsed,
         avgMomentum,
         staleClients,
+        avoidanceIncidents,
       },
     })
   } catch (err) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { tasks, clients } from "@/lib/schema"
-import { eq, and, gte, ne } from "drizzle-orm"
+import { tasks, clients, dailyGoals } from "@/lib/schema"
+import { eq, and, gte, ne, desc } from "drizzle-orm"
 import { calculateMomentum } from "@/lib/metrics"
 import { DAILY_MINIMUM_POINTS, DAILY_TARGET_POINTS, WORK_START_HOUR, WORK_END_HOUR } from "@/lib/constants"
 import { getESTNow, getESTTodayStart, estToUTC } from "@/lib/domain"
@@ -57,7 +57,13 @@ export async function GET() {
       paceStatus = percentOfTarget >= dayProgress ? "on_track" : "behind"
     }
 
-    const streak = 0 // TODO: Implement from daily_log table
+    // Get current streak from dailyGoals table
+    const [latestGoal] = await db
+      .select({ currentStreak: dailyGoals.currentStreak })
+      .from(dailyGoals)
+      .orderBy(desc(dailyGoals.date))
+      .limit(1)
+    const streak = latestGoal?.currentStreak ?? 0
 
     return NextResponse.json({
       completedCount: completedToday.length,
