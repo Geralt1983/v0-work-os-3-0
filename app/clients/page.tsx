@@ -86,14 +86,12 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Clients</h1>
             <p className="hidden sm:block text-sm text-white/60 mt-1">Manage priorities and track client health</p>
           </div>
-          <div className="flex-shrink-0 pt-1">
-            <WorkOSNav />
-          </div>
+          <WorkOSNav />
         </div>
 
         <main className="mt-8 flex flex-col gap-8 pb-20">
