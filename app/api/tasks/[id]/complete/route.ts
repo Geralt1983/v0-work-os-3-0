@@ -4,6 +4,7 @@ import { tasks, dailyLog, clients, dailyGoals } from "@/lib/schema"
 import { eq, sql } from "drizzle-orm"
 import { logTaskEvent } from "@/lib/events"
 import { sendNotification } from "@/lib/notifications"
+import { checkAndSendMilestone } from "@/lib/milestone-checker"
 
 // POST mark task as complete
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -139,6 +140,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.log(`[POINTS] Added ${points} points for task ${taskId}`)
     } catch (pointsError) {
       console.error("[POINTS] Failed to update daily goals:", pointsError)
+    }
+
+    // ============================================
+    // MILESTONE NOTIFICATIONS (25%, 50%, 75%, 100%, etc.)
+    // ============================================
+    try {
+      await checkAndSendMilestone()
+      console.log("[MILESTONE] Milestone check completed")
+    } catch (milestoneError) {
+      console.error("[MILESTONE] Failed to check milestone:", milestoneError)
     }
 
     // ============================================
