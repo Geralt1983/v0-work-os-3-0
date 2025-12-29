@@ -155,7 +155,7 @@ export const taskEvents = pgTable("task_events", {
 })
 
 // =============================================================================
-// DAILY GOALS (points tracking with streaks)
+// DAILY GOALS (points tracking with streaks and debt)
 // =============================================================================
 export const dailyGoals = pgTable("daily_goals", {
   id: serial("id").primaryKey(),
@@ -166,6 +166,10 @@ export const dailyGoals = pgTable("daily_goals", {
   currentStreak: integer("current_streak").default(0),
   longestStreak: integer("longest_streak").default(0),
   lastGoalHitDate: date("last_goal_hit_date"),
+  dailyDebt: integer("daily_debt").default(0), // Points below target for this day
+  weeklyDebt: integer("weekly_debt").default(0), // Cumulative debt for the week
+  pressureLevel: integer("pressure_level").default(0), // 0-5 scale for urgency
+  lastUrgencyNotificationHour: integer("last_urgency_notification_hour"), // Track last hourly alert
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
 

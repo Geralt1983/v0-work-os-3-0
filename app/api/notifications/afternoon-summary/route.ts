@@ -1,12 +1,13 @@
 export const maxDuration = 60
 
 import { NextResponse } from "next/server"
-import { sendNotification, formatAfternoonSummary } from "@/lib/notifications"
+import { sendNotification } from "@/lib/notifications"
 import { getDb } from "@/lib/db"
-import { tasks, clients } from "@/lib/schema"
-import { eq, gte, and, ne, inArray } from "drizzle-orm"
-import { DAILY_TARGET_POINTS } from "@/lib/constants"
+import { tasks, clients, dailyGoals } from "@/lib/schema"
+import { eq, gte, and, ne, inArray, sql } from "drizzle-orm"
+import { DAILY_TARGET_POINTS, DAILY_MINIMUM_POINTS } from "@/lib/constants"
 import { getTaskPoints } from "@/lib/domain"
+import { analyzePace, getUrgencyPriority, calculateWeeklyDebt } from "@/lib/urgency-system"
 
 export async function GET() {
   console.log("[Afternoon Summary] Starting")
@@ -21,6 +22,7 @@ export async function GET() {
 
     const todayStr = estTime.toISOString().split("T")[0]
     const todayStart = new Date(`${todayStr}T00:00:00-05:00`)
+    const currentHour = estTime.getHours()
 
     console.log("[Afternoon Summary] Today start:", todayStart.toISOString())
 
@@ -58,20 +60,78 @@ export async function GET() {
       activeTasksTimeoutPromise,
     ])
 
-    const message = formatAfternoonSummary({
-      todayTasks: todayTasks.length,
-      todayPoints,
-      targetPoints: DAILY_TARGET_POINTS,
-      clientsTouched,
-      remainingActive: activeTasks.length,
-    })
+    // Get weekly debt for context
+    const dayOfWeek = estTime.getDay()
+    const weekStart = new Date(estTime)
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    weekStart.setDate(weekStart.getDate() - daysSinceMonday)
+    weekStart.setHours(0, 0, 0, 0)
+    const weekStartStr = weekStart.toISOString().split("T")[0]
+
+    const weekGoals = await db
+      .select()
+      .from(dailyGoals)
+      .where(sql`${dailyGoals.date} >= ${weekStartStr} AND ${dailyGoals.date} <= ${todayStr}`)
+
+    const weeklyDebt = calculateWeeklyDebt(
+      weekGoals.map((g) => ({
+        earnedPoints: g.date === todayStr ? todayPoints : g.earnedPoints,
+        targetPoints: g.targetPoints,
+      }))
+    )
+
+    // Analyze pace
+    const pace = analyzePace(todayPoints, currentHour)
+    const priority = getUrgencyPriority(pace)
+    const percentOfTarget = Math.round((todayPoints / DAILY_TARGET_POINTS) * 100)
+    const minimumMet = todayPoints >= DAILY_MINIMUM_POINTS
+    const targetMet = todayPoints >= DAILY_TARGET_POINTS
+
+    // Enhanced afternoon message with debt context
+    let message = "🌤️ Afternoon Check-in\n\n"
+    message += `📊 Today: ${todayPoints}/${DAILY_TARGET_POINTS} pts (${percentOfTarget}%)\n`
+    message += `✓ ${todayTasks.length} tasks • ${activeTasks.length} active remaining\n\n`
+
+    if (targetMet) {
+      message += "🎯 TARGET HIT! You've crushed today.\n"
+    } else if (minimumMet) {
+      const remaining = DAILY_TARGET_POINTS - todayPoints
+      message += `✅ Minimum met! ${remaining.toFixed(1)} pts more for target.\n`
+    } else {
+      const toMinimum = DAILY_MINIMUM_POINTS - todayPoints
+      const toTarget = DAILY_TARGET_POINTS - todayPoints
+      message += `⏳ ${toMinimum.toFixed(1)} pts to minimum, ${toTarget.toFixed(1)} pts to target\n`
+    }
+
+    // Pace analysis
+    if (pace.isCritical) {
+      message += `\n🔴 CRITICAL: ${Math.abs(pace.delta).toFixed(1)} pts behind pace!\n`
+    } else if (pace.isUrgent) {
+      message += `\n⚠️ Behind pace by ${Math.abs(pace.delta).toFixed(1)} pts\n`
+    } else if (pace.isAhead) {
+      message += `\n🚀 Ahead of pace by ${pace.delta.toFixed(1)} pts!\n`
+    }
+
+    // Weekly debt context
+    if (weeklyDebt > 0) {
+      message += `\n💳 Weekly Debt: ${weeklyDebt} pts\n`
+      if (weeklyDebt > 20) {
+        message += "   🚨 CRITICAL weekly deficit!\n"
+      } else if (weeklyDebt > 10) {
+        message += "   ⚠️ Significant deficit building\n"
+      }
+    }
+
+    if (clientsTouched.length > 0) {
+      message += `\n✅ Touched: ${clientsTouched.join(", ")}`
+    }
 
     console.log("[Afternoon Summary] Message:", message)
 
     const result = await sendNotification(message, {
       title: "Afternoon Check-in",
       tags: "clock4,chart_with_upwards_trend",
-      priority: "default",
+      priority,
     })
 
     return NextResponse.json({ ...result, message })
