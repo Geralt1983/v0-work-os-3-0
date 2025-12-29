@@ -84,7 +84,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     return (
       <button
         onClick={() => updateCollapsed(false)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-3 text-white shadow-lg shadow-fuchsia-500/25 hover:shadow-fuchsia-500/40 hover:scale-105 transition-all duration-200 btn-press glow-ai"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-200 btn-press glow-ai"
       >
         <Zap className="w-5 h-5 animate-pulse" />
         <span className="font-semibold tracking-tight">Synapse</span>
@@ -102,11 +102,11 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
       {/* Header with gradient accent */}
       <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-r from-zinc-950 to-zinc-900">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-lg shadow-fuchsia-500/20">
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
             <Zap className="w-4 h-4 text-white" />
           </div>
           <span className="font-semibold text-zinc-100 tracking-tight">{ASSISTANT_NAME}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 font-medium">AI</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">AI</span>
         </div>
         <button
           onClick={() => updateCollapsed(true)}
@@ -192,7 +192,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-fuchsia-500 disabled:opacity-50"
+            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
             placeholder="Type or tap mic..."
           />
 
@@ -200,7 +200,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-4 py-2 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-fuchsia-500 transition flex items-center gap-2"
+              className="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition flex items-center gap-2"
             >
               <Send className="w-4 h-4" />
               Send
@@ -227,7 +227,7 @@ function SidebarMessage({ message }: { message: Message }) {
       <div
         className={cn(
           "max-w-[90%] rounded-xl px-3 py-2 text-sm leading-snug",
-          isUser ? "bg-fuchsia-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
+          isUser ? "bg-indigo-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
         )}
       >
         <p className="whitespace-pre-line">{message.content}</p>

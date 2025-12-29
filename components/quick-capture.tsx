@@ -154,7 +154,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
     <div className="w-full space-y-3">
       {/* Input Section with glow effect */}
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-fuchsia-500/20 to-violet-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-violet-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
         <input
           type="text"
           value={input}
@@ -178,7 +178,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             className={cn(
               "absolute right-2 top-1/2 -translate-y-1/2",
               "p-2.5 rounded-lg btn-press",
-              "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500",
+              "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500",
               "shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
               "transition-all duration-200"
@@ -285,7 +285,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             <Button
               onClick={handleAddToBacklog}
               disabled={isAdding}
-              className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 btn-press transition-all"
+              className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 btn-press transition-all"
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -185,19 +185,19 @@ export function VoiceRecorder({
           "border border-zinc-700/50",
           "shadow-lg shadow-black/20",
           "transition-all duration-300 ease-out",
-          "hover:scale-105 hover:shadow-xl hover:shadow-fuchsia-500/10",
-          "hover:border-fuchsia-500/30",
+          "hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/10",
+          "hover:border-indigo-500/30",
           "active:scale-95",
           "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
           compact ? "w-10 h-10" : "w-12 h-12",
           className,
         )}
       >
-        <div className="absolute inset-0 rounded-full bg-fuchsia-500/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 rounded-full bg-indigo-500/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
         <Mic
           className={cn(
             "relative transition-colors duration-200",
-            "text-zinc-400 group-hover:text-fuchsia-400",
+            "text-zinc-400 group-hover:text-indigo-400",
             compact ? "w-4 h-4" : "w-5 h-5",
           )}
         />
@@ -212,13 +212,13 @@ export function VoiceRecorder({
           "flex items-center gap-3 px-4 py-2",
           "bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900",
           "border border-zinc-700/50 rounded-full",
-          "shadow-lg shadow-fuchsia-500/5",
+          "shadow-lg shadow-indigo-500/5",
           className,
         )}
       >
         <div className="relative">
-          <Loader className="w-5 h-5 text-fuchsia-400 animate-spin" />
-          <div className="absolute inset-0 blur-md bg-fuchsia-500/30 animate-pulse" />
+          <Loader className="w-5 h-5 text-indigo-400 animate-spin" />
+          <div className="absolute inset-0 blur-md bg-indigo-500/30 animate-pulse" />
         </div>
         <span className="text-sm text-zinc-400 font-medium tracking-wide">Transcribing...</span>
       </div>

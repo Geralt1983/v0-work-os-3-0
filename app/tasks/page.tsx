@@ -328,7 +328,7 @@ export default function MovesPage() {
         ref={setNodeRef}
         className={`col-span-1 rounded-xl transition-all duration-200 relative ${
           isOver
-            ? "bg-fuchsia-500/20 ring-2 ring-fuchsia-500/50 scale-[1.01]"
+            ? "bg-indigo-500/20 ring-2 ring-indigo-500/50 scale-[1.01]"
             : showDropTarget
               ? "ring-1 ring-dashed ring-zinc-600"
               : ""
@@ -337,7 +337,7 @@ export default function MovesPage() {
         {showDropTarget && (
           <div
             className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${
-              isOver ? "bg-fuchsia-500/10" : "bg-transparent"
+              isOver ? "bg-indigo-500/10" : "bg-transparent"
             }`}
           />
         )}
@@ -347,11 +347,11 @@ export default function MovesPage() {
           <div
             className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${
               isOver
-                ? "bg-fuchsia-500/20 border-2 border-dashed border-fuchsia-500/50"
+                ? "bg-indigo-500/20 border-2 border-dashed border-indigo-500/50"
                 : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
             }`}
           >
-            <span className={`text-sm ${isOver ? "text-fuchsia-400" : "text-zinc-500"}`}>
+            <span className={`text-sm ${isOver ? "text-indigo-400" : "text-zinc-500"}`}>
               {isOver ? "Release to move to backlog" : "Drop here to send to backlog"}
             </span>
           </div>
@@ -396,7 +396,7 @@ export default function MovesPage() {
 
           <Button
             size="sm"
-            className="bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-fuchsia-500/20 hover:shadow-fuchsia-500/30 btn-press transition-all"
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 btn-press transition-all"
             onClick={() => setIsNewTaskOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1.5" />
@@ -424,7 +424,7 @@ export default function MovesPage() {
               onClick={() => setView("board")}
               className={`rounded-full px-3 h-8 ${
                 view === "board"
-                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
             >
@@ -437,7 +437,7 @@ export default function MovesPage() {
               onClick={() => setView("list")}
               className={`rounded-full px-3 h-8 ${
                 view === "list"
-                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
             >
@@ -450,7 +450,7 @@ export default function MovesPage() {
               onClick={() => setView("focus")}
               className={`rounded-full px-3 h-8 ${
                 view === "focus"
-                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
             >
@@ -503,7 +503,7 @@ export default function MovesPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${
                 activeTab === tab.key
-                  ? "border-fuchsia-500 text-white"
+                  ? "border-indigo-500 text-white"
                   : "border-transparent text-zinc-400 hover:text-white"
               }`}
             >
@@ -566,7 +566,7 @@ export default function MovesPage() {
                 }}
               >
                 {activeTask ? (
-                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-fuchsia-500/50 rounded-2xl">
+                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-indigo-500/50 rounded-2xl">
                     <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
                   </div>
                 ) : null}
@@ -751,19 +751,19 @@ function ViewToggle({ view, onChange }: { view: TasksView; onChange: (v: TasksVi
     <div className="inline-flex rounded-full bg-zinc-900 p-1">
       <button
         onClick={() => onChange("board")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <LayoutGrid className="h-3.5 w-3.5" /> Board
       </button>
       <button
         onClick={() => onChange("list")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <List className="h-3.5 w-3.5" /> List
       </button>
       <button
         onClick={() => onChange("focus")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <Crosshair className="h-3.5 w-3.5" /> Focus
       </button>
@@ -822,11 +822,11 @@ function TaskCard({
   // Status-based card styling
   const getStatusStyles = () => {
     if (isDragging) {
-      return "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20 ring-2 ring-fuchsia-500/30"
+      return "border-indigo-500/50 bg-zinc-900 shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-500/30"
     }
     switch (task.status) {
       case "today":
-        return "card-today border hover:border-fuchsia-500/40 hover:shadow-lg hover:shadow-fuchsia-500/10"
+        return "card-today border hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10"
       case "upnext":
         return "card-queued border hover:border-zinc-600 hover:shadow-lg"
       case "done":
@@ -861,7 +861,7 @@ function TaskCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
+          <div className={`font-medium text-indigo-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
           <h3
             className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
@@ -904,7 +904,7 @@ function TaskCard({
           <CheckSquare className="h-3.5 w-3.5 text-zinc-500" />
           <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-fuchsia-500 transition-all duration-300"
+              className="h-full bg-indigo-500 transition-all duration-300"
               style={{ width: `${totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0}%` }}
             />
           </div>
@@ -956,7 +956,7 @@ function UndoToast({
         >
           <div className="flex items-center gap-3 rounded-full bg-zinc-800 border border-zinc-700 px-4 py-2 shadow-lg">
             <span className="text-sm text-zinc-300">Move completed</span>
-            <button onClick={onUndo} className="text-sm font-medium text-fuchsia-400 hover:text-fuchsia-300">
+            <button onClick={onUndo} className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
               Undo
             </button>
           </div>
@@ -985,7 +985,7 @@ function DroppableColumn({
   const getColumnIcon = () => {
     switch (id) {
       case "today-column":
-        return <Zap className="h-5 w-5 text-fuchsia-400" />
+        return <Zap className="h-5 w-5 text-indigo-400" />
       case "upnext-column":
         return <Clock className="h-5 w-5 text-zinc-400" />
       default:
@@ -1010,7 +1010,7 @@ function DroppableColumn({
     <div
       ref={setNodeRef}
       className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
-        isOver ? "bg-fuchsia-500/5 ring-2 ring-fuchsia-500/30 scale-[1.01]" : ""
+        isOver ? "bg-indigo-500/5 ring-2 ring-indigo-500/30 scale-[1.01]" : ""
       }`}
     >
       <div className="flex items-center gap-2 mb-3">
