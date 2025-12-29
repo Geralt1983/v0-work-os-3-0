@@ -152,7 +152,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="What needs to be done?"
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     autoFocus
                   />
                 </div>
@@ -176,7 +176,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
                       aria-label="Select client"
-                      className={`w-full px-4 py-3 bg-zinc-800 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer ${
+                      className={`w-full px-4 py-3 bg-zinc-800 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer ${
                         !clientId ? "border-red-500" : "border-zinc-700"
                       }`}
                     >
@@ -201,7 +201,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                         onClick={() => setStatus(opt.value)}
                         className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
                           status === opt.value
-                            ? "bg-fuchsia-500 text-white"
+                            ? "bg-indigo-500 text-white"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -222,7 +222,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                         onClick={() => setEffortEstimate(opt.value)}
                         className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
                           effortEstimate === opt.value
-                            ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                            ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -247,7 +247,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                         onClick={() => setDrainType(opt.value)}
                         className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${
                           drainType === opt.value
-                            ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                            ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -269,7 +269,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add any notes or context..."
                     rows={3}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
                   />
                 </div>
               </div>
@@ -286,7 +286,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                 <button
                   type="submit"
                   disabled={!title.trim() || !clientId || isSubmitting}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {isSubmitting ? "Creating..." : "Create Move"}
                 </button>

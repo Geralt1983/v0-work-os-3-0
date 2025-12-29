@@ -323,7 +323,7 @@ export function EditTaskDialog({
                         type="button"
                         onClick={handleRewrite}
                         disabled={isRewriting || !title.trim()}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {isRewriting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
                         Rewrite
@@ -334,7 +334,7 @@ export function EditTaskDialog({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
-                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
 
@@ -349,7 +349,7 @@ export function EditTaskDialog({
                       <select
                         value={clientId ?? ""}
                         onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
-                        className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer"
+                        className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer"
                       >
                         <option value="">No client</option>
                         {clients.map((client) => (
@@ -372,7 +372,7 @@ export function EditTaskDialog({
                           onClick={() => setStatus(opt.value)}
                           className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
                             status === opt.value
-                              ? "bg-fuchsia-500 text-white"
+                              ? "bg-indigo-500 text-white"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -393,7 +393,7 @@ export function EditTaskDialog({
                           onClick={() => setEffortEstimate(opt.value)}
                           className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
                             effortEstimate === opt.value
-                              ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                              ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -418,7 +418,7 @@ export function EditTaskDialog({
                           onClick={() => setDrainType(opt.value)}
                           className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${
                             drainType === opt.value
-                              ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                              ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -439,7 +439,7 @@ export function EditTaskDialog({
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Add any notes or context..."
                       rows={3}
-                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
                     />
                   </div>
 
@@ -460,10 +460,10 @@ export function EditTaskDialog({
                             <button
                               type="button"
                               onClick={() => toggleSubtask(subtask.id)}
-                              className="flex-shrink-0 text-zinc-400 hover:text-fuchsia-400 transition"
+                              className="flex-shrink-0 text-zinc-400 hover:text-indigo-400 transition"
                             >
                               {subtask.completed ? (
-                                <CheckSquare className="h-5 w-5 text-fuchsia-500" />
+                                <CheckSquare className="h-5 w-5 text-indigo-500" />
                               ) : (
                                 <Square className="h-5 w-5" />
                               )}
@@ -529,7 +529,7 @@ export function EditTaskDialog({
                     <button
                       type="submit"
                       disabled={!title.trim() || isSubmitting}
-                      className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                       {isSubmitting ? "Saving..." : "Save Changes"}
                     </button>
@@ -578,7 +578,7 @@ export function EditTaskDialog({
                 </div>
                 <div>
                   <span className="text-zinc-500 text-xs uppercase tracking-wide">Suggested:</span>
-                  <div className="text-fuchsia-400 mt-1 font-medium">{rewriteSuggestion}</div>
+                  <div className="text-indigo-400 mt-1 font-medium">{rewriteSuggestion}</div>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -587,7 +587,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Keep Original
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRewrite} className="bg-fuchsia-500 text-white hover:bg-fuchsia-600">
+            <AlertDialogAction onClick={confirmRewrite} className="bg-indigo-500 text-white hover:bg-indigo-600">
               Use Suggestion
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -605,7 +605,7 @@ export function EditTaskDialog({
                 <ul className="space-y-2 mt-2">
                   {subtaskSuggestions.map((subtask, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <Square className="h-4 w-4 text-fuchsia-500 mt-0.5 flex-shrink-0" />
+                      <Square className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
                       <span className="text-zinc-300">{subtask}</span>
                     </li>
                   ))}
@@ -620,7 +620,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSubtasks} className="bg-fuchsia-500 text-white hover:bg-fuchsia-600">
+            <AlertDialogAction onClick={confirmSubtasks} className="bg-indigo-500 text-white hover:bg-indigo-600">
               Add Subtasks
             </AlertDialogAction>
           </AlertDialogFooter>
