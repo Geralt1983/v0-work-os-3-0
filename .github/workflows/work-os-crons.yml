@@ -4,19 +4,38 @@ on:
   schedule:
     # All times in UTC - adjust for EST (UTC-5) / EDT (UTC-4)
     # Using EST times (winter) - adjust in spring for EDT
-    
+
     # 8:00 AM EST = 13:00 UTC
     - cron: '0 13 * * 1-5'
-    
+
     # 10:00 AM EST = 15:00 UTC (has Jeremy started?)
     - cron: '0 15 * * 1-5'
-    
-    # 4:00 PM EST = 21:00 UTC
+
+    # HOURLY URGENCY CHECKS (11am-5pm EST)
+    # 11:00 AM EST = 16:00 UTC
+    - cron: '0 16 * * 1-5'
+
+    # 12:00 PM EST = 17:00 UTC
+    - cron: '0 17 * * 1-5'
+
+    # 1:00 PM EST = 18:00 UTC
+    - cron: '0 18 * * 1-5'
+
+    # 2:00 PM EST = 19:00 UTC
+    - cron: '0 19 * * 1-5'
+
+    # 3:00 PM EST = 20:00 UTC
+    - cron: '0 20 * * 1-5'
+
+    # 4:00 PM EST = 21:00 UTC (afternoon summary)
     - cron: '0 21 * * 1-5'
-    
+
+    # 5:00 PM EST = 22:00 UTC
+    - cron: '0 22 * * 1-5'
+
     # 6:00 PM EST = 23:00 UTC (end of day wrap-up)
     - cron: '0 23 * * 1-5'
-    
+
     # Sunday 6:00 PM EST = 23:00 UTC (weekly backlog review)
     - cron: '0 23 * * 0'
 
@@ -31,6 +50,7 @@ on:
         options:
           - morning
           - started-check
+          - urgency-check
           - afternoon
           - end-of-day
           - weekly-review
@@ -54,11 +74,17 @@ jobs:
           # For scheduled runs, determine based on UTC hour
           HOUR=$(date -u +%H)
           DAY=$(date -u +%u)  # 1=Monday, 7=Sunday
-          
+
           case $HOUR in
             13) echo "type=morning" >> $GITHUB_OUTPUT ;;
             15) echo "type=started-check" >> $GITHUB_OUTPUT ;;
+            16) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
+            17) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
+            18) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
+            19) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
+            20) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
             21) echo "type=afternoon" >> $GITHUB_OUTPUT ;;
+            22) echo "type=urgency-check" >> $GITHUB_OUTPUT ;;
             23)
               if [ "$DAY" == "7" ]; then
                 echo "type=weekly-review" >> $GITHUB_OUTPUT
@@ -93,16 +119,35 @@ jobs:
           response=$(curl -s -w "\n%{http_code}" -X GET \
             "${{ secrets.WORKOS_API_URL }}/api/notifications/started-check" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          
+
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
-          
+
           echo "Response: $body"
           echo "HTTP Code: $http_code"
-          
+
           # Don't fail if no notification needed (404 or specific response)
           if [ "$http_code" -ge 500 ]; then
             echo "::error::Started check failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Urgency Check (Hourly 11am-5pm EST)
+        if: steps.determine.outputs.type == 'urgency-check'
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${{ secrets.WORKOS_API_URL }}/api/notifications/urgency-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          # Don't fail if no notification needed
+          if [ "$http_code" -ge 500 ]; then
+            echo "::error::Urgency check failed with HTTP $http_code"
             exit 1
           fi
 
