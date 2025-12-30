@@ -86,7 +86,7 @@ export function ComplexitySlider({ value, onChange, aiEstimate, className }: Com
       </div>
 
       {/* Slider container */}
-      <div className="relative pt-2 pb-6">
+      <div className="relative pt-2 pb-12">
         {/* Gradient track background */}
         <div className="absolute inset-x-0 top-2 h-2 rounded-full bg-zinc-800 overflow-hidden">
           <div
@@ -160,7 +160,7 @@ export function ComplexitySlider({ value, onChange, aiEstimate, className }: Com
       </div>
 
       {/* Category pills */}
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1 flex-wrap mt-1">
         {COMPLEXITY_CONFIG.map((config) => {
           const isActive = value >= config.min && value <= config.max
           const pillColor = {
