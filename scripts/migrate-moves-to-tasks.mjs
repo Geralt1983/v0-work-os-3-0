@@ -19,21 +19,21 @@ async function main() {
   try {
     await sql`ALTER TABLE IF EXISTS moves RENAME TO tasks`
     console.log("   ✓ moves → tasks")
-  } catch (e) {
+  } catch {
     console.log("   - moves table already renamed or doesn't exist")
   }
 
   try {
     await sql`ALTER TABLE IF EXISTS move_events RENAME TO task_events`
     console.log("   ✓ move_events → task_events")
-  } catch (e) {
+  } catch {
     console.log("   - move_events table already renamed or doesn't exist")
   }
 
   try {
     await sql`ALTER TABLE IF EXISTS move_graveyard RENAME TO task_graveyard`
     console.log("   ✓ move_graveyard → task_graveyard")
-  } catch (e) {
+  } catch {
     console.log("   - move_graveyard table already renamed or doesn't exist")
   }
 
@@ -43,21 +43,21 @@ async function main() {
   try {
     await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS points_ai_guess integer`
     console.log("   ✓ Added points_ai_guess")
-  } catch (e) {
+  } catch {
     console.log("   - points_ai_guess already exists")
   }
 
   try {
     await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS points_final integer`
     console.log("   ✓ Added points_final")
-  } catch (e) {
+  } catch {
     console.log("   - points_final already exists")
   }
 
   try {
     await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS points_adjusted_at timestamp with time zone`
     console.log("   ✓ Added points_adjusted_at")
-  } catch (e) {
+  } catch {
     console.log("   - points_adjusted_at already exists")
   }
 
@@ -79,7 +79,7 @@ async function main() {
       )
     `
     console.log("   ✓ Created daily_goals table")
-  } catch (e) {
+  } catch {
     console.log("   - daily_goals table already exists")
   }
 
@@ -98,7 +98,7 @@ async function main() {
     try {
       await idx.sql
       console.log(`   ✓ Created ${idx.name}`)
-    } catch (e) {
+    } catch {
       console.log(`   - ${idx.name} already exists`)
     }
   }
@@ -133,7 +133,7 @@ async function main() {
   try {
     await sql`ALTER TABLE daily_snapshots ADD COLUMN IF NOT EXISTS avoidance_incidents integer DEFAULT 0`
     console.log("   ✓ Added avoidance_incidents column")
-  } catch (e) {
+  } catch {
     console.log("   - avoidance_incidents already exists")
   }
 
