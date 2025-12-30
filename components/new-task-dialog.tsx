@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { X } from "lucide-react"
+import { ComplexitySlider } from "@/components/complexity-slider"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClients, type TaskStatus } from "@/hooks/use-tasks"
 
@@ -20,13 +21,6 @@ interface NewTaskDialogProps {
     drainType?: string
   }) => Promise<void>
 }
-
-const effortOptions = [
-  { value: 2, label: "Quick", description: "<5 min", color: "bg-emerald-500" },
-  { value: 4, label: "Routine", description: "15-30 min", color: "bg-green-500" },
-  { value: 6, label: "Meaningful", description: "30-60 min", color: "bg-yellow-500" },
-  { value: 8, label: "Heavy", description: "1-2 hours", color: "bg-orange-500" },
-]
 
 const drainOptions = [
   { value: "deep", label: "Deep", color: "bg-rose-500", description: "Focused technical work" },
@@ -48,7 +42,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [effortEstimate, setEffortEstimate] = useState(2)
+  const [effortEstimate, setEffortEstimate] = useState(5)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -213,27 +207,11 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Complexity Points */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {effortOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setEffortEstimate(opt.value)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
-                          effortEstimate === opt.value
-                            ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
-                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${opt.color}`} />
-                          <span>{opt.label}</span>
-                        </div>
-                        <span className="text-xs opacity-70">{opt.description}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-3">Complexity</label>
+                  <ComplexitySlider
+                    value={effortEstimate}
+                    onChange={setEffortEstimate}
+                  />
                 </div>
 
                 {/* Drain Type */}
