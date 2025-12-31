@@ -38,7 +38,7 @@ export const chatTools = [
         type: "object",
         properties: {
           title: { type: "string", description: "Task title - should be actionable and specific" },
-          client_name: { type: "string", description: "Client name (case-insensitive, partial match supported)" },
+          client_name: { type: "string", description: "Client name (case-insensitive, partial match supported). REQUIRED - every task must belong to a client." },
           description: { type: "string", description: "Optional description" },
           status: {
             type: "string",
@@ -56,7 +56,7 @@ export const chatTools = [
             description: "deep=focused work, shallow=comms/emails, admin=paperwork",
           },
         },
-        required: ["title"],
+        required: ["title", "client_name"],
       },
     },
   },

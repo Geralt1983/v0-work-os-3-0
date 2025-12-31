@@ -64,19 +64,23 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
     }
 
     case "create_task": {
-      let clientId = null
-      if (args.client_name) {
-        const clientNameLower = (args.client_name as string).toLowerCase()
-        const allClients = await db.select().from(clients)
-        const matchedClient = allClients.find(
-          (c) => c.name.toLowerCase().includes(clientNameLower) || clientNameLower.includes(c.name.toLowerCase()),
-        )
-        clientId = matchedClient?.id || null
-
-        if (!matchedClient) {
-          return { success: false, error: `No client found matching "${args.client_name}"` }
-        }
+      // Client is required for all tasks
+      if (!args.client_name) {
+        return { success: false, error: "Client name is required. Ask the user which client this task is for." }
       }
+
+      const clientNameLower = (args.client_name as string).toLowerCase()
+      const allClients = await db.select().from(clients)
+      const matchedClient = allClients.find(
+        (c) => c.name.toLowerCase().includes(clientNameLower) || clientNameLower.includes(c.name.toLowerCase()),
+      )
+
+      if (!matchedClient) {
+        const availableClients = allClients.map(c => c.name).join(", ")
+        return { success: false, error: `No client found matching "${args.client_name}". Available clients: ${availableClients}` }
+      }
+
+      const clientId = matchedClient.id
 
       const [newTask] = await db
         .insert(tasks)

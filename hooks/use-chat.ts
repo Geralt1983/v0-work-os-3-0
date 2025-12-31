@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import useSWR from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
 
 // =============================================================================
@@ -175,6 +175,13 @@ export function useChat() {
 
         markAsSeen()
         window.dispatchEvent(new Event("chat-message-received"))
+
+        // If a task was created, refresh the tasks list
+        if (response.assistantMessage.taskCard) {
+          globalMutate("tasks")
+          globalMutate("/api/backlog/grouped")
+          globalMutate("/api/backlog/recommendations")
+        }
 
         mutateHistory()
       } catch (err) {
