@@ -143,3 +143,51 @@ BEGIN
         ALTER TABLE "client_memory" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;
     END IF;
 END $$;
+
+-- ============================================
+-- DAILY_GOALS TABLE - Add missing columns
+-- ============================================
+
+-- Add daily_debt if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'daily_goals' AND column_name = 'daily_debt'
+    ) THEN
+        ALTER TABLE "daily_goals" ADD COLUMN "daily_debt" integer DEFAULT 0;
+    END IF;
+END $$;
+
+-- Add weekly_debt if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'daily_goals' AND column_name = 'weekly_debt'
+    ) THEN
+        ALTER TABLE "daily_goals" ADD COLUMN "weekly_debt" integer DEFAULT 0;
+    END IF;
+END $$;
+
+-- Add pressure_level if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'daily_goals' AND column_name = 'pressure_level'
+    ) THEN
+        ALTER TABLE "daily_goals" ADD COLUMN "pressure_level" integer DEFAULT 0;
+    END IF;
+END $$;
+
+-- Add last_urgency_notification_hour if missing
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'daily_goals' AND column_name = 'last_urgency_notification_hour'
+    ) THEN
+        ALTER TABLE "daily_goals" ADD COLUMN "last_urgency_notification_hour" integer;
+    END IF;
+END $$;

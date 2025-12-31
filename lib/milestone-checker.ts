@@ -57,10 +57,13 @@ export async function checkAndSendMilestone() {
       console.log("[milestone-checker] Error fetching daily log:", err)
     }
 
-    const sentNotifications: number[] = (todayLog?.notificationsSent as number[]) || []
-    const newMilestones = MILESTONES.filter((m) => currentPercent >= m && !sentNotifications.includes(m))
+    // Handle mixed types in notificationsSent (could be strings like "work_started" or numbers like 50)
+    const rawNotifications = (todayLog?.notificationsSent as (string | number)[]) || []
+    const sentMilestones = rawNotifications.filter((n): n is number => typeof n === "number")
+    const newMilestones = MILESTONES.filter((m) => currentPercent >= m && !sentMilestones.includes(m))
 
-    console.log("[milestone-checker] Sent notifications:", sentNotifications)
+    console.log("[milestone-checker] Raw notifications:", rawNotifications)
+    console.log("[milestone-checker] Sent milestones (numbers only):", sentMilestones)
     console.log("[milestone-checker] New milestones to send:", newMilestones)
 
     if (newMilestones.length === 0) {
@@ -68,7 +71,7 @@ export async function checkAndSendMilestone() {
         message: "No new milestones",
         currentPercent,
         earnedPoints,
-        sentNotifications,
+        sentMilestones,
       }
     }
 
@@ -84,7 +87,7 @@ export async function checkAndSendMilestone() {
     })
     console.log("[milestone-checker] Notification result:", result)
 
-    const updatedNotifications = [...sentNotifications, ...newMilestones]
+    const updatedNotifications = [...rawNotifications, ...newMilestones]
     try {
       if (todayLog) {
         await db.update(dailyLog).set({ notificationsSent: updatedNotifications }).where(eq(dailyLog.id, todayLog.id))
