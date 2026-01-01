@@ -23,6 +23,9 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   status: text("status").notNull().default("backlog"),
+  // Value tier system (checkbox/progress/deliverable/milestone)
+  valueTier: varchar("value_tier", { length: 20 }).default("progress"),
+  // Legacy fields (deprecated, kept for migration compatibility)
   effortEstimate: integer("effort_estimate").default(2),
   effortActual: integer("effort_actual"),
   drainType: text("drain_type"),
@@ -32,7 +35,7 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
   backlogEnteredAt: timestamp("backlog_entered_at", { withTimezone: true }),
-  // Points tracking (1-10 scale, formerly complexity)
+  // Legacy points tracking (deprecated, use valueTier instead)
   pointsAiGuess: integer("points_ai_guess"),
   pointsFinal: integer("points_final"),
   pointsAdjustedAt: timestamp("points_adjusted_at", { withTimezone: true }),
@@ -84,6 +87,10 @@ export const clientMemory = pgTable("client_memory", {
   importance: text("importance").default("medium"),
   preferredWorkTime: text("preferred_work_time"),
   avoidanceScore: integer("avoidance_score").default(0),
+  // Blocker tracking (for stale wall system)
+  consecutiveSkips: integer("consecutive_skips").default(0),
+  lastSkipDate: date("last_skip_date"),
+  blockerReason: text("blocker_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -104,6 +111,11 @@ export const dailyLog = pgTable("daily_log", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   workStartedNotified: boolean("work_started_notified").default(false),
   workStartedAt: timestamp("work_started_at", { withTimezone: true }),
+  // Value-based points tracking
+  pointsEarned: integer("points_earned").default(0),
+  pointsTarget: integer("points_target").default(16),
+  dayComplete: boolean("day_complete").default(false),
+  staleBlockedClients: text("stale_blocked_clients"), // JSON array of client names that blocked
 })
 
 // =============================================================================

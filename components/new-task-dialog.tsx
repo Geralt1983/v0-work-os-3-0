@@ -4,9 +4,10 @@ import type React from "react"
 
 import { useState } from "react"
 import { X } from "lucide-react"
-import { ComplexitySlider } from "@/components/complexity-slider"
+import { ValueTierSelector } from "@/components/value-tier-selector"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClients, type TaskStatus } from "@/hooks/use-tasks"
+import { type ValueTier, DEFAULT_VALUE_TIER } from "@/lib/domain/task-types"
 
 interface NewTaskDialogProps {
   open: boolean
@@ -17,7 +18,7 @@ interface NewTaskDialogProps {
     clientName?: string
     description?: string
     status?: TaskStatus
-    effortEstimate?: number
+    valueTier?: ValueTier
     drainType?: string
   }) => Promise<void>
 }
@@ -42,7 +43,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [effortEstimate, setEffortEstimate] = useState(5)
+  const [valueTier, setValueTier] = useState<ValueTier>(DEFAULT_VALUE_TIER)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -62,7 +63,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
       clientName: selectedClient?.name,
       description: description.trim() || undefined,
       status,
-      effortEstimate,
+      valueTier,
       drainType,
     })
 
@@ -73,7 +74,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
         clientName: selectedClient?.name, // Pass clientName for immediate display
         description: description.trim() || undefined,
         status,
-        effortEstimate,
+        valueTier,
         drainType,
       })
       console.log("[v0] NewMoveDialog: submit successful")
@@ -82,7 +83,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
       setClientId(undefined)
       setDescription("")
       setStatus("backlog")
-      setEffortEstimate(2)
+      setValueTier(DEFAULT_VALUE_TIER)
       setDrainType("shallow")
       onClose()
     } catch (error) {
@@ -205,12 +206,12 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                   </div>
                 </div>
 
-                {/* Complexity Points */}
+                {/* Value Tier */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-3">Complexity</label>
-                  <ComplexitySlider
-                    value={effortEstimate}
-                    onChange={setEffortEstimate}
+                  <label className="block text-sm font-medium text-zinc-400 mb-3">Value</label>
+                  <ValueTierSelector
+                    value={valueTier}
+                    onChange={setValueTier}
                   />
                 </div>
 
