@@ -3,9 +3,10 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { X, Wand2, GitBranch, Loader2, Square, CheckSquare, Trash2 } from "lucide-react"
-import { ComplexitySlider, getComplexityInfo } from "@/components/complexity-slider"
+import { ValueTierSelector } from "@/components/value-tier-selector"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClients, type TaskStatus, type Task, type Subtask } from "@/hooks/use-tasks"
+import { type ValueTier, DEFAULT_VALUE_TIER, VALUE_TIER_CONFIG, effortToValueTier } from "@/lib/domain/task-types"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +29,7 @@ interface EditTaskDialogProps {
       clientId?: number
       description?: string
       status?: TaskStatus
-      effortEstimate?: number
+      valueTier?: ValueTier
       drainType?: string
     },
   ) => Promise<void>
@@ -49,23 +50,6 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: "today", label: "Today" },
 ]
 
-function typeToPoints(type: Task["type"]): number {
-  switch (type) {
-    case "Quick":
-      return 2
-    case "Routine":
-      return 4
-    case "Meaningful":
-      return 6
-    case "Heavy":
-      return 8
-    case "Major":
-      return 10
-    default:
-      return 4
-  }
-}
-
 export function EditTaskDialog({
   open,
   task,
@@ -81,7 +65,7 @@ export function EditTaskDialog({
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [effortEstimate, setEffortEstimate] = useState(3)
+  const [valueTier, setValueTier] = useState<ValueTier>(DEFAULT_VALUE_TIER)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -122,8 +106,9 @@ export function EditTaskDialog({
       setClientId(task.clientId)
       setDescription(task.description || "")
       setStatus(task.status === "done" ? "today" : task.status)
-      setEffortEstimate(typeToPoints(task.type))
-      setDrainType("shallow")
+      // Use valueTier if present, otherwise convert from legacy effortEstimate
+      setValueTier((task.valueTier as ValueTier) || effortToValueTier(task.effortEstimate))
+      setDrainType(task.drainType || "shallow")
       setSubtasks(task.subtasks || [])
     }
   }, [task])
@@ -141,7 +126,7 @@ export function EditTaskDialog({
         clientId,
         description: description.trim() || undefined,
         status,
-        effortEstimate,
+        valueTier,
         drainType,
       })
       onClose()
@@ -157,6 +142,7 @@ export function EditTaskDialog({
     setIsRewriting(true)
     try {
       const selectedClient = clients.find((c) => c.id === clientId)
+      const tierConfig = VALUE_TIER_CONFIG[valueTier]
       const res = await fetch("/api/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,8 +150,8 @@ export function EditTaskDialog({
           text: title,
           context: {
             client: selectedClient?.name,
-            type: getComplexityInfo(effortEstimate).label,
-            points: effortEstimate,
+            valueTier: valueTier,
+            tierLabel: tierConfig.label,
           },
         }),
       })
@@ -198,7 +184,7 @@ export function EditTaskDialog({
           title,
           description,
           clientName: selectedClient?.name,
-          effortEstimate,
+          valueTier,
         }),
       })
       if (!res.ok) {
@@ -376,13 +362,13 @@ export function EditTaskDialog({
                     </div>
                   </div>
 
-                  {/* Complexity Points */}
+                  {/* Value Tier */}
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-3">Complexity</label>
-                    <ComplexitySlider
-                      value={effortEstimate}
-                      onChange={setEffortEstimate}
-                      aiEstimate={task?.pointsAiGuess}
+                    <label className="block text-sm font-medium text-zinc-400 mb-3">Value</label>
+                    <ValueTierSelector
+                      value={valueTier}
+                      onChange={setValueTier}
+                      aiSuggestion={task?.valueTier as ValueTier | null}
                     />
                   </div>
 

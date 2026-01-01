@@ -8,11 +8,13 @@ import {
   type BackendTaskStatus,
   type FrontendTaskStatus,
   type TaskSizeType,
+  type ValueTier,
   STATUS_TO_FRONTEND,
   STATUS_TO_BACKEND,
   effortToSize,
   pointsToSize,
   sizeToEffort,
+  getValueTierPoints,
 } from "@/lib/domain"
 
 // =============================================================================
@@ -29,6 +31,7 @@ interface BackendTask {
   title: string
   description: string | null
   status: BackendTaskStatus
+  valueTier: string | null
   effortEstimate: number | null
   effortActual: number | null
   drainType: string | null
@@ -52,6 +55,7 @@ export interface Task {
   title: string
   description?: string
   type: TaskSizeType
+  valueTier?: ValueTier
   effortEstimate?: number
   status: FrontendTaskStatus
   subtasks?: Subtask[]
@@ -60,7 +64,7 @@ export interface Task {
   completedAt?: number
   sortOrder?: number
   drainType?: string
-  points?: number // Final points (user-adjusted or AI guess)
+  points?: number // Final points from value tier
   pointsAiGuess?: number
   pointsFinal?: number
 }
@@ -140,26 +144,35 @@ export function useTasks() {
 
       const tasksToUse = mergeWithMockData(backendTasks, MOCK_TASKS as BackendTask[])
 
-      const mappedTasks = tasksToUse.map((task) => ({
-        id: task.id.toString(),
-        client: task.clientName ?? (task.client ? task.client.name : ""),
-        clientId: task.clientId ?? undefined,
-        clientColor: task.client?.color ?? undefined,
-        title: task.title,
-        description: task.description ?? undefined,
-        type: pointsToSize(task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate),
-        effortEstimate: task.effortEstimate ?? 2,
-        status: STATUS_TO_FRONTEND[task.status],
-        subtasks: (task.subtasks as Subtask[]) ?? [],
-        tasksCount: undefined,
-        ageLabel: getAgeLabel(task.createdAt),
-        completedAt: task.completedAt ? new Date(task.completedAt).getTime() : undefined,
-        sortOrder: task.sortOrder ?? undefined,
-        drainType: task.drainType ?? undefined,
-        points: task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate ?? undefined,
-        pointsAiGuess: task.pointsAiGuess ?? undefined,
-        pointsFinal: task.pointsFinal ?? undefined,
-      }))
+      const mappedTasks = tasksToUse.map((task) => {
+        // Calculate points from valueTier (preferred) or fall back to legacy fields
+        const valueTier = task.valueTier as ValueTier | undefined
+        const points = valueTier
+          ? getValueTierPoints(valueTier)
+          : (task.pointsFinal ?? task.pointsAiGuess ?? task.effortEstimate ?? 2)
+
+        return {
+          id: task.id.toString(),
+          client: task.clientName ?? (task.client ? task.client.name : ""),
+          clientId: task.clientId ?? undefined,
+          clientColor: task.client?.color ?? undefined,
+          title: task.title,
+          description: task.description ?? undefined,
+          type: pointsToSize(points),
+          valueTier,
+          effortEstimate: task.effortEstimate ?? 2,
+          status: STATUS_TO_FRONTEND[task.status],
+          subtasks: (task.subtasks as Subtask[]) ?? [],
+          tasksCount: undefined,
+          ageLabel: getAgeLabel(task.createdAt),
+          completedAt: task.completedAt ? new Date(task.completedAt).getTime() : undefined,
+          sortOrder: task.sortOrder ?? undefined,
+          drainType: task.drainType ?? undefined,
+          points,
+          pointsAiGuess: task.pointsAiGuess ?? undefined,
+          pointsFinal: task.pointsFinal ?? undefined,
+        }
+      })
 
       if (isPreviewEnvironment()) {
         const localTasksData = getLocalTasks()
@@ -333,13 +346,15 @@ export function useTasks() {
     clientName?: string
     description?: string
     status?: TaskStatus
-    effortEstimate?: number
+    valueTier?: ValueTier
     drainType?: string
     pointsAiGuess?: number
     pointsFinal?: number
   }) => {
     const backendStatus = taskData.status ? STATUS_TO_BACKEND[taskData.status] : "backlog"
     const targetStatus = taskData.status || "backlog"
+    const valueTier = taskData.valueTier || "progress"
+    const points = getValueTierPoints(valueTier)
 
     const optimisticId = `temp-${Date.now()}`
     const optimisticTask: Task = {
@@ -349,12 +364,12 @@ export function useTasks() {
       clientColor: undefined,
       title: taskData.title,
       description: taskData.description,
-      type: pointsToSize(taskData.pointsFinal ?? taskData.pointsAiGuess ?? taskData.effortEstimate ?? 2),
-      effortEstimate: taskData.effortEstimate || 2,
+      type: pointsToSize(points),
+      valueTier,
       status: targetStatus,
       ageLabel: "today",
       sortOrder: -1,
-      points: taskData.pointsFinal ?? taskData.pointsAiGuess ?? taskData.effortEstimate,
+      points,
       pointsAiGuess: taskData.pointsAiGuess,
       pointsFinal: taskData.pointsFinal,
     }
@@ -374,11 +389,9 @@ export function useTasks() {
           clientId: taskData.clientId || null,
           description: taskData.description || null,
           status: backendStatus,
-          effortEstimate: taskData.effortEstimate || 2,
+          valueTier,
           drainType: taskData.drainType || null,
           sortOrder: -1,
-          pointsAiGuess: taskData.pointsAiGuess || null,
-          pointsFinal: taskData.pointsFinal || null,
         }),
       })
 
@@ -428,11 +441,12 @@ export function useTasks() {
       clientId?: number
       description?: string
       status?: TaskStatus
-      effortEstimate?: number
+      valueTier?: ValueTier
       drainType?: string
     },
   ) => {
     const backendStatus = taskData.status ? STATUS_TO_BACKEND[taskData.status] : undefined
+    const points = taskData.valueTier ? getValueTierPoints(taskData.valueTier) : undefined
 
     mutate((current: Task[] | undefined) => {
       if (!current) return current
@@ -444,8 +458,9 @@ export function useTasks() {
           clientId: taskData.clientId ?? t.clientId,
           description: taskData.description ?? t.description,
           status: taskData.status ?? t.status,
-          type: taskData.effortEstimate ? pointsToSize(taskData.effortEstimate) : t.type,
-          effortEstimate: taskData.effortEstimate ?? t.effortEstimate,
+          valueTier: taskData.valueTier ?? t.valueTier,
+          type: points ? pointsToSize(points) : t.type,
+          points: points ?? t.points,
         }
       })
     }, false)
@@ -458,7 +473,7 @@ export function useTasks() {
           clientId: taskData.clientId,
           description: taskData.description,
           status: backendStatus,
-          effortEstimate: taskData.effortEstimate,
+          valueTier: taskData.valueTier,
           drainType: taskData.drainType,
         }),
       })

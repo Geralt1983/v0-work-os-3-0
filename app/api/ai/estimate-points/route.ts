@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
+import { VALUE_POINTS, type ValueTier } from "@/lib/domain/task-types"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -26,14 +27,29 @@ function detectClient(text: string): string | null {
   return null
 }
 
-const POINTS_PROMPT = `You are a task points estimator for a healthcare operations consultant. Estimate the points value of tasks on a 1-10 scale based on time, cognitive load, and stakes.
+const VALUE_TIER_PROMPT = `You are a task value estimator for a healthcare operations consultant. Categorize tasks by the VALUE they produce, not time spent.
 
-POINTS SCALE:
-1-2: Quick (<5 min) - forward email, check status, quick acknowledgment
-3-4: Routine (15-30 min) - simple reply, small document review, standard update
-5-6: Meaningful (30-60 min) - documentation, coordination across parties, research
-7-8: Heavy lift (1-2 hours) - large order set review, complex issue resolution, training prep
-9-10: Major (2+ hours, high stakes) - go-live support, escalation handling, critical decisions
+VALUE TIERS (choose ONE):
+
+1. "checkbox" (1 point) - Had to happen, low stakes
+   - Admin tasks: scheduling, email forwards, status checks
+   - Quick acknowledgments, confirmations
+   - Routine maintenance, filing
+
+2. "progress" (2 points) - Moved something forward
+   - Research, drafting, preparation work
+   - Internal coordination, notes, updates
+   - Incremental work on larger deliverables
+
+3. "deliverable" (4 points) - Client sees output
+   - Documents sent to client: specs, proposals, reports
+   - Completed reviews with recommendations
+   - Training materials or presentations delivered
+
+4. "milestone" (7 points) - Major checkpoint
+   - Go-live events, launches
+   - Critical issue resolutions
+   - Major project phase completions
 
 TASK TO ANALYZE:
 "{input}"
@@ -41,8 +57,8 @@ TASK TO ANALYZE:
 Respond in JSON format:
 {
   "title": "Clean, actionable task title (imperative verb, specific)",
-  "points": <number 1-10>,
-  "reasoning": "Brief explanation of points estimate",
+  "valueTier": "checkbox" | "progress" | "deliverable" | "milestone",
+  "reasoning": "Brief explanation: what value does completing this produce?",
   "confidence": <number 0.0-1.0>
 }
 
@@ -50,7 +66,13 @@ Rules for title cleanup:
 - Start with action verb (Review, Send, Update, Complete, Schedule, etc.)
 - Remove filler words and context that's obvious
 - Keep client/project name if mentioned
-- Be specific but concise (5-10 words ideal)`
+- Be specific but concise (5-10 words ideal)
+
+KEY QUESTION: "When this task is done, what VALUE exists that didn't before?"
+- If nothing visible changes: checkbox
+- If progress was made but nothing delivered: progress
+- If client received something: deliverable
+- If a major goal was achieved: milestone`
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,7 +93,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: POINTS_PROMPT.replace("{input}", raw_input),
+          content: VALUE_TIER_PROMPT.replace("{input}", raw_input),
         },
       ],
       response_format: { type: "json_object" },
@@ -86,18 +108,29 @@ export async function POST(request: NextRequest) {
 
     const parsed = JSON.parse(content)
 
+    // Validate and normalize value tier
+    const validTiers: ValueTier[] = ["checkbox", "progress", "deliverable", "milestone"]
+    const valueTier: ValueTier = validTiers.includes(parsed.valueTier)
+      ? parsed.valueTier
+      : "progress" // Default to progress if invalid
+
+    const points = VALUE_POINTS[valueTier]
+
     return NextResponse.json({
       client: detectedClient,
       title: parsed.title,
-      points: Math.min(10, Math.max(1, parsed.points)),
+      valueTier,
+      points,
       reasoning: parsed.reasoning,
       confidence: parsed.confidence,
       raw_input,
+      // Legacy compatibility
+      pointsAiGuess: points,
     })
   } catch (error) {
-    console.error("Points estimation error:", error)
+    console.error("Value tier estimation error:", error)
     return NextResponse.json(
-      { error: "Failed to estimate points" },
+      { error: "Failed to estimate value tier" },
       { status: 500 }
     )
   }

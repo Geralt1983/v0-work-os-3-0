@@ -9,6 +9,9 @@ import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
+import { DailyProgressBar } from "@/components/daily-progress-bar"
+import { ValueTierBadge } from "@/components/value-tier-selector"
+import { getTaskPoints, getValueTierConfig, type ValueTier } from "@/lib/domain/task-types"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -401,6 +404,10 @@ export default function MovesPage() {
         </div>
 
         <div className="mt-4">
+          <DailyProgressBar />
+        </div>
+
+        <div className="mt-4">
           <DoneToday />
         </div>
 
@@ -601,24 +608,12 @@ export default function MovesPage() {
                         {/* Title - grows to fill space, truncate with ellipsis */}
                         <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
 
-                        {/* Points */}
-                        <span
-                          className={`text-xs w-10 shrink-0 text-right font-medium ${
-                            task.points
-                              ? task.points <= 2
-                                ? "text-emerald-400"
-                                : task.points <= 4
-                                  ? "text-green-400"
-                                  : task.points <= 6
-                                    ? "text-yellow-400"
-                                    : task.points <= 8
-                                      ? "text-orange-400"
-                                      : "text-red-400"
-                              : "text-zinc-500"
-                          }`}
-                        >
-                          {task.points || "—"}
-                        </span>
+                        {/* Value tier badge */}
+                        <ValueTierBadge
+                          tier={(task.valueTier as ValueTier) || "progress"}
+                          showPoints
+                          className="shrink-0"
+                        />
 
                         {/* Actions */}
                         <div className="flex items-center gap-1 shrink-0">
@@ -810,16 +805,8 @@ function TaskCard({
   }
 
   const isCompact = variant === "compact"
-
-  // Points color based on 1-10 scale
-  const getPointsColor = (value: number | undefined) => {
-    if (!value) return "text-zinc-500"
-    if (value <= 2) return "text-emerald-400"
-    if (value <= 4) return "text-green-400"
-    if (value <= 6) return "text-yellow-400"
-    if (value <= 8) return "text-orange-400"
-    return "text-red-400"
-  }
+  const taskPoints = getTaskPoints(task)
+  const tierConfig = getValueTierConfig(task.valueTier)
 
   // Status-based card styling
   const getStatusStyles = () => {
@@ -918,26 +905,16 @@ function TaskCard({
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
         <div className="flex items-center gap-2">
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              task.type === "Quick"
-                ? "bg-emerald-500/20 text-emerald-400"
-                : task.type === "Routine"
-                  ? "bg-green-500/20 text-green-400"
-                  : task.type === "Meaningful"
-                    ? "bg-yellow-500/20 text-yellow-400"
-                    : task.type === "Heavy"
-                      ? "bg-orange-500/20 text-orange-400"
-                      : task.type === "Major"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-zinc-700 text-zinc-400"
-            }`}
-          >
-            {task.type}
+          {task.valueTier ? (
+            <ValueTierBadge tier={task.valueTier as ValueTier} showPoints />
+          ) : (
+            <span className={`text-xs px-2 py-0.5 rounded-full ${tierConfig.bgColor} ${tierConfig.color}`}>
+              {tierConfig.label}
+            </span>
+          )}
+          <span className={`text-sm font-medium ${tierConfig.color}`}>
+            {taskPoints}pt
           </span>
-          {task.points ? (
-            <span className={`text-sm font-medium ${getPointsColor(task.points)}`}>{task.points}pt</span>
-          ) : null}
         </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>
