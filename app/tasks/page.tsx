@@ -367,14 +367,12 @@ export default function MovesPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
-            <p className="hidden sm:block text-sm text-white/50 mt-0.5">One task per client, every day.</p>
+            <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
           </div>
-          <div className="flex-shrink-0 pt-1">
-            <WorkOSNav />
-          </div>
+          <WorkOSNav />
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
@@ -914,12 +912,9 @@ function TaskCard({
             <ValueTierBadge tier={task.valueTier as ValueTier} showPoints />
           ) : (
             <span className={`text-xs px-2 py-0.5 rounded-full ${tierConfig.bgColor} ${tierConfig.color}`}>
-              {tierConfig.label}
+              {tierConfig.label} · {taskPoints}pt
             </span>
           )}
-          <span className={`text-sm font-medium ${tierConfig.color}`}>
-            {taskPoints}pt
-          </span>
         </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>
