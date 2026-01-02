@@ -119,8 +119,8 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
               className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-white">New Move</h2>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                <h2 className="text-base font-semibold text-white">New Move</h2>
                 <button
                   type="button"
                   onClick={onClose}
@@ -132,37 +132,37 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
               </div>
 
               {/* Body */}
-              <div className="px-6 py-5 space-y-5">
+              <div className="px-4 py-3 space-y-3">
                 {submitError && (
-                  <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                  <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
                     {submitError}
                   </div>
                 )}
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Title</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="What needs to be done?"
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     autoFocus
                   />
                 </div>
 
                 {/* Client */}
                 <div>
-                  <label htmlFor="client-select" className="block text-sm font-medium text-zinc-400 mb-2">
+                  <label htmlFor="client-select" className="block text-xs font-medium text-zinc-400 mb-1.5">
                     Client <span className="text-red-400">*</span>
                   </label>
                   {clientsLoading ? (
-                    <div className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500">
+                    <div className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-500 text-sm">
                       Loading clients...
                     </div>
                   ) : clientsError ? (
-                    <div className="w-full px-4 py-3 bg-zinc-800 border border-red-700 rounded-xl text-red-400">
+                    <div className="w-full px-3 py-2 bg-zinc-800 border border-red-700 rounded-lg text-red-400 text-sm">
                       Error loading clients
                     </div>
                   ) : (
@@ -171,7 +171,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
                       aria-label="Select client"
-                      className={`w-full px-4 py-3 bg-zinc-800 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer ${
+                      className={`w-full px-3 py-2 bg-zinc-800 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer ${
                         !clientId ? "border-red-500" : "border-zinc-700"
                       }`}
                     >
@@ -187,14 +187,14 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Status</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Status</label>
                   <div className="flex gap-2">
                     {statusOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setStatus(opt.value)}
-                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                        className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                           status === opt.value
                             ? "bg-indigo-500 text-white"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
@@ -208,31 +208,31 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Value Tier */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-3">Value</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Value</label>
                   <ValueTierSelector
                     value={valueTier}
                     onChange={setValueTier}
+                    compact
                   />
                 </div>
 
                 {/* Drain Type */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Energy Type</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Energy Type</label>
+                  <div className="flex gap-2">
                     {drainOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setDrainType(opt.value)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 ${
                           drainType === opt.value
                             ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
-                        <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${opt.color}`} />
                         {opt.label}
-                        <span className="text-xs opacity-70">{opt.description}</span>
                       </button>
                     ))}
                   </div>
@@ -240,34 +240,34 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">
                     Description <span className="text-zinc-600">(optional)</span>
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add any notes or context..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                    rows={2}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
                   />
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-zinc-800 flex justify-end gap-3">
+              <div className="px-4 py-3 border-t border-zinc-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!title.trim() || !clientId || isSubmitting}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-4 py-2 rounded-lg text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {isSubmitting ? "Creating..." : "Create Move"}
+                  {isSubmitting ? "Creating..." : "Create"}
                 </button>
               </div>
             </form>
