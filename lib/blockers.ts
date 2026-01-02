@@ -6,7 +6,7 @@
 import { getDb } from "@/lib/db"
 import { clientMemory, clients, tasks } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
-import { BLOCKER_SKIP_THRESHOLD } from "@/lib/constants"
+import { BLOCKER_SKIP_THRESHOLD, isRealClient } from "@/lib/constants"
 import { getESTDateString } from "@/lib/domain/timezone"
 
 // -----------------------------------------------------------------------------
@@ -183,6 +183,9 @@ export async function getClientsNeedingBlockerPrompt(): Promise<BlockerInfo[]> {
   const results: BlockerInfo[] = []
 
   for (const client of allClients) {
+    // Skip non-client categories (Revenue, General Admin)
+    if (!isRealClient(client.name)) continue
+
     const [memory] = await db
       .select()
       .from(clientMemory)
@@ -255,6 +258,9 @@ export async function getClientsWithBlockers(): Promise<BlockerInfo[]> {
   const results: BlockerInfo[] = []
 
   for (const client of allClients) {
+    // Skip non-client categories (Revenue, General Admin)
+    if (!isRealClient(client.name)) continue
+
     const [memory] = await db
       .select()
       .from(clientMemory)

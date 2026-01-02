@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import useSWR from "swr"
 import { useTasks } from "@/hooks/use-tasks"
 import {
   getTaskPoints,
@@ -9,8 +10,11 @@ import {
   VALUE_TIER_CONFIG,
   type ValueTier
 } from "@/lib/domain/task-types"
-import { AlertTriangle, Trophy, Target, TrendingUp } from "lucide-react"
+import { isRealClient } from "@/lib/constants"
+import { AlertTriangle, Trophy, Target, TrendingUp, Palmtree } from "lucide-react"
 import { motion } from "framer-motion"
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 interface DailyProgressBarProps {
   className?: string
@@ -18,6 +22,10 @@ interface DailyProgressBarProps {
 
 export function DailyProgressBar({ className }: DailyProgressBarProps) {
   const { tasks } = useTasks()
+  const { data: holidayData } = useSWR("/api/holidays", fetcher)
+
+  const isHoliday = holidayData?.isTodayHoliday ?? false
+  const holidayInfo = holidayData?.todayHolidayInfo
 
   // Calculate today's completed tasks and points
   const { pointsEarned, completedCount, staleClients } = useMemo(() => {
@@ -32,9 +40,10 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
     // Find stale clients (5+ days without activity)
     // For now, calculate from task data - later this can come from the staleness API
+    // Filter out non-client categories (Revenue, General Admin)
     const clientLastActivity = new Map<string, number>()
     tasks.forEach((t) => {
-      if (t.status === "done" && t.completedAt && t.client) {
+      if (t.status === "done" && t.completedAt && t.client && isRealClient(t.client)) {
         const existing = clientLastActivity.get(t.client) || 0
         const taskTime = new Date(t.completedAt).getTime()
         if (taskTime > existing) {
@@ -61,11 +70,13 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
   const progressPercent = getPointsProgress(pointsEarned, DAILY_TARGET_POINTS)
   const isComplete = pointsEarned >= DAILY_TARGET_POINTS
-  const hasStaleBlockers = staleClients.length > 0
-  const canCompleteDay = isComplete && !hasStaleBlockers
+  // On holidays, stale blockers don't apply
+  const hasStaleBlockers = !isHoliday && staleClients.length > 0
+  const canCompleteDay = isHoliday || (isComplete && !hasStaleBlockers)
 
   // Determine progress bar color
   const getProgressColor = () => {
+    if (isHoliday) return "from-cyan-500 to-teal-500"
     if (hasStaleBlockers) return "from-amber-500 to-amber-600"
     if (isComplete) return "from-emerald-500 to-emerald-600"
     if (progressPercent >= 75) return "from-blue-500 to-indigo-500"
@@ -75,6 +86,7 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
   // Determine status message
   const getStatusMessage = () => {
+    if (isHoliday) return holidayInfo?.description ? `🏝️ ${holidayInfo.description}` : "🏝️ Holiday Mode"
     if (canCompleteDay) return "Day complete! 🎉"
     if (hasStaleBlockers) return `Stale wall: ${staleClients.length} client${staleClients.length > 1 ? "s" : ""} need attention`
     if (isComplete) return "Target reached!"
@@ -87,24 +99,31 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {canCompleteDay ? (
+          {isHoliday ? (
+            <Palmtree className="h-5 w-5 text-cyan-400" />
+          ) : canCompleteDay ? (
             <Trophy className="h-5 w-5 text-emerald-400" />
           ) : hasStaleBlockers ? (
             <AlertTriangle className="h-5 w-5 text-amber-400" />
           ) : (
             <Target className="h-5 w-5 text-indigo-400" />
           )}
-          <span className="font-semibold text-zinc-100">Daily Progress</span>
+          <span className="font-semibold text-zinc-100">
+            {isHoliday ? "Holiday" : "Daily Progress"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-2xl font-bold ${
+            isHoliday ? "text-cyan-400" :
             canCompleteDay ? "text-emerald-400" :
             hasStaleBlockers ? "text-amber-400" :
             "text-zinc-100"
           }`}>
-            {pointsEarned}
+            {isHoliday ? "Off" : pointsEarned}
           </span>
-          <span className="text-zinc-500">/ {DAILY_TARGET_POINTS} pts</span>
+          {!isHoliday && (
+            <span className="text-zinc-500">/ {DAILY_TARGET_POINTS} pts</span>
+          )}
         </div>
       </div>
 
@@ -112,30 +131,35 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
       <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${Math.min(progressPercent, 100)}%` }}
+          animate={{ width: isHoliday ? "100%" : `${Math.min(progressPercent, 100)}%` }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProgressColor()} rounded-full`}
         />
-        {/* Target marker */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-zinc-600"
-          style={{ left: "100%" }}
-        />
+        {/* Target marker - hide on holidays */}
+        {!isHoliday && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-zinc-600"
+            style={{ left: "100%" }}
+          />
+        )}
       </div>
 
       {/* Status row */}
       <div className="flex items-center justify-between mt-3">
         <span className={`text-sm ${
+          isHoliday ? "text-cyan-400" :
           canCompleteDay ? "text-emerald-400" :
           hasStaleBlockers ? "text-amber-400" :
           "text-zinc-400"
         }`}>
           {getStatusMessage()}
         </span>
-        <div className="flex items-center gap-1 text-xs text-zinc-500">
-          <TrendingUp className="h-3 w-3" />
-          {completedCount} task{completedCount !== 1 ? "s" : ""}
-        </div>
+        {!isHoliday && (
+          <div className="flex items-center gap-1 text-xs text-zinc-500">
+            <TrendingUp className="h-3 w-3" />
+            {completedCount} task{completedCount !== 1 ? "s" : ""}
+          </div>
+        )}
       </div>
 
       {/* Stale wall warning */}

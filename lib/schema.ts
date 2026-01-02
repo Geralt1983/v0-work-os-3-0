@@ -186,6 +186,16 @@ export const dailyGoals = pgTable("daily_goals", {
 })
 
 // =============================================================================
+// HOLIDAYS
+// =============================================================================
+export const holidays = pgTable("holidays", {
+  id: serial("id").primaryKey(),
+  date: date("date").unique().notNull(),
+  description: text("description"), // Optional label like "Christmas", "Vacation"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// =============================================================================
 // BEHAVIORAL PATTERNS
 // =============================================================================
 export const behavioralPatterns = pgTable("behavioral_patterns", {
@@ -210,6 +220,7 @@ export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>
 export type DailyGoal = InferSelectModel<typeof dailyGoals>
 export type GraveyardTask = InferSelectModel<typeof taskGraveyard>
+export type Holiday = InferSelectModel<typeof holidays>
 export type TaskStatus = "active" | "queued" | "backlog" | "done"
 export type DrainType = "deep" | "shallow" | "admin"
 

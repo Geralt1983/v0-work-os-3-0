@@ -23,6 +23,7 @@ import { CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
+import { HolidayManager } from "@/components/holiday-manager"
 import {
   DndContext,
   DragOverlay,
@@ -417,6 +418,10 @@ export default function MovesPage() {
 
         <div className="mt-4 hidden lg:block">
           <SynapsePicks />
+        </div>
+
+        <div className="mt-4 hidden lg:block">
+          <HolidayManager />
         </div>
 
         <div className="hidden lg:flex items-center justify-between gap-2 mt-4">

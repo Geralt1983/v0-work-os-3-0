@@ -6,9 +6,10 @@
 import { getDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq, ne, desc, and, gte } from "drizzle-orm"
-import { STALE_THRESHOLD_DAYS, DAILY_TARGET_POINTS } from "@/lib/constants"
+import { STALE_THRESHOLD_DAYS, DAILY_TARGET_POINTS, isRealClient } from "@/lib/constants"
 import { getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 import { calculateTotalPoints } from "@/lib/domain/task-types"
+import { getAdjustedStaleDays } from "@/lib/holidays"
 
 // -----------------------------------------------------------------------------
 // Types
@@ -54,6 +55,9 @@ export async function getClientStaleness(): Promise<Map<string, number>> {
   const now = new Date()
 
   for (const client of allClients) {
+    // Skip non-client categories (Revenue, General Admin)
+    if (!isRealClient(client.name)) continue
+
     // Get most recent completed task for this client
     const [lastTask] = await db
       .select({ completedAt: tasks.completedAt })
@@ -68,8 +72,8 @@ export async function getClientStaleness(): Promise<Map<string, number>> {
     let daysSinceLastTask: number
 
     if (lastTask?.completedAt) {
-      const diffMs = now.getTime() - lastTask.completedAt.getTime()
-      daysSinceLastTask = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      // Use holiday-adjusted days (excludes holidays from the count)
+      daysSinceLastTask = await getAdjustedStaleDays(lastTask.completedAt, now)
     } else {
       // Client has never had a completed task - treat as maximally stale
       daysSinceLastTask = 999
@@ -100,6 +104,9 @@ export async function getClientStalenessDetails(): Promise<ClientStalenessInfo[]
   const now = new Date()
 
   for (const client of allClients) {
+    // Skip non-client categories (Revenue, General Admin)
+    if (!isRealClient(client.name)) continue
+
     // Get most recent completed task for this client
     const [lastTask] = await db
       .select({ completedAt: tasks.completedAt })
@@ -116,8 +123,8 @@ export async function getClientStalenessDetails(): Promise<ClientStalenessInfo[]
 
     if (lastTask?.completedAt) {
       lastCompletedAt = lastTask.completedAt
-      const diffMs = now.getTime() - lastTask.completedAt.getTime()
-      daysSinceLastTask = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      // Use holiday-adjusted days (excludes holidays from the count)
+      daysSinceLastTask = await getAdjustedStaleDays(lastTask.completedAt, now)
     } else {
       daysSinceLastTask = 999
     }

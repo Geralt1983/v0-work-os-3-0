@@ -6,6 +6,17 @@ export const DAILY_TARGET_POINTS = 16 // Ideal daily goal (matches lib/domain/ta
 export const STALE_THRESHOLD_DAYS = 5 // Days without activity before client is considered "stale"
 export const BLOCKER_SKIP_THRESHOLD = 3 // Consecutive skips before asking "what's blocking?"
 
+// Non-client categories - these are task categories, not real clients
+// They don't count toward stale wall or require daily attention
+export const NON_CLIENT_CATEGORIES = ["Revenue", "General Admin"] as const
+export type NonClientCategory = (typeof NON_CLIENT_CATEGORIES)[number]
+
+/** Check if a client name is a real client (not a category like Revenue or General Admin) */
+export function isRealClient(clientName: string | null | undefined): boolean {
+  if (!clientName) return false
+  return !NON_CLIENT_CATEGORIES.includes(clientName as NonClientCategory)
+}
+
 // Weekly goals (points-based)
 export const WEEKLY_MINIMUM_POINTS = 60 // 5 workdays × 12 minimum
 export const WEEKLY_TARGET_POINTS = 80 // 5 workdays × 16 target
