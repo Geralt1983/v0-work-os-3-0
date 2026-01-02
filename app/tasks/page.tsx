@@ -420,7 +420,7 @@ export default function MovesPage() {
           <SynapsePicks />
         </div>
 
-        <div className="mt-4 hidden lg:block">
+        <div className="mt-4">
           <HolidayManager />
         </div>
 
