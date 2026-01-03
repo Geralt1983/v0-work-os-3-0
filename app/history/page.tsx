@@ -8,9 +8,9 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl">Completion History</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-zinc-100 sm:text-2xl md:text-3xl">History</h1>
             <p className="hidden sm:block text-sm text-white/60 mt-1">Track your progress and patterns over time.</p>
           </div>
           <WorkOSNav />

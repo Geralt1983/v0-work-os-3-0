@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { useState, memo, useCallback } from "react"
-import { getTaskPoints, getValueTierConfig, DAILY_TARGET_POINTS, type ValueTier } from "@/lib/domain/task-types"
-import { ValueTierBadge } from "@/components/value-tier-selector"
+import { getTaskPoints, getValueTierConfig, DAILY_TARGET_POINTS } from "@/lib/domain/task-types"
 
 // Memoized task item to prevent re-renders when other tasks change
 const TaskItem = memo(function TaskItem({
@@ -38,13 +37,9 @@ const TaskItem = memo(function TaskItem({
         >
           {task.client}
         </Badge>
-        {task.valueTier ? (
-          <ValueTierBadge tier={task.valueTier as ValueTier} showPoints className="text-xs" />
-        ) : (
-          <span className={`text-xs font-medium w-8 text-right ${tierConfig.color}`}>
-            {points}pt
-          </span>
-        )}
+        <span className={`text-xs font-medium tabular-nums ${tierConfig.color}`}>
+          {points}pt{points > 1 ? "s" : ""}
+        </span>
       </div>
     </div>
   )

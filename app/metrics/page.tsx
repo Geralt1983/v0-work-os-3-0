@@ -223,7 +223,7 @@ export default function MetricsDashboard() {
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <PageHeader title="Metrics" description="See your pacing, momentum, and weekly flow." />
           <WorkOSNav />
         </div>

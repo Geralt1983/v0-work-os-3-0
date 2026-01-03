@@ -88,20 +88,6 @@ export function ValueTierSelector({
         })}
       </div>
 
-      {/* Selected tier summary */}
-      {!compact && (
-        <div className="flex items-center justify-between px-1 text-xs">
-          <span className="text-zinc-500">
-            Selected: <span className={VALUE_TIER_CONFIG[currentTier].color}>{VALUE_TIER_CONFIG[currentTier].label}</span>
-          </span>
-          <span className={cn(
-            "font-medium tabular-nums",
-            VALUE_TIER_CONFIG[currentTier].color
-          )}>
-            +{VALUE_POINTS[currentTier]} points
-          </span>
-        </div>
-      )}
     </div>
   )
 }

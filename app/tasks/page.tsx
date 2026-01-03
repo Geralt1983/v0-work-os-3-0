@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
 import { DailyProgressBar } from "@/components/daily-progress-bar"
-import { ValueTierBadge } from "@/components/value-tier-selector"
 import { getTaskPoints, getValueTierConfig, type ValueTier } from "@/lib/domain/task-types"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
@@ -367,9 +366,9 @@ export default function MovesPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-zinc-100 sm:text-2xl md:text-3xl tracking-tight">Tasks</h1>
             <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
           </div>
           <WorkOSNav />
@@ -611,12 +610,16 @@ export default function MovesPage() {
                         {/* Title - grows to fill space, truncate with ellipsis */}
                         <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
 
-                        {/* Value tier badge */}
-                        <ValueTierBadge
-                          tier={(task.valueTier as ValueTier) || "progress"}
-                          showPoints
-                          className="shrink-0"
-                        />
+                        {/* Points badge */}
+                        {(() => {
+                          const points = getTaskPoints(task)
+                          const tierConfig = getValueTierConfig(task.valueTier)
+                          return (
+                            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium tabular-nums ${tierConfig.bgColor} ${tierConfig.color}`}>
+                              {points}pt{points > 1 ? "s" : ""}
+                            </span>
+                          )
+                        })()}
 
                         {/* Actions */}
                         <div className="flex items-center gap-1 shrink-0">
@@ -908,13 +911,9 @@ function TaskCard({
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
         <div className="flex items-center gap-2">
-          {task.valueTier ? (
-            <ValueTierBadge tier={task.valueTier as ValueTier} showPoints />
-          ) : (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${tierConfig.bgColor} ${tierConfig.color}`}>
-              {tierConfig.label} · {taskPoints}pt
-            </span>
-          )}
+          <span className={`text-xs px-2 py-0.5 rounded-full ${tierConfig.bgColor} ${tierConfig.color} font-medium tabular-nums`}>
+            {taskPoints}pt{taskPoints > 1 ? "s" : ""}
+          </span>
         </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>

@@ -275,7 +275,7 @@ export function EditTaskDialog({
                 className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800">
                   <h2 className="text-base font-semibold text-white">Edit Task</h2>
                   <button
                     type="button"
@@ -288,7 +288,7 @@ export function EditTaskDialog({
                 </div>
 
                 {/* Body */}
-                <div className="px-4 py-3 space-y-3">
+                <div className="px-4 py-2 space-y-2.5">
                   {submitError && (
                     <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
                       {submitError}
@@ -404,8 +404,8 @@ export function EditTaskDialog({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Add any notes or context..."
-                      rows={2}
-                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                      rows={1}
+                      className="w-full px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
                     />
                   </div>
 
@@ -473,7 +473,7 @@ export function EditTaskDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="px-4 py-3 border-t border-zinc-800 flex justify-between gap-2">
+                <div className="px-4 py-2.5 border-t border-zinc-800 flex justify-between gap-2">
                   {onDelete && (
                     <button
                       type="button"
