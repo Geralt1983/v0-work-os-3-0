@@ -204,8 +204,8 @@ export function shouldSendUrgencyNotification(
   // Don't send duplicate in same hour
   if (lastNotificationHour === hour) return false
 
-  // Send at specific hours if behind pace
-  const urgencyHours = [11, 12, 13, 14, 15, 17]
+  // Send at specific hours if behind pace (11am, 1pm, 3pm)
+  const urgencyHours = [11, 13, 15]
 
   if (urgencyHours.includes(hour)) {
     // Send if behind, warning, or critical

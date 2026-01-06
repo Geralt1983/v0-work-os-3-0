@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db"
-import { tasks, dailyLog, dailyGoals } from "@/lib/schema"
-import { eq, and, gte, desc } from "drizzle-orm"
+import { dailyLog, dailyGoals } from "@/lib/schema"
+import { eq } from "drizzle-orm"
 import { sendMilestoneAlert } from "@/lib/notifications"
 import { MILESTONES } from "@/lib/constants"
 
@@ -14,7 +14,14 @@ function getESTDate(): { dateStr: string; startOfDay: Date } {
   return { dateStr, startOfDay }
 }
 
-export async function checkAndSendMilestone() {
+interface MilestoneCheckParams {
+  earnedPoints?: number
+  targetPoints?: number
+  currentStreak?: number
+  taskCount?: number
+}
+
+export async function checkAndSendMilestone(params?: MilestoneCheckParams) {
   console.log("[milestone-checker] Starting check")
 
   try {
@@ -23,21 +30,32 @@ export async function checkAndSendMilestone() {
 
     console.log("[milestone-checker] Checking for date:", dateStr, "startOfDay:", startOfDay.toISOString())
 
-    const completedToday = await db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfDay)))
+    let earnedPoints: number
+    let targetPoints: number
+    let currentStreak: number
+    let taskCount: number
 
-    // Get today's goals for points and streak info
-    const [todayGoal] = await db
-      .select()
-      .from(dailyGoals)
-      .where(eq(dailyGoals.date, dateStr))
-      .limit(1)
+    // Use provided params if available (from task completion), otherwise query database
+    if (params?.earnedPoints !== undefined) {
+      earnedPoints = params.earnedPoints
+      targetPoints = params.targetPoints ?? 18
+      currentStreak = params.currentStreak ?? 0
+      taskCount = params.taskCount ?? 0
+      console.log("[milestone-checker] Using provided params:", { earnedPoints, targetPoints, currentStreak, taskCount })
+    } else {
+      // Get today's goals for points, task count, and streak info
+      const [todayGoal] = await db
+        .select()
+        .from(dailyGoals)
+        .where(eq(dailyGoals.date, dateStr))
+        .limit(1)
 
-    const earnedPoints = todayGoal?.earnedPoints || 0
-    const targetPoints = todayGoal?.targetPoints || 18
-    const currentStreak = todayGoal?.currentStreak || 0
+      earnedPoints = todayGoal?.earnedPoints || 0
+      targetPoints = todayGoal?.targetPoints || 18
+      currentStreak = todayGoal?.currentStreak || 0
+      taskCount = todayGoal?.taskCount || 0
+      console.log("[milestone-checker] Queried from database:", { earnedPoints, targetPoints, currentStreak, taskCount })
+    }
 
     const currentPercent = Math.round((earnedPoints / targetPoints) * 100)
 
@@ -45,7 +63,7 @@ export async function checkAndSendMilestone() {
       earnedPoints,
       targetPoints,
       currentPercent,
-      tasksCount: completedToday.length,
+      taskCount,
       currentStreak,
     })
 
@@ -77,7 +95,7 @@ export async function checkAndSendMilestone() {
 
     const result = await sendMilestoneAlert({
       percent: highestMilestone,
-      taskCount: completedToday.length,
+      taskCount,
       earnedPoints,
       targetPoints,
       currentStreak,
@@ -92,7 +110,7 @@ export async function checkAndSendMilestone() {
         await db.insert(dailyLog).values({
           id: `log-${dateStr}`,
           date: dateStr,
-          completedTasks: completedToday.map((t) => t.id),
+          completedTasks: [],
           notificationsSent: updatedNotifications,
         })
       }
