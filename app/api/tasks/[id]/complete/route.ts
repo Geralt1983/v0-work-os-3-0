@@ -146,7 +146,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // MILESTONE NOTIFICATIONS (25%, 50%, 75%, 100%, etc.)
     // ============================================
     try {
-      await checkAndSendMilestone()
+      // Pass the updated values directly to avoid race condition
+      await checkAndSendMilestone({
+        earnedPoints: newEarnedPoints,
+        targetPoints,
+        currentStreak,
+        taskCount: (existingGoal?.taskCount || 0) + 1,
+      })
       console.log("[MILESTONE] Milestone check completed")
     } catch (milestoneError) {
       console.error("[MILESTONE] Failed to check milestone:", milestoneError)
