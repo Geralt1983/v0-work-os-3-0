@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db"
-import { tasks, dailyLog, dailyGoals } from "@/lib/schema"
-import { eq, and, gte, desc } from "drizzle-orm"
+import { dailyLog, dailyGoals } from "@/lib/schema"
+import { eq } from "drizzle-orm"
 import { sendMilestoneAlert } from "@/lib/notifications"
 import { MILESTONES } from "@/lib/constants"
 
@@ -23,12 +23,7 @@ export async function checkAndSendMilestone() {
 
     console.log("[milestone-checker] Checking for date:", dateStr, "startOfDay:", startOfDay.toISOString())
 
-    const completedToday = await db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.status, "done"), gte(tasks.completedAt, startOfDay)))
-
-    // Get today's goals for points and streak info
+    // Get today's goals for points, task count, and streak info
     const [todayGoal] = await db
       .select()
       .from(dailyGoals)
@@ -38,6 +33,7 @@ export async function checkAndSendMilestone() {
     const earnedPoints = todayGoal?.earnedPoints || 0
     const targetPoints = todayGoal?.targetPoints || 18
     const currentStreak = todayGoal?.currentStreak || 0
+    const taskCount = todayGoal?.taskCount || 0
 
     const currentPercent = Math.round((earnedPoints / targetPoints) * 100)
 
@@ -45,7 +41,7 @@ export async function checkAndSendMilestone() {
       earnedPoints,
       targetPoints,
       currentPercent,
-      tasksCount: completedToday.length,
+      taskCount,
       currentStreak,
     })
 
@@ -77,7 +73,7 @@ export async function checkAndSendMilestone() {
 
     const result = await sendMilestoneAlert({
       percent: highestMilestone,
-      taskCount: completedToday.length,
+      taskCount,
       earnedPoints,
       targetPoints,
       currentStreak,
@@ -92,7 +88,7 @@ export async function checkAndSendMilestone() {
         await db.insert(dailyLog).values({
           id: `log-${dateStr}`,
           date: dateStr,
-          completedTasks: completedToday.map((t) => t.id),
+          completedTasks: [],
           notificationsSent: updatedNotifications,
         })
       }
