@@ -17,6 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const [currentTask] = await db
       .select({
         status: tasks.status,
+        title: tasks.title, // Added for notification
         pointsAiGuess: tasks.pointsAiGuess,
         pointsFinal: tasks.pointsFinal,
       })
@@ -143,8 +144,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // ============================================
-    // MILESTONE NOTIFICATIONS (25%, 50%, 75%, 100%, etc.)
+    // MILESTONE NOTIFICATIONS - DISABLED (Too noisy)
     // ============================================
+    /*
     try {
       // Pass the updated values directly to avoid race condition
       await checkAndSendMilestone({
@@ -156,6 +158,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.log("[MILESTONE] Milestone check completed")
     } catch (milestoneError) {
       console.error("[MILESTONE] Failed to check milestone:", milestoneError)
+    }
+    */
+
+    // ============================================
+    // TASK COMPLETION NOTIFICATION
+    // ============================================
+    try {
+      const points = currentTask?.pointsFinal || currentTask?.pointsAiGuess || 3
+      const taskTitle = currentTask?.title || "Task"
+
+      await sendNotification(`✅ Completed: ${taskTitle} (${points} pts)`, {
+        title: "Task Complete",
+        priority: "default",
+        tags: "white_check_mark"
+      })
+    } catch (e) {
+      console.error("Failed to send completion notification", e)
     }
 
     // ============================================

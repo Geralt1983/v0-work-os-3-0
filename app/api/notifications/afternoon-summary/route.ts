@@ -75,8 +75,8 @@ export async function GET() {
 
     const weeklyDebt = calculateWeeklyDebt(
       weekGoals.map((g) => ({
-        earnedPoints: g.date === todayStr ? todayPoints : g.earnedPoints,
-        targetPoints: g.targetPoints,
+        earnedPoints: g.date === todayStr ? todayPoints : (g.earnedPoints || 0),
+        targetPoints: g.targetPoints || 0,
       }))
     )
 
@@ -90,7 +90,13 @@ export async function GET() {
     // Enhanced afternoon message with debt context
     let message = "🌤️ Afternoon Check-in\n\n"
     message += `📊 Today: ${todayPoints}/${DAILY_TARGET_POINTS} pts (${percentOfTarget}%)\n`
-    message += `✓ ${todayTasks.length} tasks • ${activeTasks.length} active remaining\n\n`
+    message += `✓ ${todayTasks.length} tasks completed:\n`
+
+    todayTasks.forEach(t => {
+      message += `   • ${t.title} (${getTaskPoints(t)} pts)\n`
+    })
+
+    message += `\n📋 ${activeTasks.length} active remaining\n\n`
 
     if (targetMet) {
       message += "🎯 TARGET HIT! You've crushed today.\n"

@@ -190,8 +190,25 @@ export function formatMorningSummary(stats: {
   deferredTasks?: Array<{ title: string; deferCount: number }>
 }) {
   const pct = Math.round((stats.weekPoints / stats.weekTarget) * 100)
-  let msg = `☀️ Good morning!\n\n`
-  msg += `📊 Week so far: ${stats.weekTasks} tasks (${stats.weekPoints}/${stats.weekTarget} pts = ${pct}%)\n\n`
+
+  // Calculate Pace
+  const now = new Date()
+  const dayOfWeek = now.getDay() || 7 // 1-7 (Mon-Sun)
+  // Expected progress: (Days passed including today?) No, usually standard work week is 5 days.
+  // If it's Monday morning (day 1), expected is 0% or start.
+  // Let's say expected is (dayOfWeek - 1) / 5.
+  // If it is Wednesday morning (day 3), we should have finished 2 days (40%).
+  const workDaysPassed = Math.min(Math.max(dayOfWeek - 1, 0), 5)
+  const expectedPct = Math.round((workDaysPassed / 5) * 100)
+  const diff = pct - expectedPct
+
+  let paceMsg = ""
+  if (diff >= 10) paceMsg = `🚀 Ahead of schedule by ${diff}%`
+  else if (diff <= -10) paceMsg = `⚠️ Behind schedule by ${Math.abs(diff)}%`
+  else paceMsg = `✅ On track`
+
+  let msg = `☀️ Good morning! ${paceMsg}\n\n`
+  msg += `📊 Week: ${stats.weekPoints}/${stats.weekTarget} pts (${pct}%) vs Expected ${expectedPct}%\n`
   msg += `🎯 Today's goals:\n`
   msg += `   • Minimum: ${DAILY_MINIMUM_POINTS} pts\n`
   msg += `   • Target: ${DAILY_TARGET_POINTS} pts\n`
