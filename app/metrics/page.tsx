@@ -220,6 +220,25 @@ export default function MetricsDashboard() {
     setTimeout(() => setNotificationStatus(null), 5000)
   }
 
+  const sendStatusNotification = async () => {
+    setNotificationStatus("Sending status update...")
+    try {
+      const res = await fetch("/api/notifications/status", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        setNotificationStatus(`Failed: HTTP ${res.status} - ${data.error || data.details || "Unknown error"}`)
+      } else {
+        setNotificationStatus(data.success ? "Status update sent!" : `Failed: ${data.error || "Unknown error"}`)
+      }
+    } catch (err) {
+      setNotificationStatus(`Error: ${err}`)
+    }
+    setTimeout(() => setNotificationStatus(null), 5000)
+  }
+
+
+
+
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
@@ -264,11 +283,10 @@ export default function MetricsDashboard() {
                   </p>
                   <div className="mt-3 h-2 rounded-full bg-zinc-800">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        paceStatus === "on_track"
-                          ? "bg-gradient-to-r from-cyan-500 to-emerald-500"
-                          : "bg-gradient-to-r from-amber-500 to-orange-500"
-                      }`}
+                      className={`h-full rounded-full transition-all ${paceStatus === "on_track"
+                        ? "bg-gradient-to-r from-cyan-500 to-emerald-500"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500"
+                        }`}
                       style={{ width: pacingWidth }}
                     />
                   </div>
@@ -383,9 +401,8 @@ export default function MetricsDashboard() {
                       return (
                         <div
                           key={client.clientId}
-                          className={`rounded-2xl border bg-zinc-900/70 px-4 py-3 ${
-                            client.isStale ? "border-amber-500/30" : "border-zinc-800"
-                          }`}
+                          className={`rounded-2xl border bg-zinc-900/70 px-4 py-3 ${client.isStale ? "border-amber-500/30" : "border-zinc-800"
+                            }`}
                         >
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-3">
@@ -442,7 +459,7 @@ export default function MetricsDashboard() {
                       />
                     </svg>
                   </div>
-                  <h2 className="text-lg font-semibold">Notification Testing</h2>
+                  <h2 className="text-lg font-semibold">Notification Controls</h2>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Button variant="outline" size="sm" onClick={sendTestNotification}>
@@ -453,6 +470,9 @@ export default function MetricsDashboard() {
                   </Button>
                   <Button variant="outline" size="sm" onClick={sendAfternoonSummary}>
                     Afternoon Summary
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={sendStatusNotification}>
+                    Status Update
                   </Button>
                 </div>
                 {notificationStatus && (
