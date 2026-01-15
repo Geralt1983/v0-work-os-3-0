@@ -22,7 +22,7 @@ import { CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
-import { HolidayManager } from "@/components/holiday-manager"
+
 import {
   DndContext,
   DragOverlay,
@@ -329,30 +329,27 @@ export default function MovesPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`col-span-1 rounded-xl transition-all duration-200 relative ${
-          isOver
-            ? "bg-indigo-500/20 ring-2 ring-indigo-500/50 scale-[1.01]"
-            : showDropTarget
-              ? "ring-1 ring-dashed ring-zinc-600"
-              : ""
-        }`}
+        className={`col-span-1 rounded-xl transition-all duration-200 relative ${isOver
+          ? "bg-indigo-500/20 ring-2 ring-indigo-500/50 scale-[1.01]"
+          : showDropTarget
+            ? "ring-1 ring-dashed ring-zinc-600"
+            : ""
+          }`}
       >
         {showDropTarget && (
           <div
-            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${
-              isOver ? "bg-indigo-500/10" : "bg-transparent"
-            }`}
+            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${isOver ? "bg-indigo-500/10" : "bg-transparent"
+              }`}
           />
         )}
         <h2 className="text-xl font-bold text-zinc-100 mb-3 relative z-20">Backlog</h2>
         <div className="relative z-0">{children}</div>
         {showDropTarget && (
           <div
-            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${
-              isOver
-                ? "bg-indigo-500/20 border-2 border-dashed border-indigo-500/50"
-                : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
-            }`}
+            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${isOver
+              ? "bg-indigo-500/20 border-2 border-dashed border-indigo-500/50"
+              : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
+              }`}
           >
             <span className={`text-sm ${isOver ? "text-indigo-400" : "text-zinc-500"}`}>
               {isOver ? "Release to move to backlog" : "Drop here to send to backlog"}
@@ -417,9 +414,7 @@ export default function MovesPage() {
           <SynapsePicks />
         </div>
 
-        <div className="mt-4">
-          <HolidayManager />
-        </div>
+
 
         <div className="hidden lg:flex items-center justify-between gap-2 mt-4">
           <div className="flex items-center gap-1 bg-zinc-900 rounded-full p-1">
@@ -427,11 +422,10 @@ export default function MovesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setView("board")}
-              className={`rounded-full px-3 h-8 ${
-                view === "board"
-                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
+              className={`rounded-full px-3 h-8 ${view === "board"
+                ? "bg-indigo-600 text-white hover:bg-indigo-600"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
             >
               <LayoutGrid className="h-4 w-4 mr-1.5" />
               Board
@@ -440,11 +434,10 @@ export default function MovesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setView("list")}
-              className={`rounded-full px-3 h-8 ${
-                view === "list"
-                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
+              className={`rounded-full px-3 h-8 ${view === "list"
+                ? "bg-indigo-600 text-white hover:bg-indigo-600"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
             >
               <List className="h-4 w-4 mr-1.5" />
               List
@@ -453,11 +446,10 @@ export default function MovesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setView("focus")}
-              className={`rounded-full px-3 h-8 ${
-                view === "focus"
-                  ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
+              className={`rounded-full px-3 h-8 ${view === "focus"
+                ? "bg-indigo-600 text-white hover:bg-indigo-600"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
             >
               <Crosshair className="h-4 w-4 mr-1.5" />
               Focus
@@ -506,11 +498,10 @@ export default function MovesPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${
-                activeTab === tab.key
-                  ? "border-indigo-500 text-white"
-                  : "border-transparent text-zinc-400 hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab.key
+                ? "border-indigo-500 text-white"
+                : "border-transparent text-zinc-400 hover:text-white"
+                }`}
             >
               {tab.label}
               <Badge variant="secondary" className="text-xs">
@@ -883,11 +874,10 @@ function TaskCard({
             disabled={completing}
             aria-label={`Complete task: ${task.title}`}
             title={`Complete: ${task.title}`}
-            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${
-              completing
-                ? "bg-emerald-500 text-white animate-celebrate glow-success"
-                : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
-            }`}
+            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${completing
+              ? "bg-emerald-500 text-white animate-celebrate glow-success"
+              : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
+              }`}
           >
             <Check className={`${isCompact ? "h-4 w-4" : "h-5 w-5"} ${completing ? "animate-pulse" : ""}`} />
           </button>
@@ -992,9 +982,8 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
-        isOver ? "bg-indigo-500/5 ring-2 ring-indigo-500/30 scale-[1.01]" : ""
-      }`}
+      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${isOver ? "bg-indigo-500/5 ring-2 ring-indigo-500/30 scale-[1.01]" : ""
+        }`}
     >
       <div className="flex items-center gap-2 mb-3">
         {getColumnIcon()}

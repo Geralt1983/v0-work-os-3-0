@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ListTodo, BarChart3, Users, History } from "lucide-react"
+import { ListTodo, BarChart3, Users, History, Palmtree } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useState, useCallback } from "react"
 import { preload } from "swr"
@@ -74,6 +74,7 @@ export function WorkOSNav() {
     { href: "/metrics", icon: BarChart3, label: "Metrics" },
     { href: "/clients", icon: Users, label: "Clients" },
     { href: "/history", icon: History, label: "History" },
+    { href: "/holidays", icon: Palmtree, label: "Holidays" },
   ]
 
   return (
