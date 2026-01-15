@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm"
 import { logTaskEvent } from "@/lib/events"
 import { sendNotification } from "@/lib/notifications"
 import { checkAndSendMilestone } from "@/lib/milestone-checker"
+import { getTaskPoints } from "@/lib/domain"
 
 // POST mark task as complete
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +18,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const [currentTask] = await db
       .select({
         status: tasks.status,
-        title: tasks.title, // Added for notification
+        title: tasks.title,
+        valueTier: tasks.valueTier, // Added for accurate points
         pointsAiGuess: tasks.pointsAiGuess,
         pointsFinal: tasks.pointsFinal,
       })
@@ -54,7 +56,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let currentStreak = 0
 
     try {
-      const points = currentTask?.pointsFinal || currentTask?.pointsAiGuess || 3
+      // Use standard domain logic for points
+      const points = getTaskPoints(currentTask || {})
       const now = new Date()
       const estOffset = -5 * 60
       const estNow = new Date(now.getTime() + (estOffset - now.getTimezoneOffset()) * 60000)
@@ -165,7 +168,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // TASK COMPLETION NOTIFICATION
     // ============================================
     try {
-      const points = currentTask?.pointsFinal || currentTask?.pointsAiGuess || 3
+      const points = getTaskPoints(currentTask || {})
       const taskTitle = currentTask?.title || "Task"
 
       await sendNotification(`✅ Completed: ${taskTitle} (${points} pts)`, {
