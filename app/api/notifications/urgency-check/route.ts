@@ -97,8 +97,8 @@ export async function GET(request: Request) {
     // Calculate weekly debt
     const weeklyDebt = calculateWeeklyDebt(
       weekGoals.map((g) => ({
-        earnedPoints: g.date === todayStr ? earnedPoints : g.earnedPoints,
-        targetPoints: g.targetPoints,
+        earnedPoints: g.date === todayStr ? earnedPoints : (g.earnedPoints || 0),
+        targetPoints: g.targetPoints || 0,
       }))
     )
 
@@ -152,13 +152,18 @@ export async function GET(request: Request) {
     }
 
     // Generate and send urgency message
-    const message = generateUrgencyMessage(pace, currentHour, dailyDebt, weeklyDebt)
+    // DISABLED: User requested to stop urgent notifications (2026-01-15)
+    // const message = generateUrgencyMessage(pace, currentHour, dailyDebt, weeklyDebt)
 
+    /*
     await sendNotification(message, {
       title: "Work OS - Urgency Alert",
       tags: "alarm_clock",
       priority,
     })
+    */
+
+    console.log("[Urgency Check] Notification WOULD have been sent, but is disabled.")
 
     // Update last notification hour
     await db
@@ -172,7 +177,7 @@ export async function GET(request: Request) {
     console.log("[Urgency Check] Notification sent:", { priority, hour: currentHour })
 
     return NextResponse.json({
-      sent: true,
+      sent: false, // Disabled
       priority,
       hour: currentHour,
       pace: {

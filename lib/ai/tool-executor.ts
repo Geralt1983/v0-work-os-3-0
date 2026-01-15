@@ -147,6 +147,7 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         toStatus: "done",
       })
 
+      /*
       let milestoneResult = null
       try {
         milestoneResult = await checkAndSendMilestone()
@@ -154,12 +155,13 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       } catch (notifyErr) {
         console.error("[tool-executor] Milestone notification check failed:", notifyErr)
       }
+      */
 
       return {
         success: true,
         task: updated,
         message: `Completed "${currentTask.title}"`,
-        milestone: milestoneResult,
+        milestone: null, // Milestone notifications disabled
       }
     }
 
@@ -250,10 +252,10 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       return {
         suggestion: suggestion
           ? {
-              id: suggestion.id,
-              title: suggestion.title,
-              drainType: suggestion.drainType,
-            }
+            id: suggestion.id,
+            title: suggestion.title,
+            drainType: suggestion.drainType,
+          }
           : null,
         reason: "Based on current pipeline state",
       }
