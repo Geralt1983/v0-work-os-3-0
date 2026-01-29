@@ -16,7 +16,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         title: tasks.title,
         description: tasks.description,
         status: tasks.status,
-        valueTier: tasks.valueTier,
         effortEstimate: tasks.effortEstimate,
         effortActual: tasks.effortActual,
         drainType: tasks.drainType,
@@ -71,7 +70,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         fromStatus: currentTask.status,
         toStatus: body.status,
       })
-    } else if (body.title || body.description || body.valueTier || body.drainType) {
+    } else if (body.title || body.description || body.effortEstimate || body.drainType) {
       // Log edit event for non-status changes
       await logTaskEvent({
         taskId,

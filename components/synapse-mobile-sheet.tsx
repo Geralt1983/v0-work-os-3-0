@@ -61,13 +61,13 @@ export function SynapseMobileSheet() {
       <button
         onClick={handleOpen}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 transition-all hover:scale-105",
+          "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-fuchsia-600 text-white shadow-lg hover:bg-fuchsia-500 transition-all hover:scale-105",
           isOpen && "hidden",
         )}
       >
         <Zap className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs bg-white text-indigo-600 rounded-full font-medium">
+          <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs bg-white text-fuchsia-600 rounded-full font-medium">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -92,7 +92,7 @@ export function SynapseMobileSheet() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-indigo-400" />
+            <Zap className="w-5 h-5 text-fuchsia-400" />
             <span className="font-semibold text-zinc-100">{ASSISTANT_NAME}</span>
           </div>
           <button onClick={() => setIsOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400">
@@ -155,7 +155,7 @@ export function SynapseMobileSheet() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
-              className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-fuchsia-500 disabled:opacity-50"
               placeholder="Type or tap mic..."
             />
 
@@ -163,7 +163,7 @@ export function SynapseMobileSheet() {
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="px-4 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-indigo-500 transition flex items-center gap-2"
+                className="px-4 py-2.5 rounded-full bg-fuchsia-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-fuchsia-500 transition flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 Send
@@ -191,7 +191,7 @@ function MobileMessage({ message }: { message: Message }) {
       <div
         className={cn(
           "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-snug",
-          isUser ? "bg-indigo-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
+          isUser ? "bg-fuchsia-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
         )}
       >
         <p className="whitespace-pre-line">{message.content}</p>

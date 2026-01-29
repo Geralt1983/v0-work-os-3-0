@@ -1,25 +1,10 @@
 // Daily goal constants (points-based, not time-based)
 export const DAILY_MINIMUM_POINTS = 12 // Minimum daily points
-export const DAILY_TARGET_POINTS = 16 // Ideal daily goal (matches lib/domain/task-types.ts)
-
-// Stale wall configuration
-export const STALE_THRESHOLD_DAYS = 5 // Days without activity before client is considered "stale"
-export const BLOCKER_SKIP_THRESHOLD = 3 // Consecutive skips before asking "what's blocking?"
-
-// Non-client categories - these are task categories, not real clients
-// They don't count toward stale wall or require daily attention
-export const NON_CLIENT_CATEGORIES = ["Revenue", "General Admin"] as const
-export type NonClientCategory = (typeof NON_CLIENT_CATEGORIES)[number]
-
-/** Check if a client name is a real client (not a category like Revenue or General Admin) */
-export function isRealClient(clientName: string | null | undefined): boolean {
-  if (!clientName) return false
-  return !NON_CLIENT_CATEGORIES.includes(clientName as NonClientCategory)
-}
+export const DAILY_TARGET_POINTS = 18 // Ideal daily goal (matches lib/domain/task-types.ts)
 
 // Weekly goals (points-based)
 export const WEEKLY_MINIMUM_POINTS = 60 // 5 workdays × 12 minimum
-export const WEEKLY_TARGET_POINTS = 80 // 5 workdays × 16 target
+export const WEEKLY_TARGET_POINTS = 90 // 5 workdays × 18 target
 
 // Work hours (EST) - for momentum calculations
 export const WORK_START_HOUR = 9 // 9 AM EST

@@ -74,8 +74,8 @@
   --sidebar-ring: oklch(0.439 0 0);
 
   /* Semantic Colors - WorkOS Design System */
-  --brand: oklch(0.65 0.20 264);          /* Indigo - primary brand (Linear-style) */
-  --brand-muted: oklch(0.5 0.12 264);     /* Indigo muted */
+  --brand: oklch(0.7 0.25 320);           /* Fuchsia - primary brand */
+  --brand-muted: oklch(0.5 0.15 320);     /* Fuchsia muted */
   --success: oklch(0.7 0.18 160);         /* Emerald - completed/done */
   --success-muted: oklch(0.35 0.1 160);   /* Emerald muted */
   --warning: oklch(0.75 0.15 85);         /* Amber - attention needed */
@@ -86,7 +86,7 @@
   --ai-muted: oklch(0.4 0.15 280);        /* Violet muted */
 
   /* Status-specific card backgrounds */
-  --card-today: oklch(0.18 0.02 264);     /* Subtle indigo tint */
+  --card-today: oklch(0.18 0.02 320);     /* Subtle fuchsia tint */
   --card-queued: oklch(0.16 0 0);         /* Neutral */
   --card-backlog: oklch(0.14 0 0);        /* Slightly darker */
   --card-done: oklch(0.16 0.015 160);     /* Subtle emerald tint */
@@ -180,7 +180,7 @@
 /* Drag overlay card lift effect */
 [data-dnd-dragging="true"] {
   transform: scale(1.05) rotate(2deg);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(217, 70, 239, 0.5);
   cursor: grabbing;
 }
 
@@ -205,8 +205,8 @@
 /* Status-based card styles */
 .card-today {
   background: var(--card-today);
-  border-color: oklch(0.5 0.15 264 / 0.3);
-  box-shadow: 0 0 20px -5px oklch(0.6 0.18 264 / 0.15);
+  border-color: oklch(0.5 0.15 320 / 0.3);
+  box-shadow: 0 0 20px -5px oklch(0.6 0.2 320 / 0.15);
 }
 
 .card-queued {

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ListTodo, BarChart3, Users, History, Palmtree } from "lucide-react"
+import { ListTodo, BarChart3, Users, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useState, useCallback } from "react"
 import { preload } from "swr"
@@ -74,7 +74,6 @@ export function WorkOSNav() {
     { href: "/metrics", icon: BarChart3, label: "Metrics" },
     { href: "/clients", icon: Users, label: "Clients" },
     { href: "/history", icon: History, label: "History" },
-    { href: "/holidays", icon: Palmtree, label: "Holidays" },
   ]
 
   return (
@@ -94,13 +93,13 @@ export function WorkOSNav() {
             className={cn(
               "relative h-10 w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
               "text-white/60 hover:text-white hover:bg-white/10",
-              active && "text-indigo-300 bg-indigo-500/20 glow-brand",
+              active && "text-fuchsia-300 bg-fuchsia-500/20 glow-brand",
             )}
           >
             <Icon className={cn("h-5 w-5 transition-transform", active && "scale-110")} aria-hidden="true" />
             <span className="sr-only">{label}</span>
             {active && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-fuchsia-400" />
             )}
           </Link>
         )

@@ -8,27 +8,6 @@
       "when": 1766813632451,
       "tag": "0000_boring_firebird",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767283179281,
-      "tag": "0001_unknown_moondragon",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1735682850000,
-      "tag": "0002_add_client_memory_last_task_description",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1767320973021,
-      "tag": "0003_colossal_changeling",
-      "breakpoints": true
     }
   ]
 }

@@ -4,10 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import { X } from "lucide-react"
-import { ValueTierSelector } from "@/components/value-tier-selector"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClients, type TaskStatus } from "@/hooks/use-tasks"
-import { type ValueTier, DEFAULT_VALUE_TIER } from "@/lib/domain/task-types"
 
 interface NewTaskDialogProps {
   open: boolean
@@ -18,10 +16,17 @@ interface NewTaskDialogProps {
     clientName?: string
     description?: string
     status?: TaskStatus
-    valueTier?: ValueTier
+    effortEstimate?: number
     drainType?: string
   }) => Promise<void>
 }
+
+const effortOptions = [
+  { value: 2, label: "Quick", description: "<5 min", color: "bg-emerald-500" },
+  { value: 4, label: "Routine", description: "15-30 min", color: "bg-green-500" },
+  { value: 6, label: "Meaningful", description: "30-60 min", color: "bg-yellow-500" },
+  { value: 8, label: "Heavy", description: "1-2 hours", color: "bg-orange-500" },
+]
 
 const drainOptions = [
   { value: "deep", label: "Deep", color: "bg-rose-500", description: "Focused technical work" },
@@ -43,7 +48,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [valueTier, setValueTier] = useState<ValueTier>(DEFAULT_VALUE_TIER)
+  const [effortEstimate, setEffortEstimate] = useState(2)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -63,7 +68,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
       clientName: selectedClient?.name,
       description: description.trim() || undefined,
       status,
-      valueTier,
+      effortEstimate,
       drainType,
     })
 
@@ -74,7 +79,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
         clientName: selectedClient?.name, // Pass clientName for immediate display
         description: description.trim() || undefined,
         status,
-        valueTier,
+        effortEstimate,
         drainType,
       })
       console.log("[v0] NewMoveDialog: submit successful")
@@ -83,7 +88,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
       setClientId(undefined)
       setDescription("")
       setStatus("backlog")
-      setValueTier(DEFAULT_VALUE_TIER)
+      setEffortEstimate(2)
       setDrainType("shallow")
       onClose()
     } catch (error) {
@@ -119,8 +124,8 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
               className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-                <h2 className="text-base font-semibold text-white">New Move</h2>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+                <h2 className="text-lg font-semibold text-white">New Move</h2>
                 <button
                   type="button"
                   onClick={onClose}
@@ -132,37 +137,37 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
               </div>
 
               {/* Body */}
-              <div className="px-4 py-3 space-y-3">
+              <div className="px-6 py-5 space-y-5">
                 {submitError && (
-                  <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                  <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
                     {submitError}
                   </div>
                 )}
 
                 {/* Title */}
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Title</label>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="What needs to be done?"
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
                     autoFocus
                   />
                 </div>
 
                 {/* Client */}
                 <div>
-                  <label htmlFor="client-select" className="block text-xs font-medium text-zinc-400 mb-1.5">
+                  <label htmlFor="client-select" className="block text-sm font-medium text-zinc-400 mb-2">
                     Client <span className="text-red-400">*</span>
                   </label>
                   {clientsLoading ? (
-                    <div className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-500 text-sm">
+                    <div className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500">
                       Loading clients...
                     </div>
                   ) : clientsError ? (
-                    <div className="w-full px-3 py-2 bg-zinc-800 border border-red-700 rounded-lg text-red-400 text-sm">
+                    <div className="w-full px-4 py-3 bg-zinc-800 border border-red-700 rounded-xl text-red-400">
                       Error loading clients
                     </div>
                   ) : (
@@ -171,7 +176,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
                       aria-label="Select client"
-                      className={`w-full px-3 py-2 bg-zinc-800 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer ${
+                      className={`w-full px-4 py-3 bg-zinc-800 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer ${
                         !clientId ? "border-red-500" : "border-zinc-700"
                       }`}
                     >
@@ -187,16 +192,16 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Status</label>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Status</label>
                   <div className="flex gap-2">
                     {statusOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setStatus(opt.value)}
-                        className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
                           status === opt.value
-                            ? "bg-indigo-500 text-white"
+                            ? "bg-fuchsia-500 text-white"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -206,33 +211,49 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                   </div>
                 </div>
 
-                {/* Value Tier */}
+                {/* Complexity Points */}
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Value</label>
-                  <ValueTierSelector
-                    value={valueTier}
-                    onChange={setValueTier}
-                    compact
-                  />
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {effortOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setEffortEstimate(opt.value)}
+                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
+                          effortEstimate === opt.value
+                            ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                          <span>{opt.label}</span>
+                        </div>
+                        <span className="text-xs opacity-70">{opt.description}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Drain Type */}
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Energy Type</label>
-                  <div className="flex gap-2">
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Energy Type</label>
+                  <div className="flex flex-wrap gap-2">
                     {drainOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => setDrainType(opt.value)}
-                        className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 ${
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${
                           drainType === opt.value
-                            ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
+                            ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${opt.color}`} />
+                        <span className={`w-2 h-2 rounded-full ${opt.color}`} />
                         {opt.label}
+                        <span className="text-xs opacity-70">{opt.description}</span>
                       </button>
                     ))}
                   </div>
@@ -240,34 +261,34 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
                     Description <span className="text-zinc-600">(optional)</span>
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add any notes or context..."
-                    rows={2}
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
                   />
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-3 border-t border-zinc-800 flex justify-end gap-2">
+              <div className="px-6 py-4 border-t border-zinc-800 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!title.trim() || !clientId || isSubmitting}
-                  className="px-4 py-2 rounded-lg text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {isSubmitting ? "Creating..." : "Create"}
+                  {isSubmitting ? "Creating..." : "Create Move"}
                 </button>
               </div>
             </form>
