@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks, clients, clientMemory } from "@/lib/schema"
 import { eq, and, gte, sql } from "drizzle-orm"
+import { MOCK_TASKS, MOCK_CLIENTS } from "@/lib/mock-data"
 
 interface ScoredTask {
   id: number
@@ -25,6 +26,28 @@ function getPreferredDrainTypes(hour: number): { types: string[]; label: string 
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Backlog/recommendations API: Using mock data (preview mode)")
+      const backlogTasks = MOCK_TASKS.filter(t => t.status === "backlog").slice(0, 3)
+      return NextResponse.json({
+        recommendations: backlogTasks.map((t, i) => {
+          const client = MOCK_CLIENTS.find(c => c.id === t.clientId)
+          return {
+            id: t.id,
+            title: t.title,
+            clientName: client?.name || "Unknown",
+            clientColor: client?.color || "#6b7280",
+            drainType: t.drainType,
+            effortEstimate: t.effortEstimate,
+            reason: i === 0 ? "Client hasn't been touched in 3 days" : "Good next candidate",
+            score: 80 - i * 10,
+            daysInBacklog: Math.floor(Math.random() * 10) + 1,
+          }
+        }),
+      })
+    }
+    
     const db = getDb()
 
     // Get current time in EST

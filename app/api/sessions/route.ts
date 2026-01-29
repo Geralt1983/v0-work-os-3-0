@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { sessions } from "@/lib/schema"
 import { randomUUID } from "crypto"
 import { desc, gte, sql } from "drizzle-orm"
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Sessions API: Using mock data (preview mode)")
+      return NextResponse.json([])
+    }
+    
     const db = getDb()
 
     // Get sessions from last 7 days
@@ -34,6 +40,16 @@ export async function GET() {
 
 export async function POST() {
   try {
+    // Return mock session in preview mode without database
+    if (isPreviewWithoutDb()) {
+      const id = randomUUID()
+      return NextResponse.json({
+        id,
+        createdAt: new Date(),
+        lastActiveAt: new Date(),
+      })
+    }
+    
     const db = getDb()
     const id = randomUUID()
     const [session] = await db

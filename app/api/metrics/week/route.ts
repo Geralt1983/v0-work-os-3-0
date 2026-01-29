@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks } from "@/lib/schema"
 import { eq, gte, and, lte } from "drizzle-orm"
 import { getESTDayOfWeek, getESTWeekStart, estToUTC } from "@/lib/domain"
@@ -8,6 +8,28 @@ import { WEEKLY_MINIMUM_POINTS, WEEKLY_TARGET_POINTS } from "@/lib/constants"
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Metrics/week API: Using mock data (preview mode)")
+      return NextResponse.json({
+        totalPoints: 27,
+        tasksCompleted: 9,
+        workdaysPassed: 3,
+        workdaysRemaining: 2,
+        daysRemaining: 2,
+        dailyAveragePoints: 9,
+        projectedPoints: 45,
+        minimumGoal: WEEKLY_MINIMUM_POINTS,
+        idealGoal: WEEKLY_TARGET_POINTS,
+        minimumPercent: 45,
+        idealPercent: 30,
+        pacePointsNeeded: 17,
+        pacePointsForTarget: 32,
+        status: "on_track",
+        isWorkday: true,
+      })
+    }
+    
     const db = getDb()
     const now = new Date()
 

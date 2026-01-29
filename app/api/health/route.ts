@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { clients } from "@/lib/schema"
 import { sql } from "drizzle-orm"
 
 export async function GET() {
   try {
+    // Return mock health in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Health check: Preview mode (no database)")
+      return NextResponse.json({
+        status: "ok",
+        database: "preview_mode",
+        clientsCount: 5,
+        timestamp: new Date().toISOString(),
+        note: "Running in preview mode with mock data",
+      })
+    }
+    
     console.log("[v0] Health check: Testing database connection")
     const db = getDb()
 

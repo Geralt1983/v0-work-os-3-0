@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks, clients, dailyGoals } from "@/lib/schema"
 import { eq, and, gte, ne, desc } from "drizzle-orm"
 import { calculateMomentum } from "@/lib/metrics"
@@ -9,6 +9,32 @@ import { calculateTotalPoints } from "@/lib/domain/task-types"
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Metrics/today API: Using mock data (preview mode)")
+      return NextResponse.json({
+        completedCount: 2,
+        earnedPoints: 6,
+        targetPoints: DAILY_TARGET_POINTS,
+        percentOfMinimum: 50,
+        percentOfTarget: 37,
+        percent: 37,
+        paceStatus: "behind",
+        momentum: {
+          score: 50,
+          percent: 37,
+          status: "on_track",
+          label: "On track",
+          expectedByNow: 8,
+          actualPoints: 6,
+          dayProgress: 50,
+        },
+        streak: 3,
+        clientsTouchedToday: 2,
+        totalExternalClients: 4,
+      })
+    }
+    
     const db = getDb()
 
     const now = new Date()

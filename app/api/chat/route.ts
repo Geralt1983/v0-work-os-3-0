@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { sessions, messages } from "@/lib/schema"
 import { eq, asc } from "drizzle-orm"
 import { randomUUID } from "crypto"
@@ -13,8 +13,27 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(request: Request) {
   try {
-    const db = getDb()
     const { sessionId: providedSessionId, message } = await request.json()
+    
+    // Return mock response in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Chat API: Using mock response (preview mode)")
+      const sessionId = providedSessionId || randomUUID()
+      const userMsgId = randomUUID()
+      const assistantMsgId = randomUUID()
+      return NextResponse.json({
+        sessionId,
+        userMessage: { id: userMsgId, role: "user", content: message },
+        assistantMessage: { 
+          id: assistantMsgId, 
+          role: "assistant", 
+          content: "I'm Synapse, your AI assistant. In preview mode, I can't access the database, but once connected to Neon, I'll be able to help you manage tasks, analyze your work patterns, and provide recommendations.",
+          taskCard: null,
+        },
+      })
+    }
+    
+    const db = getDb()
 
     const sessionId = providedSessionId || randomUUID()
 

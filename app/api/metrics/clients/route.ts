@@ -1,10 +1,30 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq } from "drizzle-orm"
+import { MOCK_CLIENTS, MOCK_TASKS } from "@/lib/mock-data"
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Metrics/clients API: Using mock data (preview mode)")
+      const mockMetrics = MOCK_CLIENTS.map((client) => {
+        const clientTasks = MOCK_TASKS.filter((t) => t.clientId === client.id)
+        const completedTasks = clientTasks.filter((t) => t.status === "done")
+        return {
+          clientId: client.id,
+          clientName: client.name,
+          totalTasks: clientTasks.length,
+          completedTasks: completedTasks.length,
+          activeTasks: clientTasks.length - completedTasks.length,
+          daysSinceLastTask: Math.floor(Math.random() * 5),
+          isStale: Math.random() > 0.7,
+        }
+      })
+      return NextResponse.json(mockMetrics)
+    }
+    
     const db = getDb()
     const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
     const allTasks = await db.select().from(tasks)

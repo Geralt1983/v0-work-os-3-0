@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { dailyGoals } from "@/lib/schema"
 import { eq, desc } from "drizzle-orm"
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Streaks API: Using mock data (preview mode)")
+      return NextResponse.json({
+        currentStreak: 3,
+        longestStreak: 7,
+        hitGoalToday: false,
+        earnedPoints: 6,
+        targetPoints: 16,
+        taskCount: 2,
+      })
+    }
+    
     const db = getDb()
 
     // Get today's date in EST

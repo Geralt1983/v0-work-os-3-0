@@ -1,12 +1,24 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks, clients } from "@/lib/schema"
 import { eq, and, ne, desc, asc } from "drizzle-orm"
 import { logTaskEvent } from "@/lib/events"
+import { MOCK_TASKS, MOCK_CLIENTS } from "@/lib/mock-data"
 
 export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Tasks API: Starting GET request")
+    
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Tasks API: Using mock data (preview mode)")
+      const mockTasksWithClients = MOCK_TASKS.map(task => ({
+        ...task,
+        client: MOCK_CLIENTS.find(c => c.id === task.clientId),
+      }))
+      return NextResponse.json(mockTasksWithClients)
+    }
+    
     const db = getDb()
 
     const { searchParams } = new URL(request.url)
@@ -60,6 +72,28 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Tasks API: Starting POST request")
+    
+    // In preview mode without database, return a mock success
+    if (isPreviewWithoutDb()) {
+      const body = await request.json()
+      const mockTask = {
+        id: Date.now(),
+        clientId: body.clientId || null,
+        clientName: body.clientName || "Preview Client",
+        title: body.title,
+        description: body.description || null,
+        status: body.status || "backlog",
+        valueTier: body.valueTier || "progress",
+        drainType: body.drainType || null,
+        sortOrder: 0,
+        subtasks: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        completedAt: null,
+      }
+      return NextResponse.json(mockTask, { status: 201 })
+    }
+    
     const db = getDb()
     const body = await request.json()
     console.log("[v0] Tasks API: POST body received", body)

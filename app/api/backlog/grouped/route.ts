@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, isPreviewWithoutDb } from "@/lib/db"
 import { tasks, clients, clientMemory } from "@/lib/schema"
 import { eq, asc, and, gte } from "drizzle-orm"
+import { MOCK_TASKS, MOCK_CLIENTS } from "@/lib/mock-data"
 
 interface BacklogTask {
   id: number
@@ -23,6 +24,45 @@ interface ClientGroup {
 
 export async function GET() {
   try {
+    // Return mock data in preview mode without database
+    if (isPreviewWithoutDb()) {
+      console.log("[v0] Backlog/grouped API: Using mock data (preview mode)")
+      const backlogTasks = MOCK_TASKS.filter(t => t.status === "backlog")
+      const groups: ClientGroup[] = []
+      const clientMap = new Map<number, ClientGroup>()
+      
+      for (const task of backlogTasks) {
+        if (!task.clientId) continue
+        const client = MOCK_CLIENTS.find(c => c.id === task.clientId)
+        if (!client) continue
+        
+        if (!clientMap.has(task.clientId)) {
+          clientMap.set(task.clientId, {
+            clientId: client.id,
+            clientName: client.name,
+            clientColor: client.color,
+            staleDays: Math.floor(Math.random() * 5),
+            touchedToday: false,
+            tasks: [],
+          })
+        }
+        
+        clientMap.get(task.clientId)!.tasks.push({
+          id: task.id,
+          title: task.title,
+          drainType: task.drainType || null,
+          effortEstimate: task.effortEstimate || null,
+          daysInBacklog: Math.floor(Math.random() * 10),
+          decayStatus: "normal",
+        })
+      }
+      
+      return NextResponse.json({
+        groups: Array.from(clientMap.values()),
+        totalTasks: backlogTasks.length,
+      })
+    }
+    
     const db = getDb()
 
     // Get all backlog tasks grouped by client
