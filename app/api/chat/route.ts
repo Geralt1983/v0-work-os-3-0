@@ -9,7 +9,17 @@ import { chatTools } from "@/lib/ai/tools"
 import { executeTool } from "@/lib/ai/tool-executor"
 import { getAvoidanceSummary } from "@/lib/ai/avoidance"
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// Lazy initialization to avoid errors when API key is not set
+let openaiClient: OpenAI | null = null
+function getOpenAI(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
+  return openaiClient
+}
 
 export async function POST(request: Request) {
   try {

@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 import { VALUE_POINTS, type ValueTier } from "@/lib/domain/task-types"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazy initialization to avoid errors when API key is not set
+let openaiClient: OpenAI | null = null
+function getOpenAI(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return openaiClient
+}
 
 const CLIENT_PATTERNS: Record<string, string[]> = {
   "Raleigh": ["raleigh", "ral", "rdu"],
@@ -87,6 +97,21 @@ export async function POST(request: NextRequest) {
 
     // Detect client from input or use hint
     const detectedClient = client_hint || detectClient(raw_input)
+
+    const openai = getOpenAI()
+    if (!openai) {
+      // Return a default estimation when OpenAI is not available
+      return NextResponse.json({
+        client: detectedClient,
+        title: raw_input,
+        valueTier: "progress" as ValueTier,
+        points: VALUE_POINTS.progress,
+        reasoning: "AI estimation unavailable - using default value tier",
+        confidence: 0.5,
+        raw_input,
+        pointsAiGuess: VALUE_POINTS.progress,
+      })
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
