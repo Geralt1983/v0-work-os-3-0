@@ -85,13 +85,6 @@ export function useGroupedBacklog() {
 
   const finalData = data || (isPreviewEnvironment() ? getMockGroupedBacklog() : undefined)
 
-  console.log("[v0] GroupedBacklog render:", {
-    groups: finalData?.groups?.length || 0,
-    totalTasks: finalData?.totalTasks || 0,
-    isLoading,
-    error: error ? { message: error.message } : null,
-  })
-
   return {
     groups: finalData?.groups || [],
     totalTasks: finalData?.totalTasks || 0,

@@ -66,8 +66,6 @@ export function GroupedBacklog({ onEditMove }: GroupedBacklogProps = {}) {
     setTimeout(() => setIsRefreshing(false), 500)
   }
 
-  console.log("[v0] GroupedBacklog render:", { groups, totalTasks, isLoading, error })
-
   if (isLoading) {
     return (
       <div className="space-y-2 animate-pulse">

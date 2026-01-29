@@ -287,7 +287,10 @@ export default function MovesPage() {
     const upnext = filteredTasks.filter((t) => t.status === "upnext")
     const backlog = filteredTasks.filter((t) => t.status === "backlog")
     const done = filteredTasks.filter((t) => t.status === "done")
-    return { today, upnext, backlog, done }
+    const todayPoints = today.reduce((sum, t) => sum + (t.points || 0), 0)
+    const upnextPoints = upnext.reduce((sum, t) => sum + (t.points || 0), 0)
+    const backlogPoints = backlog.reduce((sum, t) => sum + (t.points || 0), 0)
+    return { today, upnext, backlog, done, todayPoints, upnextPoints, backlogPoints }
   }, [filteredTasks])
 
   const activeTasks = useMemo(() => {
@@ -305,9 +308,9 @@ export default function MovesPage() {
   }
 
   const mobileTabs = [
-    { key: "today", label: "Today", count: byStatus.today.length },
-    { key: "upnext", label: "Queued", count: byStatus.upnext.length },
-    { key: "backlog", label: "Backlog", count: byStatus.backlog.length },
+    { key: "today", label: "Today", count: byStatus.today.length, points: byStatus.todayPoints },
+    { key: "upnext", label: "Queued", count: byStatus.upnext.length, points: byStatus.upnextPoints },
+    { key: "backlog", label: "Backlog", count: byStatus.backlog.length, points: byStatus.backlogPoints },
   ] as const
 
   const [activeTab, setActiveTab] = useState<"today" | "upnext" | "backlog">("today")
@@ -341,7 +344,12 @@ export default function MovesPage() {
             }`}
           />
         )}
-        <h2 className="text-xl font-bold text-zinc-100 mb-3 relative z-20">Backlog</h2>
+        <div className="flex items-center gap-2 mb-3 relative z-20">
+          <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+          {byStatus.backlogPoints > 0 && (
+            <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+          )}
+        </div>
         <div className="relative z-0">{children}</div>
         {showDropTarget && (
           <div
@@ -507,6 +515,9 @@ export default function MovesPage() {
               <Badge variant="secondary" className="text-xs">
                 {tab.count}
               </Badge>
+              {tab.points > 0 && (
+                <span className="text-[10px] text-zinc-500">{tab.points}pts</span>
+              )}
             </button>
           ))}
         </div>
@@ -521,7 +532,7 @@ export default function MovesPage() {
               onDragOver={handleDragOver}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0}>
+                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0} totalPoints={byStatus.todayPoints}>
                   <SortableContext items={displayItems.today.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {displayItems.today.map((task) => (
                       <SortableTaskCard
@@ -536,7 +547,7 @@ export default function MovesPage() {
                     ))}
                   </SortableContext>
                 </DroppableColumn>
-                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0}>
+                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0} totalPoints={byStatus.upnextPoints}>
                   <SortableContext items={displayItems.upnext.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {displayItems.upnext.map((task) => (
                       <SortableTaskCard
@@ -642,7 +653,12 @@ export default function MovesPage() {
 
               {/* Backlog section */}
               <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+                    {byStatus.backlogPoints > 0 && (
+                      <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+                    )}
+                  </div>
                 <GroupedBacklog onEditMove={handleEditFromBacklog} />
               </div>
             </div>
@@ -668,7 +684,12 @@ export default function MovesPage() {
                 )}
               </div>
               <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+                    {byStatus.backlogPoints > 0 && (
+                      <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+                    )}
+                  </div>
                 <GroupedBacklog onEditMove={handleEditFromBacklog} />
               </div>
             </div>
@@ -977,11 +998,13 @@ function DroppableColumn({
   id,
   title,
   isEmpty,
+  totalPoints,
   children,
 }: {
   id: string
   title: string
   isEmpty: boolean
+  totalPoints?: number
   children: React.ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -1023,6 +1046,9 @@ function DroppableColumn({
       <div className="flex items-center gap-2 mb-3">
         {getColumnIcon()}
         <h2 className="text-xl font-bold text-zinc-100">{title}</h2>
+        {totalPoints !== undefined && totalPoints > 0 && (
+          <span className="text-sm font-medium text-zinc-500">{totalPoints} pts</span>
+        )}
       </div>
       {isEmpty && !isOver ? (
         <div className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
