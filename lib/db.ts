@@ -1,5 +1,5 @@
-import { createPool } from "@vercel/postgres"
-import { drizzle } from "drizzle-orm/vercel-postgres"
+import { neon } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-http"
 import * as schema from "./schema"
 
 // Singleton pattern for connection reuse
@@ -18,8 +18,8 @@ export function getDb() {
     throw new Error("No database connection string found")
   }
 
-  // Create pool with explicit connection string
-  const pool = createPool({ connectionString })
-  db = drizzle(pool, { schema })
+  // Create neon client with connection string
+  const sql = neon(connectionString)
+  db = drizzle({ client: sql, schema })
   return db
 }
