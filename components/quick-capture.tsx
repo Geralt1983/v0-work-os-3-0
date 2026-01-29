@@ -3,20 +3,13 @@
 import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
-import { Loader2, Sparkles, Send } from "lucide-react"
+import { Loader2, Plus, Minus, Sparkles, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useClients } from "@/hooks/use-tasks"
-import {
-  VALUE_TIER_CONFIG,
-  VALUE_POINTS,
-  type ValueTier,
-} from "@/lib/domain/task-types"
-import { ValueTierSelector, ValueTierBadge } from "@/components/value-tier-selector"
 
 interface EstimateResult {
   client: string | null
   title: string
-  valueTier: ValueTier
   points: number
   reasoning: string
   confidence: number
@@ -33,12 +26,11 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
   const [isEstimating, setIsEstimating] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [estimate, setEstimate] = useState<EstimateResult | null>(null)
-  const [adjustedTier, setAdjustedTier] = useState<ValueTier | null>(null)
+  const [adjustedPoints, setAdjustedPoints] = useState<number | null>(null)
   const [selectedClientId, setSelectedClientId] = useState<string>("none")
   const [error, setError] = useState<string | null>(null)
 
-  const currentTier = adjustedTier ?? estimate?.valueTier ?? "progress"
-  const currentPoints = VALUE_POINTS[currentTier]
+  const currentPoints = adjustedPoints ?? estimate?.points ?? 0
 
   // When estimate comes in, try to match the detected client
   useEffect(() => {
@@ -60,7 +52,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
     setIsEstimating(true)
     setError(null)
     setEstimate(null)
-    setAdjustedTier(null)
+    setAdjustedPoints(null)
     setSelectedClientId("none")
 
     try {
@@ -75,7 +67,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
       const data: EstimateResult = await res.json()
       setEstimate(data)
     } catch (err) {
-      setError("Failed to estimate value tier")
+      setError("Failed to estimate points")
       console.error(err)
     } finally {
       setIsEstimating(false)
@@ -105,7 +97,8 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
           title: estimate.title,
           status: "backlog",
           clientId,
-          valueTier: currentTier,
+          pointsAiGuess: estimate.points,
+          pointsFinal: adjustedPoints,
         }),
       })
 
@@ -114,7 +107,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
       // Reset state
       setInput("")
       setEstimate(null)
-      setAdjustedTier(null)
+      setAdjustedPoints(null)
       setSelectedClientId("none")
       onTaskCreated?.()
     } catch (err) {
@@ -125,21 +118,43 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
     }
   }
 
+  const adjustPoints = (delta: number) => {
+    const current = adjustedPoints ?? estimate?.points ?? 5
+    const newValue = Math.max(1, Math.min(10, current + delta))
+    setAdjustedPoints(newValue)
+  }
+
   const resetCapture = () => {
     setInput("")
     setEstimate(null)
-    setAdjustedTier(null)
+    setAdjustedPoints(null)
     setSelectedClientId("none")
     setError(null)
   }
 
-  const tierConfig = VALUE_TIER_CONFIG[currentTier]
+  const getPointsColor = (value: number) => {
+    if (value <= 2) return "text-emerald-400"
+    if (value <= 4) return "text-green-400"
+    if (value <= 6) return "text-yellow-400"
+    if (value <= 8) return "text-orange-400"
+    return "text-red-400"
+  }
+
+  const getPointsLabel = (value: number) => {
+    if (value <= 2) return "Quick"
+    if (value <= 4) return "Routine"
+    if (value <= 6) return "Meaningful"
+    if (value <= 8) return "Heavy"
+    return "Major"
+  }
+
+  const selectedClient = clients.find((c) => String(c.id) === selectedClientId)
 
   return (
     <div className="w-full space-y-3">
       {/* Input Section with glow effect */}
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-violet-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-fuchsia-500/20 to-violet-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
         <input
           type="text"
           value={input}
@@ -163,7 +178,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             className={cn(
               "absolute right-2 top-1/2 -translate-y-1/2",
               "p-2.5 rounded-lg btn-press",
-              "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500",
+              "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500",
               "shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
               "transition-all duration-200"
@@ -219,35 +234,47 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             <h3 className="text-lg font-medium text-zinc-100">{estimate.title}</h3>
           </div>
 
-          {/* Value Tier Display & Adjustment */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className={cn("text-3xl font-bold tabular-nums", tierConfig.color)}>
+          {/* Points Display & Adjustment */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => adjustPoints(-1)}
+                disabled={currentPoints <= 1}
+                className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <span className={cn("text-3xl font-bold tabular-nums", getPointsColor(currentPoints))}>
                   {currentPoints}
                 </span>
                 <div className="flex flex-col">
-                  <span className={cn("text-sm font-medium", tierConfig.color)}>
-                    {tierConfig.label}
+                  <span className={cn("text-sm font-medium", getPointsColor(currentPoints))}>
+                    {getPointsLabel(currentPoints)}
                   </span>
-                  <span className="text-xs text-zinc-500">{tierConfig.description}</span>
+                  <span className="text-xs text-zinc-500">points</span>
                 </div>
               </div>
 
-              {adjustedTier !== null && adjustedTier !== estimate.valueTier && (
-                <span className="text-xs text-zinc-500">
-                  AI suggested: {VALUE_TIER_CONFIG[estimate.valueTier].label}
-                </span>
-              )}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => adjustPoints(1)}
+                disabled={currentPoints >= 10}
+                className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
 
-            {/* Tier Selector */}
-            <ValueTierSelector
-              value={currentTier}
-              onChange={(tier) => setAdjustedTier(tier)}
-              aiSuggestion={estimate.valueTier}
-              compact
-            />
+            {adjustedPoints !== null && adjustedPoints !== estimate.points && (
+              <span className="text-xs text-zinc-500">
+                AI said {estimate.points}
+              </span>
+            )}
           </div>
 
           {/* Reasoning */}
@@ -258,7 +285,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             <Button
               onClick={handleAddToBacklog}
               disabled={isAdding}
-              className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 btn-press transition-all"
+              className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 btn-press transition-all"
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

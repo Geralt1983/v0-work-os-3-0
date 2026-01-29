@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { useState, memo, useCallback } from "react"
-import { getTaskPoints, getValueTierConfig, DAILY_TARGET_POINTS } from "@/lib/domain/task-types"
+import { getTaskPoints, getPointsColor } from "@/lib/domain/task-types"
 
 // Memoized task item to prevent re-renders when other tasks change
 const TaskItem = memo(function TaskItem({
@@ -16,7 +16,6 @@ const TaskItem = memo(function TaskItem({
   formatTime: (date: number) => string
 }) {
   const points = getTaskPoints(task)
-  const tierConfig = getValueTierConfig(task.valueTier)
 
   return (
     <div
@@ -37,8 +36,8 @@ const TaskItem = memo(function TaskItem({
         >
           {task.client}
         </Badge>
-        <span className={`text-xs font-medium tabular-nums ${tierConfig.color}`}>
-          {points}pt{points > 1 ? "s" : ""}
+        <span className={`text-xs font-medium w-8 text-right ${getPointsColor(points)}`}>
+          {points}pt
         </span>
       </div>
     </div>
@@ -88,22 +87,15 @@ export function DoneToday() {
     )
   }
 
-  const progressPercent = Math.round((totalPoints / DAILY_TARGET_POINTS) * 100)
-  const isComplete = totalPoints >= DAILY_TARGET_POINTS
-
   return (
-    <Card className={`${isComplete ? "border-emerald-500/50" : "border-emerald-500/30"} bg-emerald-950/20`}>
+    <Card className="border-emerald-500/30 bg-emerald-950/20">
       <CardHeader className="pb-2">
         <button onClick={() => setExpanded(!expanded)} className="flex items-center justify-between w-full">
           <CardTitle className="flex items-center gap-2 text-lg text-emerald-100">
-            <CheckCircle2 className={`h-5 w-5 ${isComplete ? "text-emerald-400" : "text-emerald-500/70"}`} />
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             Done Today
-            <Badge variant="secondary" className={`ml-2 ${
-              isComplete
-                ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/50"
-                : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-            }`}>
-              {totalPoints}/{DAILY_TARGET_POINTS} pts ({progressPercent}%)
+            <Badge variant="secondary" className="ml-2 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+              {doneTodayTasks.length} tasks &bull; {totalPoints} pts
             </Badge>
           </CardTitle>
           {expanded ? (

@@ -3,10 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { X, Wand2, GitBranch, Loader2, Square, CheckSquare, Trash2 } from "lucide-react"
-import { ValueTierSelector } from "@/components/value-tier-selector"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClients, type TaskStatus, type Task, type Subtask } from "@/hooks/use-tasks"
-import { type ValueTier, DEFAULT_VALUE_TIER, VALUE_TIER_CONFIG, effortToValueTier } from "@/lib/domain/task-types"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +27,7 @@ interface EditTaskDialogProps {
       clientId?: number
       description?: string
       status?: TaskStatus
-      valueTier?: ValueTier
+      effortEstimate?: number
       drainType?: string
     },
   ) => Promise<void>
@@ -37,6 +35,13 @@ interface EditTaskDialogProps {
   onSetSubtasksFromTitles?: (id: string, titles: string[]) => Promise<void>
   onDelete?: (id: string) => Promise<void>
 }
+
+const effortOptions = [
+  { value: 2, label: "Quick", description: "<5 min", color: "bg-emerald-500" },
+  { value: 4, label: "Routine", description: "15-30 min", color: "bg-green-500" },
+  { value: 6, label: "Meaningful", description: "30-60 min", color: "bg-yellow-500" },
+  { value: 8, label: "Heavy", description: "1-2 hours", color: "bg-orange-500" },
+]
 
 const drainOptions = [
   { value: "deep", label: "Deep", color: "bg-rose-500" },
@@ -49,6 +54,23 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: "upnext", label: "Up Next" },
   { value: "today", label: "Today" },
 ]
+
+function typeToPoints(type: Task["type"]): number {
+  switch (type) {
+    case "Quick":
+      return 2
+    case "Routine":
+      return 4
+    case "Meaningful":
+      return 6
+    case "Heavy":
+      return 8
+    case "Major":
+      return 10
+    default:
+      return 4
+  }
+}
 
 export function EditTaskDialog({
   open,
@@ -65,7 +87,7 @@ export function EditTaskDialog({
   const [clientId, setClientId] = useState<number | undefined>()
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("backlog")
-  const [valueTier, setValueTier] = useState<ValueTier>(DEFAULT_VALUE_TIER)
+  const [effortEstimate, setEffortEstimate] = useState(3)
   const [drainType, setDrainType] = useState<string>("shallow")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -106,9 +128,8 @@ export function EditTaskDialog({
       setClientId(task.clientId)
       setDescription(task.description || "")
       setStatus(task.status === "done" ? "today" : task.status)
-      // Use valueTier if present, otherwise convert from legacy effortEstimate
-      setValueTier((task.valueTier as ValueTier) || effortToValueTier(task.effortEstimate))
-      setDrainType(task.drainType || "shallow")
+      setEffortEstimate(typeToPoints(task.type))
+      setDrainType("shallow")
       setSubtasks(task.subtasks || [])
     }
   }, [task])
@@ -126,7 +147,7 @@ export function EditTaskDialog({
         clientId,
         description: description.trim() || undefined,
         status,
-        valueTier,
+        effortEstimate,
         drainType,
       })
       onClose()
@@ -142,7 +163,6 @@ export function EditTaskDialog({
     setIsRewriting(true)
     try {
       const selectedClient = clients.find((c) => c.id === clientId)
-      const tierConfig = VALUE_TIER_CONFIG[valueTier]
       const res = await fetch("/api/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,8 +170,8 @@ export function EditTaskDialog({
           text: title,
           context: {
             client: selectedClient?.name,
-            valueTier: valueTier,
-            tierLabel: tierConfig.label,
+            type: effortOptions.find((e) => e.value === effortEstimate)?.label,
+            points: effortEstimate,
           },
         }),
       })
@@ -184,7 +204,7 @@ export function EditTaskDialog({
           title,
           description,
           clientName: selectedClient?.name,
-          valueTier,
+          effortEstimate,
         }),
       })
       if (!res.ok) {
@@ -275,8 +295,8 @@ export function EditTaskDialog({
                 className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800">
-                  <h2 className="text-base font-semibold text-white">Edit Task</h2>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+                  <h2 className="text-lg font-semibold text-white">Edit Task</h2>
                   <button
                     type="button"
                     onClick={onClose}
@@ -288,7 +308,7 @@ export function EditTaskDialog({
                 </div>
 
                 {/* Body */}
-                <div className="px-4 py-2 space-y-2.5">
+                <div className="px-6 py-5 space-y-5">
                   {submitError && (
                     <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
                       {submitError}
@@ -297,13 +317,13 @@ export function EditTaskDialog({
 
                   {/* Title with Rewrite button */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-medium text-zinc-400">Title</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-zinc-400">Title</label>
                       <button
                         type="button"
                         onClick={handleRewrite}
                         disabled={isRewriting || !title.trim()}
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {isRewriting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
                         Rewrite
@@ -314,22 +334,22 @@ export function EditTaskDialog({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
-                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition text-sm"
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
                     />
                   </div>
 
                   {/* Client */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Client</label>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Client</label>
                     {clientsLoading ? (
-                      <div className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-500 text-sm">
+                      <div className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500">
                         Loading clients...
                       </div>
                     ) : (
                       <select
                         value={clientId ?? ""}
                         onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
-                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer"
+                        className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition appearance-none cursor-pointer"
                       >
                         <option value="">No client</option>
                         {clients.map((client) => (
@@ -343,16 +363,16 @@ export function EditTaskDialog({
 
                   {/* Status */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Status</label>
-                    <div className="flex gap-1.5">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Status</label>
+                    <div className="flex gap-2">
                       {statusOptions.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setStatus(opt.value)}
-                          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
                             status === opt.value
-                              ? "bg-indigo-500 text-white"
+                              ? "bg-fuchsia-500 text-white"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -362,33 +382,47 @@ export function EditTaskDialog({
                     </div>
                   </div>
 
-                  {/* Value Tier */}
+                  {/* Complexity Points */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Value</label>
-                    <ValueTierSelector
-                      value={valueTier}
-                      onChange={setValueTier}
-                      aiSuggestion={task?.valueTier as ValueTier | null}
-                      compact
-                    />
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Complexity</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {effortOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setEffortEstimate(opt.value)}
+                          className={`px-3 py-2.5 rounded-xl text-sm font-medium transition flex flex-col items-center gap-1 ${
+                            effortEstimate === opt.value
+                              ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
+                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                            <span>{opt.label}</span>
+                          </div>
+                          <span className="text-xs opacity-70">{opt.description}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Drain Type */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Energy Type</label>
-                    <div className="flex gap-1.5">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Energy Type</label>
+                    <div className="flex flex-wrap gap-2">
                       {drainOptions.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setDrainType(opt.value)}
-                          className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 ${
+                          className={`px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 ${
                             drainType === opt.value
-                              ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
+                              ? "bg-zinc-700 text-white ring-2 ring-fuchsia-500"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${opt.color}`} />
+                          <span className={`w-2 h-2 rounded-full ${opt.color}`} />
                           {opt.label}
                         </button>
                       ))}
@@ -397,45 +431,45 @@ export function EditTaskDialog({
 
                   {/* Description */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
                       Description <span className="text-zinc-600">(optional)</span>
                     </label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Add any notes or context..."
-                      rows={1}
-                      className="w-full px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                      rows={3}
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
                     />
                   </div>
 
                   {subtasks.length > 0 && (
                     <div className="pt-2 border-t border-zinc-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-medium text-zinc-400">Subtasks</label>
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-zinc-400">Subtasks</label>
                         <span className="text-xs text-zinc-500">
                           {completedCount}/{totalCount} done
                         </span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {subtasks.map((subtask) => (
                           <div
                             key={subtask.id}
-                            className="flex items-center gap-2 px-2 py-1.5 bg-zinc-800/50 rounded-md group"
+                            className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 rounded-lg group"
                           >
                             <button
                               type="button"
                               onClick={() => toggleSubtask(subtask.id)}
-                              className="flex-shrink-0 text-zinc-400 hover:text-indigo-400 transition"
+                              className="flex-shrink-0 text-zinc-400 hover:text-fuchsia-400 transition"
                             >
                               {subtask.completed ? (
-                                <CheckSquare className="h-4 w-4 text-indigo-500" />
+                                <CheckSquare className="h-5 w-5 text-fuchsia-500" />
                               ) : (
-                                <Square className="h-4 w-4" />
+                                <Square className="h-5 w-5" />
                               )}
                             </button>
                             <span
-                              className={`flex-1 text-xs ${
+                              className={`flex-1 text-sm ${
                                 subtask.completed ? "text-zinc-500 line-through" : "text-zinc-200"
                               }`}
                             >
@@ -446,7 +480,7 @@ export function EditTaskDialog({
                               onClick={() => deleteSubtask(subtask.id)}
                               className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
@@ -460,12 +494,12 @@ export function EditTaskDialog({
                       type="button"
                       onClick={handleBreakdown}
                       disabled={isBreakingDown}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                       {isBreakingDown ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <GitBranch className="h-3.5 w-3.5" />
+                        <GitBranch className="h-4 w-4" />
                       )}
                       {subtasks.length > 0 ? "Regenerate Subtasks" : "Break into Subtasks"}
                     </button>
@@ -473,31 +507,31 @@ export function EditTaskDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="px-4 py-2.5 border-t border-zinc-800 flex justify-between gap-2">
+                <div className="px-6 py-4 border-t border-zinc-800 flex justify-between gap-3">
                   {onDelete && (
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="px-3 py-2 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition flex items-center gap-1.5"
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition flex items-center gap-2"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </button>
                   )}
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex gap-3 ml-auto">
                     <button
                       type="button"
                       onClick={onClose}
-                      className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={!title.trim() || isSubmitting}
-                      className="px-4 py-2 rounded-lg text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium bg-fuchsia-500 text-white hover:bg-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
-                      {isSubmitting ? "Saving..." : "Save"}
+                      {isSubmitting ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -544,7 +578,7 @@ export function EditTaskDialog({
                 </div>
                 <div>
                   <span className="text-zinc-500 text-xs uppercase tracking-wide">Suggested:</span>
-                  <div className="text-indigo-400 mt-1 font-medium">{rewriteSuggestion}</div>
+                  <div className="text-fuchsia-400 mt-1 font-medium">{rewriteSuggestion}</div>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -553,7 +587,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Keep Original
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRewrite} className="bg-indigo-500 text-white hover:bg-indigo-600">
+            <AlertDialogAction onClick={confirmRewrite} className="bg-fuchsia-500 text-white hover:bg-fuchsia-600">
               Use Suggestion
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -571,7 +605,7 @@ export function EditTaskDialog({
                 <ul className="space-y-2 mt-2">
                   {subtaskSuggestions.map((subtask, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <Square className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                      <Square className="h-4 w-4 text-fuchsia-500 mt-0.5 flex-shrink-0" />
                       <span className="text-zinc-300">{subtask}</span>
                     </li>
                   ))}
@@ -586,7 +620,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSubtasks} className="bg-indigo-500 text-white hover:bg-indigo-600">
+            <AlertDialogAction onClick={confirmSubtasks} className="bg-fuchsia-500 text-white hover:bg-fuchsia-600">
               Add Subtasks
             </AlertDialogAction>
           </AlertDialogFooter>

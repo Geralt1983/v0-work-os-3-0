@@ -4,8 +4,6 @@ import { tasks, dailyLog, clients, dailyGoals } from "@/lib/schema"
 import { eq, sql } from "drizzle-orm"
 import { logTaskEvent } from "@/lib/events"
 import { sendNotification } from "@/lib/notifications"
-import { checkAndSendMilestone } from "@/lib/milestone-checker"
-import { getTaskPoints } from "@/lib/domain"
 
 // POST mark task as complete
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +16,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const [currentTask] = await db
       .select({
         status: tasks.status,
-        title: tasks.title,
-        valueTier: tasks.valueTier, // Added for accurate points
         pointsAiGuess: tasks.pointsAiGuess,
         pointsFinal: tasks.pointsFinal,
       })
@@ -56,8 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let currentStreak = 0
 
     try {
-      // Use standard domain logic for points
-      const points = getTaskPoints(currentTask || {})
+      const points = currentTask?.pointsFinal || currentTask?.pointsAiGuess || 3
       const now = new Date()
       const estOffset = -5 * 60
       const estNow = new Date(now.getTime() + (estOffset - now.getTimezoneOffset()) * 60000)
@@ -144,40 +139,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.log(`[POINTS] Added ${points} points for task ${taskId}`)
     } catch (pointsError) {
       console.error("[POINTS] Failed to update daily goals:", pointsError)
-    }
-
-    // ============================================
-    // MILESTONE NOTIFICATIONS - DISABLED (Too noisy)
-    // ============================================
-    /*
-    try {
-      // Pass the updated values directly to avoid race condition
-      await checkAndSendMilestone({
-        earnedPoints: newEarnedPoints,
-        targetPoints,
-        currentStreak,
-        taskCount: (existingGoal?.taskCount || 0) + 1,
-      })
-      console.log("[MILESTONE] Milestone check completed")
-    } catch (milestoneError) {
-      console.error("[MILESTONE] Failed to check milestone:", milestoneError)
-    }
-    */
-
-    // ============================================
-    // TASK COMPLETION NOTIFICATION
-    // ============================================
-    try {
-      const points = getTaskPoints(currentTask || {})
-      const taskTitle = currentTask?.title || "Task"
-
-      await sendNotification(`✅ Completed: ${taskTitle} (${points} pts)`, {
-        title: "Task Complete",
-        priority: "default",
-        tags: "white_check_mark"
-      })
-    } catch (e) {
-      console.error("Failed to send completion notification", e)
     }
 
     // ============================================

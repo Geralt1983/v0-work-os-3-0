@@ -9,8 +9,6 @@ import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
-import { DailyProgressBar } from "@/components/daily-progress-bar"
-import { getTaskPoints, getValueTierConfig, type ValueTier } from "@/lib/domain/task-types"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -22,7 +20,6 @@ import { CheckSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { AnimatePresence } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
-
 import {
   DndContext,
   DragOverlay,
@@ -290,7 +287,10 @@ export default function MovesPage() {
     const upnext = filteredTasks.filter((t) => t.status === "upnext")
     const backlog = filteredTasks.filter((t) => t.status === "backlog")
     const done = filteredTasks.filter((t) => t.status === "done")
-    return { today, upnext, backlog, done }
+    const todayPoints = today.reduce((sum, t) => sum + (t.points || 0), 0)
+    const upnextPoints = upnext.reduce((sum, t) => sum + (t.points || 0), 0)
+    const backlogPoints = backlog.reduce((sum, t) => sum + (t.points || 0), 0)
+    return { today, upnext, backlog, done, todayPoints, upnextPoints, backlogPoints }
   }, [filteredTasks])
 
   const activeTasks = useMemo(() => {
@@ -308,9 +308,9 @@ export default function MovesPage() {
   }
 
   const mobileTabs = [
-    { key: "today", label: "Today", count: byStatus.today.length },
-    { key: "upnext", label: "Queued", count: byStatus.upnext.length },
-    { key: "backlog", label: "Backlog", count: byStatus.backlog.length },
+    { key: "today", label: "Today", count: byStatus.today.length, points: byStatus.todayPoints },
+    { key: "upnext", label: "Queued", count: byStatus.upnext.length, points: byStatus.upnextPoints },
+    { key: "backlog", label: "Backlog", count: byStatus.backlog.length, points: byStatus.backlogPoints },
   ] as const
 
   const [activeTab, setActiveTab] = useState<"today" | "upnext" | "backlog">("today")
@@ -329,29 +329,37 @@ export default function MovesPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`col-span-1 rounded-xl transition-all duration-200 relative ${isOver
-          ? "bg-indigo-500/20 ring-2 ring-indigo-500/50 scale-[1.01]"
-          : showDropTarget
-            ? "ring-1 ring-dashed ring-zinc-600"
-            : ""
-          }`}
+        className={`col-span-1 rounded-xl transition-all duration-200 relative ${
+          isOver
+            ? "bg-fuchsia-500/20 ring-2 ring-fuchsia-500/50 scale-[1.01]"
+            : showDropTarget
+              ? "ring-1 ring-dashed ring-zinc-600"
+              : ""
+        }`}
       >
         {showDropTarget && (
           <div
-            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${isOver ? "bg-indigo-500/10" : "bg-transparent"
-              }`}
+            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${
+              isOver ? "bg-fuchsia-500/10" : "bg-transparent"
+            }`}
           />
         )}
-        <h2 className="text-xl font-bold text-zinc-100 mb-3 relative z-20">Backlog</h2>
+        <div className="flex items-center gap-2 mb-3 relative z-20">
+          <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+          {byStatus.backlogPoints > 0 && (
+            <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+          )}
+        </div>
         <div className="relative z-0">{children}</div>
         {showDropTarget && (
           <div
-            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${isOver
-              ? "bg-indigo-500/20 border-2 border-dashed border-indigo-500/50"
-              : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
-              }`}
+            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${
+              isOver
+                ? "bg-fuchsia-500/20 border-2 border-dashed border-fuchsia-500/50"
+                : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
+            }`}
           >
-            <span className={`text-sm ${isOver ? "text-indigo-400" : "text-zinc-500"}`}>
+            <span className={`text-sm ${isOver ? "text-fuchsia-400" : "text-zinc-500"}`}>
               {isOver ? "Release to move to backlog" : "Drop here to send to backlog"}
             </span>
           </div>
@@ -364,11 +372,13 @@ export default function MovesPage() {
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-zinc-100 sm:text-2xl md:text-3xl tracking-tight">Tasks</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-100 md:text-3xl tracking-tight">Tasks</h1>
+            <p className="hidden sm:block text-sm text-white/50 mt-0.5">One task per client, every day.</p>
           </div>
-          <WorkOSNav />
+          <div className="flex-shrink-0 pt-1">
+            <WorkOSNav />
+          </div>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
@@ -390,16 +400,12 @@ export default function MovesPage() {
 
           <Button
             size="sm"
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 btn-press transition-all"
+            className="bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-fuchsia-500/20 hover:shadow-fuchsia-500/30 btn-press transition-all"
             onClick={() => setIsNewTaskOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1.5" />
             New Task
           </Button>
-        </div>
-
-        <div className="mt-4">
-          <DailyProgressBar />
         </div>
 
         <div className="mt-4">
@@ -414,18 +420,17 @@ export default function MovesPage() {
           <SynapsePicks />
         </div>
 
-
-
         <div className="hidden lg:flex items-center justify-between gap-2 mt-4">
           <div className="flex items-center gap-1 bg-zinc-900 rounded-full p-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setView("board")}
-              className={`rounded-full px-3 h-8 ${view === "board"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
+              className={`rounded-full px-3 h-8 ${
+                view === "board"
+                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+              }`}
             >
               <LayoutGrid className="h-4 w-4 mr-1.5" />
               Board
@@ -434,10 +439,11 @@ export default function MovesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setView("list")}
-              className={`rounded-full px-3 h-8 ${view === "list"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
+              className={`rounded-full px-3 h-8 ${
+                view === "list"
+                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+              }`}
             >
               <List className="h-4 w-4 mr-1.5" />
               List
@@ -446,10 +452,11 @@ export default function MovesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setView("focus")}
-              className={`rounded-full px-3 h-8 ${view === "focus"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
+              className={`rounded-full px-3 h-8 ${
+                view === "focus"
+                  ? "bg-fuchsia-600 text-white hover:bg-fuchsia-600"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+              }`}
             >
               <Crosshair className="h-4 w-4 mr-1.5" />
               Focus
@@ -498,15 +505,19 @@ export default function MovesPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab.key
-                ? "border-indigo-500 text-white"
-                : "border-transparent text-zinc-400 hover:text-white"
-                }`}
+              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${
+                activeTab === tab.key
+                  ? "border-fuchsia-500 text-white"
+                  : "border-transparent text-zinc-400 hover:text-white"
+              }`}
             >
               {tab.label}
               <Badge variant="secondary" className="text-xs">
                 {tab.count}
               </Badge>
+              {tab.points > 0 && (
+                <span className="text-[10px] text-zinc-500">{tab.points}pts</span>
+              )}
             </button>
           ))}
         </div>
@@ -521,7 +532,7 @@ export default function MovesPage() {
               onDragOver={handleDragOver}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0}>
+                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0} totalPoints={byStatus.todayPoints}>
                   <SortableContext items={displayItems.today.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {displayItems.today.map((task) => (
                       <SortableTaskCard
@@ -536,7 +547,7 @@ export default function MovesPage() {
                     ))}
                   </SortableContext>
                 </DroppableColumn>
-                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0}>
+                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0} totalPoints={byStatus.upnextPoints}>
                   <SortableContext items={displayItems.upnext.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {displayItems.upnext.map((task) => (
                       <SortableTaskCard
@@ -562,7 +573,7 @@ export default function MovesPage() {
                 }}
               >
                 {activeTask ? (
-                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-indigo-500/50 rounded-2xl">
+                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-fuchsia-500/50 rounded-2xl">
                     <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
                   </div>
                 ) : null}
@@ -601,16 +612,24 @@ export default function MovesPage() {
                         {/* Title - grows to fill space, truncate with ellipsis */}
                         <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
 
-                        {/* Points badge */}
-                        {(() => {
-                          const points = getTaskPoints(task)
-                          const tierConfig = getValueTierConfig(task.valueTier)
-                          return (
-                            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium tabular-nums ${tierConfig.bgColor} ${tierConfig.color}`}>
-                              {points}pt{points > 1 ? "s" : ""}
-                            </span>
-                          )
-                        })()}
+                        {/* Points */}
+                        <span
+                          className={`text-xs w-10 shrink-0 text-right font-medium ${
+                            task.points
+                              ? task.points <= 2
+                                ? "text-emerald-400"
+                                : task.points <= 4
+                                  ? "text-green-400"
+                                  : task.points <= 6
+                                    ? "text-yellow-400"
+                                    : task.points <= 8
+                                      ? "text-orange-400"
+                                      : "text-red-400"
+                              : "text-zinc-500"
+                          }`}
+                        >
+                          {task.points || "—"}
+                        </span>
 
                         {/* Actions */}
                         <div className="flex items-center gap-1 shrink-0">
@@ -634,7 +653,12 @@ export default function MovesPage() {
 
               {/* Backlog section */}
               <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+                    {byStatus.backlogPoints > 0 && (
+                      <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+                    )}
+                  </div>
                 <GroupedBacklog onEditMove={handleEditFromBacklog} />
               </div>
             </div>
@@ -660,7 +684,12 @@ export default function MovesPage() {
                 )}
               </div>
               <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-xl font-bold text-zinc-100">Backlog</h2>
+                    {byStatus.backlogPoints > 0 && (
+                      <span className="text-sm font-medium text-zinc-500">{byStatus.backlogPoints} pts</span>
+                    )}
+                  </div>
                 <GroupedBacklog onEditMove={handleEditFromBacklog} />
               </div>
             </div>
@@ -745,19 +774,19 @@ function ViewToggle({ view, onChange }: { view: TasksView; onChange: (v: TasksVi
     <div className="inline-flex rounded-full bg-zinc-900 p-1">
       <button
         onClick={() => onChange("board")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <LayoutGrid className="h-3.5 w-3.5" /> Board
       </button>
       <button
         onClick={() => onChange("list")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <List className="h-3.5 w-3.5" /> List
       </button>
       <button
         onClick={() => onChange("focus")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-fuchsia-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <Crosshair className="h-3.5 w-3.5" /> Focus
       </button>
@@ -802,17 +831,25 @@ function TaskCard({
   }
 
   const isCompact = variant === "compact"
-  const taskPoints = getTaskPoints(task)
-  const tierConfig = getValueTierConfig(task.valueTier)
+
+  // Points color based on 1-10 scale
+  const getPointsColor = (value: number | undefined) => {
+    if (!value) return "text-zinc-500"
+    if (value <= 2) return "text-emerald-400"
+    if (value <= 4) return "text-green-400"
+    if (value <= 6) return "text-yellow-400"
+    if (value <= 8) return "text-orange-400"
+    return "text-red-400"
+  }
 
   // Status-based card styling
   const getStatusStyles = () => {
     if (isDragging) {
-      return "border-indigo-500/50 bg-zinc-900 shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-500/30"
+      return "border-fuchsia-500/50 bg-zinc-900 shadow-xl shadow-fuchsia-500/20 ring-2 ring-fuchsia-500/30"
     }
     switch (task.status) {
       case "today":
-        return "card-today border hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10"
+        return "card-today border hover:border-fuchsia-500/40 hover:shadow-lg hover:shadow-fuchsia-500/10"
       case "upnext":
         return "card-queued border hover:border-zinc-600 hover:shadow-lg"
       case "done":
@@ -847,7 +884,7 @@ function TaskCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-indigo-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
+          <div className={`font-medium text-fuchsia-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
           <h3
             className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
@@ -874,10 +911,11 @@ function TaskCard({
             disabled={completing}
             aria-label={`Complete task: ${task.title}`}
             title={`Complete: ${task.title}`}
-            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${completing
-              ? "bg-emerald-500 text-white animate-celebrate glow-success"
-              : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
-              }`}
+            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${
+              completing
+                ? "bg-emerald-500 text-white animate-celebrate glow-success"
+                : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
+            }`}
           >
             <Check className={`${isCompact ? "h-4 w-4" : "h-5 w-5"} ${completing ? "animate-pulse" : ""}`} />
           </button>
@@ -889,7 +927,7 @@ function TaskCard({
           <CheckSquare className="h-3.5 w-3.5 text-zinc-500" />
           <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
+              className="h-full bg-fuchsia-500 transition-all duration-300"
               style={{ width: `${totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0}%` }}
             />
           </div>
@@ -901,9 +939,26 @@ function TaskCard({
 
       <div className={`flex items-center justify-between ${isCompact ? "mt-2" : "mt-3"}`}>
         <div className="flex items-center gap-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full ${tierConfig.bgColor} ${tierConfig.color} font-medium tabular-nums`}>
-            {taskPoints}pt{taskPoints > 1 ? "s" : ""}
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${
+              task.type === "Quick"
+                ? "bg-emerald-500/20 text-emerald-400"
+                : task.type === "Routine"
+                  ? "bg-green-500/20 text-green-400"
+                  : task.type === "Meaningful"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : task.type === "Heavy"
+                      ? "bg-orange-500/20 text-orange-400"
+                      : task.type === "Major"
+                        ? "bg-red-500/20 text-red-400"
+                        : "bg-zinc-700 text-zinc-400"
+            }`}
+          >
+            {task.type}
           </span>
+          {task.points ? (
+            <span className={`text-sm font-medium ${getPointsColor(task.points)}`}>{task.points}pt</span>
+          ) : null}
         </div>
         <span className="text-sm text-zinc-500">{task.ageLabel}</span>
       </div>
@@ -929,7 +984,7 @@ function UndoToast({
         >
           <div className="flex items-center gap-3 rounded-full bg-zinc-800 border border-zinc-700 px-4 py-2 shadow-lg">
             <span className="text-sm text-zinc-300">Move completed</span>
-            <button onClick={onUndo} className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+            <button onClick={onUndo} className="text-sm font-medium text-fuchsia-400 hover:text-fuchsia-300">
               Undo
             </button>
           </div>
@@ -943,11 +998,13 @@ function DroppableColumn({
   id,
   title,
   isEmpty,
+  totalPoints,
   children,
 }: {
   id: string
   title: string
   isEmpty: boolean
+  totalPoints?: number
   children: React.ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -958,7 +1015,7 @@ function DroppableColumn({
   const getColumnIcon = () => {
     switch (id) {
       case "today-column":
-        return <Zap className="h-5 w-5 text-indigo-400" />
+        return <Zap className="h-5 w-5 text-fuchsia-400" />
       case "upnext-column":
         return <Clock className="h-5 w-5 text-zinc-400" />
       default:
@@ -982,12 +1039,16 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${isOver ? "bg-indigo-500/5 ring-2 ring-indigo-500/30 scale-[1.01]" : ""
-        }`}
+      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${
+        isOver ? "bg-fuchsia-500/5 ring-2 ring-fuchsia-500/30 scale-[1.01]" : ""
+      }`}
     >
       <div className="flex items-center gap-2 mb-3">
         {getColumnIcon()}
         <h2 className="text-xl font-bold text-zinc-100">{title}</h2>
+        {totalPoints !== undefined && totalPoints > 0 && (
+          <span className="text-sm font-medium text-zinc-500">{totalPoints} pts</span>
+        )}
       </div>
       {isEmpty && !isOver ? (
         <div className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">

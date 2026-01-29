@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
         title: tasks.title,
         description: tasks.description,
         status: tasks.status,
-        valueTier: tasks.valueTier,
         effortEstimate: tasks.effortEstimate,
         effortActual: tasks.effortActual,
         drainType: tasks.drainType,
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log("[v0] Tasks API: POST body received", body)
 
-    const { clientId, title, description, status, valueTier, drainType } = body
+    const { clientId, title, description, status, effortEstimate, drainType, pointsAiGuess, pointsFinal } = body
 
     if (!title) {
       console.log("[v0] Tasks API: Title is missing")
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
     const validClientId = parsedClientId && !isNaN(parsedClientId) ? parsedClientId : null
 
     const targetStatus = status || "backlog"
-    const targetValueTier = valueTier || "progress"
     const existingTasks = await db
       .select({ sortOrder: tasks.sortOrder })
       .from(tasks)
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
     const minSortOrder = existingTasks.reduce((min, t) => Math.min(min, t.sortOrder ?? 0), 0)
     const newSortOrder = minSortOrder - 1
 
-    console.log("[v0] Tasks API: Inserting task with clientId:", validClientId, "valueTier:", targetValueTier, "sortOrder:", newSortOrder)
+    console.log("[v0] Tasks API: Inserting task with clientId:", validClientId, "sortOrder:", newSortOrder)
 
     const [newTask] = await db
       .insert(tasks)
@@ -93,10 +91,13 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         status: targetStatus,
-        valueTier: targetValueTier,
+        effortEstimate: effortEstimate || 2,
         drainType: drainType || null,
         sortOrder: newSortOrder,
         updatedAt: new Date(),
+        pointsAiGuess: pointsAiGuess || null,
+        pointsFinal: pointsFinal || null,
+        pointsAdjustedAt: pointsFinal ? new Date() : null,
       })
       .returning()
 
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       taskId: newTask.id,
       eventType: "created",
       toStatus: targetStatus,
-      metadata: { valueTier: targetValueTier, drainType: drainType || null },
+      metadata: { effortEstimate: effortEstimate || 2, drainType: drainType || null },
     })
 
     let clientName: string | null = null

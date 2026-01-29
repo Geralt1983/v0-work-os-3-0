@@ -89,7 +89,7 @@ export function WeeklyGoals() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/30">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-400" />
+            <Zap className="h-4 w-4 text-fuchsia-400" />
             <div>
               <div className="text-sm font-medium">{data.totalPoints} pts</div>
               <div className="text-[10px] text-muted-foreground">this week</div>
