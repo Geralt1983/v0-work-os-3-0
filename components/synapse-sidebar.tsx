@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ChevronRight, AlertTriangle, Zap, Send } from "lucide-react"
+import { ChevronRight, AlertTriangle, Zap, Send, Paperclip, X, Trash2 } from "lucide-react"
 import { useChat, type Message, type TaskCard } from "@/hooks/use-chat"
 import { VoiceRecorder } from "@/components/voice-recorder"
 import { cn } from "@/lib/utils"
@@ -20,15 +20,17 @@ interface SynapseSidebarProps {
 }
 
 export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
-  const { messages, isLoading, error, sendMessage, unreadCount, markAsSeen } = useChat() // Get unreadCount and markAsSeen
+  const { messages, isLoading, error, sendMessage, clearChat, sessionId, unreadCount, markAsSeen } = useChat() // Get unreadCount and markAsSeen
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === "undefined") return false
     return localStorage.getItem("synapse-sidebar-collapsed") === "true"
   })
   const [input, setInput] = useState("")
   const [isVoiceMode, setIsVoiceMode] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<{ name: string; base64: string; preview?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     if (messagesContainerRef.current) {
@@ -55,12 +57,41 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     scrollToBottom("smooth")
   }, [messages])
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File too large. Max 10MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      setSelectedFile({
+        name: file.name,
+        base64,
+        preview: file.type.startsWith("image/") ? base64 : undefined,
+      })
+    }
+    reader.readAsDataURL(file)
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const clearFile = () => setSelectedFile(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !selectedFile) || isLoading) return
     const message = input
+    const imageBase64 = selectedFile?.base64
     setInput("")
-    await sendMessage(message)
+    setSelectedFile(null)
+    await sendMessage(message, imageBase64)
   }
 
   const handleQuickAction = async (prompt: string) => {
@@ -108,13 +139,33 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
           <span className="font-semibold text-zinc-100 tracking-tight">{ASSISTANT_NAME}</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">AI</span>
         </div>
-        <button
-          onClick={() => updateCollapsed(true)}
-          className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press"
-          title="Collapse sidebar"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button
+              onClick={async () => {
+                if (sessionId) {
+                  await fetch('/api/chat/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                  })
+                }
+                clearChat()
+              }}
+              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400 transition-all btn-press"
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => updateCollapsed(true)}
+            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press"
+            title="Collapse sidebar"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Avoidance warning */}
@@ -186,7 +237,44 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
           </div>
         )}
 
+        {/* File preview */}
+        {selectedFile && (
+          <div className="mb-2 p-2 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center gap-2">
+            {selectedFile.preview ? (
+              <img src={selectedFile.preview} alt="Preview" className="w-12 h-12 object-cover rounded" />
+            ) : (
+              <div className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center">
+                <Paperclip className="w-5 h-5 text-zinc-500" />
+              </div>
+            )}
+            <span className="flex-1 text-xs text-zinc-400 truncate">{selectedFile.name}</span>
+            <button onClick={clearFile} className="p-1 hover:bg-zinc-800 rounded">
+              <X className="w-4 h-4 text-zinc-500" />
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,.doc,.docx,.txt"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* Attachment button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="p-2 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition disabled:opacity-50"
+            title="Attach file"
+          >
+            <Paperclip className="w-5 h-5" />
+          </button>
+
           <input
             type="text"
             value={input}
@@ -196,10 +284,10 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             placeholder="Type or tap mic..."
           />
 
-          {input.trim() ? (
+          {input.trim() || selectedFile ? (
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || (!input.trim() && !selectedFile)}
               className="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition flex items-center gap-2"
             >
               <Send className="w-4 h-4" />

@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "mcp:start": "tsx mcp-server/index.ts",
     "start": "next start"
   },
   "dependencies": {
@@ -106,6 +107,7 @@
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.1",
     "vaul": "^1.1.2",
     "zod": "3.25.76"
   },
@@ -137,5 +139,8 @@
   },
   "trustedDependencies": [
     "pg-native"
-  ]
+  ],
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3"
+  }
 }

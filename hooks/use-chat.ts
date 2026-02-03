@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import useSWR from "swr"
 import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
 
@@ -64,6 +64,7 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSeenTime, setLastSeenTime] = useState<string | null>(null)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     const stored = localStorage.getItem("workos-chat-session")
@@ -116,6 +117,7 @@ export function useChat() {
   const switchSession = useCallback((newSessionId: string) => {
     setSessionId(newSessionId)
     setMessages([])
+    setError(null)
     localStorage.setItem("workos-chat-session", newSessionId)
   }, [])
 
@@ -124,6 +126,7 @@ export function useChat() {
     async (content: string, imageBase64?: string) => {
       if (!content.trim() && !imageBase64) return
 
+      const requestId = ++requestIdRef.current
       setIsLoading(true)
       setError(null)
 
@@ -178,11 +181,15 @@ export function useChat() {
 
         mutateHistory()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to send message")
+        if (requestId === requestIdRef.current) {
+          setError(err instanceof Error ? err.message : "Failed to send message")
+        }
         // Remove optimistic message on error
         setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id))
       } finally {
-        setIsLoading(false)
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false)
+        }
       }
     },
     [sessionId, markAsSeen, mutateHistory],
@@ -192,6 +199,7 @@ export function useChat() {
   const clearChat = useCallback(() => {
     setSessionId(null)
     setMessages([])
+    setError(null)
     localStorage.removeItem("workos-chat-session")
   }, [])
 
