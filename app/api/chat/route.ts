@@ -10,6 +10,11 @@ import { executeTool } from "@/lib/ai/tool-executor"
 import { getAvoidanceSummary } from "@/lib/ai/avoidance"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openclawBaseUrl = process.env.OPENCLAW_URL?.replace(/\/$/, "")
+const openclaw = openclawBaseUrl
+  ? new OpenAI({ apiKey: process.env.OPENCLAW_TOKEN, baseURL: `${openclawBaseUrl}/v1` })
+  : null
+const openclawEnabled = process.env.OPENCLAW_ENABLED === "true"
 
 export async function POST(request: Request) {
   try {
@@ -67,47 +72,23 @@ export async function POST(request: Request) {
       })),
     ]
 
-    // Call OpenAI with tools
-    let response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: openaiMessages,
-      tools: chatTools,
-      tool_choice: "auto",
-    })
-
-    let assistantMessage = response.choices[0].message
+    let assistantMessage: OpenAI.ChatCompletionMessage
     let taskCard = null
 
-    // Handle tool calls
-    while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-      openaiMessages.push(assistantMessage)
-
-      for (const toolCall of assistantMessage.tool_calls) {
-        if (!("function" in toolCall)) continue
-        const toolName = toolCall.function.name
-        const toolArgs = JSON.parse(toolCall.function.arguments)
-
-        console.log(`Calling tool: ${toolName}`, toolArgs)
-
-        const result = await executeTool(toolName, toolArgs)
-
-        // Create task card for task creation
-        if (toolName === "create_task" && result.task) {
-          taskCard = {
-            title: result.task.title,
-            taskId: String(result.task.id),
-            status: result.task.status,
-          }
-        }
-
-        openaiMessages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(result),
-        })
+    if (openclawEnabled) {
+      if (!openclaw) {
+        throw new Error("OpenClaw is enabled but OPENCLAW_URL/OPENCLAW_TOKEN are not set.")
       }
 
-      response = await openai.chat.completions.create({
+      const response = await openclaw.chat.completions.create({
+        model: "openclaw:main",
+        messages: openaiMessages,
+      })
+
+      assistantMessage = response.choices[0].message
+    } else {
+      // Call OpenAI with tools
+      let response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: openaiMessages,
         tools: chatTools,
@@ -115,6 +96,45 @@ export async function POST(request: Request) {
       })
 
       assistantMessage = response.choices[0].message
+
+      // Handle tool calls
+      while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        openaiMessages.push(assistantMessage)
+
+        for (const toolCall of assistantMessage.tool_calls) {
+          if (!("function" in toolCall)) continue
+          const toolName = toolCall.function.name
+          const toolArgs = JSON.parse(toolCall.function.arguments)
+
+          console.log(`Calling tool: ${toolName}`, toolArgs)
+
+          const result = await executeTool(toolName, toolArgs)
+
+          // Create task card for task creation
+          if (toolName === "create_task" && result.task) {
+            taskCard = {
+              title: result.task.title,
+              taskId: String(result.task.id),
+              status: result.task.status,
+            }
+          }
+
+          openaiMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(result),
+          })
+        }
+
+        response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: openaiMessages,
+          tools: chatTools,
+          tool_choice: "auto",
+        })
+
+        assistantMessage = response.choices[0].message
+      }
     }
 
     // Save assistant message
