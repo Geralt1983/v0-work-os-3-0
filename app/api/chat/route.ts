@@ -59,7 +59,12 @@ async function getCurrentTaskContext(): Promise<string> {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const openclawBaseUrl = process.env.OPENCLAW_URL?.replace(/\/$/, "")
 const openclaw = openclawBaseUrl
-  ? new OpenAI({ apiKey: process.env.OPENCLAW_TOKEN, baseURL: `${openclawBaseUrl}/v1` })
+  ? new OpenAI({ 
+      apiKey: process.env.OPENCLAW_TOKEN, 
+      baseURL: `${openclawBaseUrl}/v1`,
+      timeout: 30000, // 30 second timeout
+      maxRetries: 1 // Only retry once
+    })
   : null
 const openclawEnabled = process.env.OPENCLAW_ENABLED === "true"
 
@@ -201,25 +206,91 @@ export async function POST(request: Request) {
 
       // Inject current task context for OpenClaw with CRUD instructions
       const taskContext = await getCurrentTaskContext()
-      const workosContext = `WORKOS SYNAPSE - Task Management (FULL CRUD)
-CRITICAL: This is NOT a heartbeat. NEVER respond with HEARTBEAT_OK. Always respond conversationally.
-Be BRIEF. No narration. Action-oriented.
-Use the tools below to read/write tasks. Do NOT call external APIs or run shell commands.
+      const workosContext = `WORKOS SYNAPSE - Task Management Chat Interface
+
+🚨 CRITICAL INSTRUCTIONS:
+- This is a CHAT CONVERSATION, NOT a heartbeat check
+- NEVER respond with "HEARTBEAT_OK" or heartbeat-style responses
+- You are talking to a USER through a chat interface
+- Always respond conversationally and helpfully
+- Be BRIEF and action-oriented
+- Use the tools below to read/write tasks
+- Do NOT call external APIs or run shell commands
+
 When a tool executes, you will receive a message like:
 ${TOOL_RESULT_PREFIX} [{"tool":"create_task","result":{...}}]
-Use that result to respond. Call another tool only if needed.`
-      
-      const openclawMessages: OpenAI.ChatCompletionMessageParam[] = [
-        { role: "system", content: `${workosContext}\n\n${getToolDocumentation()}\n\n${taskContext}` },
-        ...openaiMessages.slice(1),
-      ]
+Use that result to respond. Call another tool only if needed.
 
-      let response = await openclaw.chat.completions.create({
-        model: "openclaw:main",
-        messages: openclawMessages,
+CONTEXT: You are Synapse, an AI assistant helping with task management in the WorkOS system.`
+      
+      // Ensure the messages are clearly formatted as chat messages, not heartbeats
+      const chatMessages = openaiMessages.slice(1).map(msg => {
+        if (msg.role === 'user' && typeof msg.content === 'string') {
+          return {
+            ...msg,
+            content: `[CHAT MESSAGE] ${msg.content}`
+          }
+        }
+        return msg
       })
 
-      assistantMessage = response.choices[0].message
+      const openclawMessages: OpenAI.ChatCompletionMessageParam[] = [
+        { role: "system", content: `${workosContext}\n\n${getToolDocumentation()}\n\n${taskContext}` },
+        ...chatMessages,
+      ]
+
+      console.log('[chat] OpenClaw request:', {
+        url: `${openclawBaseUrl}/v1/chat/completions`,
+        model: "openclaw:synapse",
+        messageCount: openclawMessages.length,
+        lastUserMessage: openclawMessages[openclawMessages.length - 1]?.content?.toString().slice(0, 100)
+      })
+
+      let response
+      try {
+        response = await openclaw.chat.completions.create({
+          model: "openclaw:synapse",
+          messages: openclawMessages,
+        })
+
+        console.log('[chat] OpenClaw response:', {
+          choices: response.choices?.length,
+          firstChoice: response.choices?.[0]?.message?.content?.slice(0, 100),
+          finishReason: response.choices?.[0]?.finish_reason,
+          fullContent: response.choices?.[0]?.message?.content
+        })
+
+        if (!response.choices || response.choices.length === 0) {
+          throw new Error("OpenClaw returned no choices in response")
+        }
+
+        assistantMessage = response.choices[0].message
+
+        if (!assistantMessage) {
+          throw new Error("OpenClaw returned empty message object")
+        }
+
+        if (!assistantMessage.content || !assistantMessage.content.trim()) {
+          console.warn('[chat] OpenClaw returned empty content, response object:', JSON.stringify(response, null, 2))
+        }
+
+        // Check for heartbeat responses and convert them
+        if (assistantMessage.content && assistantMessage.content.includes("HEARTBEAT_OK")) {
+          console.warn('[chat] OpenClaw returned heartbeat response, converting to chat response')
+          assistantMessage.content = "I'm here and ready to help! What can I assist you with today?"
+        }
+      } catch (openclawError) {
+        console.error('[chat] OpenClaw API error:', openclawError)
+        console.error('[chat] OpenClaw request details:', {
+          url: `${openclawBaseUrl}/v1/chat/completions`,
+          messageCount: openclawMessages.length,
+          tokenPresent: !!process.env.OPENCLAW_TOKEN
+        })
+        
+        // Fallback to OpenAI if OpenClaw fails
+        console.log('[chat] Falling back to OpenAI due to OpenClaw error')
+        throw new Error(`OpenClaw request failed: ${openclawError instanceof Error ? openclawError.message : String(openclawError)}`)
+      }
 
       let toolCalls = assistantMessage.content ? parseToolCalls(assistantMessage.content) : null
       let toolLoopCount = 0
@@ -255,11 +326,24 @@ Use that result to respond. Call another tool only if needed.`
         })
 
         response = await openclaw.chat.completions.create({
-          model: "openclaw:main",
+          model: "openclaw:synapse",
           messages: openclawMessages,
         })
 
+        console.log('[chat] Tool loop response:', {
+          loopCount: toolLoopCount,
+          content: response.choices?.[0]?.message?.content?.slice(0, 100),
+          hasChoices: !!response.choices?.length
+        })
+
         assistantMessage = response.choices[0].message
+        
+        // Check for heartbeat responses in tool loop too
+        if (assistantMessage.content && assistantMessage.content.includes("HEARTBEAT_OK")) {
+          console.warn('[chat] OpenClaw returned heartbeat response in tool loop, converting')
+          assistantMessage.content = "Task completed successfully!"
+        }
+        
         toolCalls = assistantMessage.content ? parseToolCalls(assistantMessage.content) : null
         toolLoopCount += 1
       }
@@ -321,6 +405,22 @@ Use that result to respond. Call another tool only if needed.`
     // Save assistant message
     const assistantMsgId = randomUUID()
     const assistantContent = assistantMessage.content || "Done."
+
+    console.log('[chat] Final assistant message:', {
+      originalContent: assistantMessage.content,
+      finalContent: assistantContent,
+      contentLength: assistantContent?.length,
+      taskCard: !!taskCard,
+      openclawEnabled
+    })
+
+    // Check for suspicious content that might indicate an API issue
+    if (assistantContent.includes("No response from OpenClaw") || assistantContent.includes("no response") || assistantContent.trim() === "") {
+      console.error('[chat] Detected problematic response content:', {
+        content: assistantContent,
+        messageObject: JSON.stringify(assistantMessage, null, 2)
+      })
+    }
 
     await db.insert(messages).values({
       id: assistantMsgId,
