@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { ChevronRight, AlertTriangle, Zap, Send, Paperclip, X, Trash2 } from "lucide-react"
-import { useChat, type Message, type TaskCard } from "@/hooks/use-chat"
+import { useChat, type Message, type TaskCard, type Attachment } from "@/hooks/use-chat"
 import { VoiceRecorder } from "@/components/voice-recorder"
 import { cn } from "@/lib/utils"
 
@@ -88,10 +88,45 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     e.preventDefault()
     if ((!input.trim() && !selectedFile) || isLoading) return
     const message = input
-    const imageBase64 = selectedFile?.base64
     setInput("")
+    
+    let attachments: Attachment[] = []
+    let imageBase64: string | undefined
+    
+    if (selectedFile) {
+      // For images, keep using base64 for vision models
+      if (selectedFile.preview) {
+        imageBase64 = selectedFile.base64
+      }
+      
+      // Also upload to get a permanent URL
+      try {
+        const base64Data = selectedFile.base64.split(",")[1] || selectedFile.base64
+        const mimeMatch = selectedFile.base64.match(/data:([^;]+);/)
+        const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream"
+        
+        const blob = await fetch(selectedFile.base64).then(r => r.blob())
+        const formData = new FormData()
+        formData.append("file", blob, selectedFile.name)
+        
+        const uploadRes = await fetch("/api/uploads", { method: "POST", body: formData })
+        if (uploadRes.ok) {
+          const uploaded = await uploadRes.json()
+          attachments.push({
+            id: uploaded.id,
+            url: uploaded.url,
+            name: uploaded.name,
+            mime: uploaded.mime,
+            size: uploaded.size,
+          })
+        }
+      } catch (err) {
+        console.error("Failed to upload file:", err)
+      }
+    }
+    
     setSelectedFile(null)
-    await sendMessage(message, imageBase64)
+    await sendMessage(message, imageBase64, attachments.length > 0 ? attachments : undefined)
   }
 
   const handleQuickAction = async (prompt: string) => {
@@ -319,6 +354,30 @@ function SidebarMessage({ message }: { message: Message }) {
         )}
       >
         <p className="whitespace-pre-line">{message.content}</p>
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {message.attachments.map((att) => (
+              <div key={att.id} className="rounded-lg overflow-hidden">
+                {att.mime.startsWith("audio/") ? (
+                  <audio controls className="w-full h-8" src={att.url}>
+                    <a href={att.url} download={att.name}>{att.name}</a>
+                  </audio>
+                ) : att.mime.startsWith("image/") ? (
+                  <img src={att.url} alt={att.name} className="max-w-full rounded" />
+                ) : (
+                  <a 
+                    href={att.url} 
+                    download={att.name}
+                    className="flex items-center gap-2 text-xs text-indigo-300 hover:text-indigo-200"
+                  >
+                    <Paperclip className="w-3 h-3" />
+                    {att.name}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {message.taskCard && <TaskCardDisplay card={message.taskCard} />}
       </div>
     </div>

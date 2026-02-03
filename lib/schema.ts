@@ -70,6 +70,19 @@ export const messages = pgTable("messages", {
   taskCard: jsonb("task_card"),
 })
 
+export const messageAttachments = pgTable("message_attachments", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").references(() => messages.id).notNull(),
+  type: text("type").notNull(), // "audio" | "image" | "document"
+  name: text("name").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  url: text("url").notNull(),
+  transcription: text("transcription"),
+  durationMs: integer("duration_ms"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // =============================================================================
 // CLIENT MEMORY
 // =============================================================================
@@ -215,6 +228,7 @@ export type Client = InferSelectModel<typeof clients>
 export type Task = InferSelectModel<typeof tasks>
 export type Session = InferSelectModel<typeof sessions>
 export type Message = InferSelectModel<typeof messages>
+export type MessageAttachment = InferSelectModel<typeof messageAttachments>
 export type TaskEvent = InferSelectModel<typeof taskEvents>
 export type BehavioralPattern = InferSelectModel<typeof behavioralPatterns>
 export type DailySnapshot = InferSelectModel<typeof dailySnapshots>

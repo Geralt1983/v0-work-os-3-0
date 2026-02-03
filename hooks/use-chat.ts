@@ -7,6 +7,16 @@ import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
 // =============================================================================
 // TYPES
 // =============================================================================
+export interface Attachment {
+  id: string
+  url: string
+  name: string
+  mime: string
+  size: number
+  durationMs?: number
+  transcription?: string
+}
+
 export interface Message {
   id: string
   sessionId: string
@@ -14,6 +24,7 @@ export interface Message {
   content: string
   timestamp?: string
   taskCard?: TaskCard | null
+  attachments?: Attachment[]
 }
 
 export interface TaskCard {
@@ -123,8 +134,8 @@ export function useChat() {
 
   // Send a message
   const sendMessage = useCallback(
-    async (content: string, imageBase64?: string) => {
-      if (!content.trim() && !imageBase64) return
+    async (content: string, imageBase64?: string, attachments?: Attachment[]) => {
+      if (!content.trim() && !imageBase64 && (!attachments || attachments.length === 0)) return
 
       const requestId = ++requestIdRef.current
       setIsLoading(true)
@@ -146,6 +157,7 @@ export function useChat() {
             sessionId: sessionId || undefined,
             message: content,
             ...(imageBase64 && { imageBase64 }),
+            ...(attachments && attachments.length > 0 && { attachments }),
           }),
         })
 

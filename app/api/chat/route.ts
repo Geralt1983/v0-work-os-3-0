@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { sessions, messages, tasks, clients } from "@/lib/schema"
+import { sessions, messages, tasks, clients, messageAttachments } from "@/lib/schema"
 import { eq, asc, ne } from "drizzle-orm"
 import { randomUUID } from "crypto"
 import OpenAI from "openai"
@@ -126,10 +126,25 @@ function parseToolCalls(content: string): Array<{tool: string, args: Record<stri
 const TOOL_RESULT_PREFIX = "TOOL_RESULT:"
 const MAX_OPENCLAW_TOOL_LOOPS = 4
 
+interface AttachmentInput {
+  id: string
+  url: string
+  name: string
+  mime: string
+  size: number
+  durationMs?: number
+  transcription?: string
+}
+
 export async function POST(request: Request) {
   try {
     const db = getDb()
-    const { sessionId: providedSessionId, message, imageBase64 } = await request.json()
+    const { sessionId: providedSessionId, message, imageBase64, attachments } = await request.json() as {
+      sessionId?: string
+      message: string
+      imageBase64?: string
+      attachments?: AttachmentInput[]
+    }
 
     const sessionId = providedSessionId || randomUUID()
 
@@ -154,6 +169,32 @@ export async function POST(request: Request) {
       content: message,
       timestamp: new Date(),
     })
+
+    // Save attachments if provided
+    if (attachments && attachments.length > 0) {
+      for (const att of attachments) {
+        const attType = att.mime.startsWith("audio/") ? "audio" 
+          : att.mime.startsWith("image/") ? "image" 
+          : "document"
+        await db.insert(messageAttachments).values({
+          id: att.id,
+          messageId: userMsgId,
+          type: attType,
+          name: att.name,
+          mime: att.mime,
+          size: att.size,
+          url: att.url,
+          transcription: att.transcription || null,
+          durationMs: att.durationMs || null,
+          createdAt: new Date(),
+        })
+      }
+    }
+
+    // Build attachment info for OpenClaw
+    const attachmentInfo = attachments && attachments.length > 0
+      ? "\n\n[Attachments: " + attachments.map(a => `${a.name} (${a.url})`).join(", ") + "]"
+      : ""
 
     // Get conversation history
     const history = await db
@@ -215,7 +256,6 @@ export async function POST(request: Request) {
 - Always respond conversationally and helpfully
 - Be BRIEF and action-oriented
 - Use the tools below to read/write tasks
-- Do NOT call external APIs or run shell commands
 
 When a tool executes, you will receive a message like:
 ${TOOL_RESULT_PREFIX} [{"tool":"create_task","result":{...}}]
@@ -226,8 +266,17 @@ CONTEXT: You are Synapse, an AI assistant helping with task management in the Wo
       // Pass through messages without modification (synapse workspace handles heartbeat override)
       const chatMessages = openaiMessages.slice(1)
 
+      // Append attachment info to last user message if present
+      if (attachmentInfo && chatMessages.length > 0) {
+        const lastIdx = chatMessages.length - 1
+        const lastMsg = chatMessages[lastIdx]
+        if (lastMsg.role === "user" && typeof lastMsg.content === "string") {
+          chatMessages[lastIdx] = { ...lastMsg, content: lastMsg.content + attachmentInfo }
+        }
+      }
+
       const openclawMessages: OpenAI.ChatCompletionMessageParam[] = [
-        { role: "system", content: `${workosContext}\n\n${getToolDocumentation()}\n\n${taskContext}` },
+        { role: "system", content: `${workosContext}\n\n${taskContext}` },
         ...chatMessages,
       ]
 
