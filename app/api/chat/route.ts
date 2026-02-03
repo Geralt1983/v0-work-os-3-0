@@ -223,16 +223,8 @@ Use that result to respond. Call another tool only if needed.
 
 CONTEXT: You are Synapse, an AI assistant helping with task management in the WorkOS system.`
       
-      // Ensure the messages are clearly formatted as chat messages, not heartbeats
-      const chatMessages = openaiMessages.slice(1).map(msg => {
-        if (msg.role === 'user' && typeof msg.content === 'string') {
-          return {
-            ...msg,
-            content: `[CHAT MESSAGE] ${msg.content}`
-          }
-        }
-        return msg
-      })
+      // Pass through messages without modification (synapse workspace handles heartbeat override)
+      const chatMessages = openaiMessages.slice(1)
 
       const openclawMessages: OpenAI.ChatCompletionMessageParam[] = [
         { role: "system", content: `${workosContext}\n\n${getToolDocumentation()}\n\n${taskContext}` },
