@@ -103,7 +103,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
 
   if (isLoading) {
     return (
-      <div className={cn("rounded-xl border border-zinc-800 bg-zinc-900/50 p-4", className)}>
+      <div className={cn("panel-obsidian gold-edge rounded-xl p-4", className)}>
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
         </div>
@@ -112,13 +112,13 @@ export function HolidayManager({ className }: HolidayManagerProps) {
   }
 
   return (
-    <div className={cn("rounded-xl border border-zinc-800 bg-zinc-900/50 p-4", className)}>
+    <div className={cn("panel-obsidian gold-edge rounded-xl p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Palmtree className="h-5 w-5 text-cyan-400" />
+        <Palmtree className="h-5 w-5 text-[color:var(--thanos-cosmic)]" />
         <h3 className="font-semibold text-zinc-100">Holiday Mode</h3>
         {isTodayHoliday && (
-          <span className="px-2 py-0.5 text-xs rounded-full bg-cyan-500/20 text-cyan-300 ml-auto">
+          <span className="px-2 py-0.5 text-xs rounded-full bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] ml-auto">
             Active Today
           </span>
         )}
@@ -148,7 +148,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
         <Button
           onClick={handleAddHoliday}
           disabled={!newDate || isAdding}
-          className="w-full bg-cyan-600 hover:bg-cyan-500 text-white"
+          className="w-full bg-[color:var(--thanos-amethyst)] hover:bg-[color:var(--thanos-amethyst)]/80 text-white"
         >
           {isAdding ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -181,19 +181,19 @@ export function HolidayManager({ className }: HolidayManagerProps) {
               className={cn(
                 "flex items-center justify-between p-2 rounded-lg",
                 isToday(holiday.date)
-                  ? "bg-cyan-500/10 border border-cyan-500/30"
+                  ? "bg-[color:var(--thanos-amethyst)]/10 border border-[color:var(--thanos-amethyst)]/30"
                   : "bg-zinc-800/50"
               )}
             >
               <div className="flex items-center gap-2">
                 <Palmtree className={cn(
                   "h-4 w-4",
-                  isToday(holiday.date) ? "text-cyan-400" : "text-zinc-500"
+                  isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-500"
                 )} />
                 <div>
                   <span className={cn(
                     "text-sm font-medium",
-                    isToday(holiday.date) ? "text-cyan-300" : "text-zinc-300"
+                    isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-300"
                   )}>
                     {formatDate(holiday.date)}
                   </span>
@@ -203,7 +203,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
                     </span>
                   )}
                   {isToday(holiday.date) && (
-                    <span className="text-xs text-cyan-400 ml-2">(Today)</span>
+                    <span className="text-xs text-[color:var(--thanos-gold)] ml-2">(Today)</span>
                   )}
                 </div>
               </div>

@@ -2,12 +2,13 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ChevronRight, AlertTriangle, Zap, Send, Paperclip, X, Trash2, Eye, EyeOff } from "lucide-react"
+import { ChevronRight, AlertTriangle, Send, Paperclip, X, Trash2, Eye, EyeOff } from "lucide-react"
 import { useChat, type Message, type TaskCard, type Attachment } from "@/hooks/use-chat"
 import { VoiceRecorder } from "@/components/voice-recorder"
+import { ThanosAIIcon } from "@/components/thanosai-icon"
 import { cn } from "@/lib/utils"
 
-const ASSISTANT_NAME = "Synapse"
+const ASSISTANT_NAME = "ThanosAI"
 
 const QUICK_ACTIONS = [
   { label: "What's next?", prompt: "What should I work on next?" },
@@ -186,10 +187,10 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     return (
       <button
         onClick={() => updateCollapsed(false)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-200 btn-press glow-ai"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] px-5 py-3 text-black shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.25)] hover:shadow-[0_0_22px_rgba(234,179,8,0.3)] hover:scale-105 transition-all duration-200 btn-press"
       >
-        <Zap className="w-5 h-5 animate-pulse" />
-        <span className="font-semibold tracking-tight">Synapse</span>
+        <ThanosAIIcon className="w-5 h-5 animate-pulse" />
+        <span className="font-semibold tracking-tight">ThanosAI</span>
         {unreadCount > 0 && (
           <span className="ml-1 px-2 py-0.5 text-xs font-medium bg-white/20 rounded-full animate-bounce">
             {unreadCount}
@@ -200,16 +201,16 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   }
 
   return (
-    <aside className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/50 flex flex-col z-40 animate-slide-in-right">
+    <aside className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] bg-[color:var(--thanos-obsidian)]/95 backdrop-blur-xl border-l border-[color:var(--thanos-amethyst)]/30 flex flex-col z-40 animate-slide-in-right">
       {/* Header with gradient accent - Mobile optimized */}
-      <div className="flex-none flex items-center justify-between px-3 sm:px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-r from-zinc-950 to-zinc-900">
+      <div className="flex-none flex items-center justify-between px-3 sm:px-4 py-3 border-b border-[color:var(--thanos-amethyst)]/20 bg-gradient-to-r from-[color:var(--thanos-obsidian)] to-[color:var(--thanos-obsidian-2)]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20 flex-shrink-0">
-            <Zap className="w-4 h-4 text-white" />
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.2)] flex-shrink-0">
+            <ThanosAIIcon className="w-4 h-4 text-black" />
           </div>
           <span className="font-semibold text-zinc-100 tracking-tight text-sm sm:text-base truncate">{ASSISTANT_NAME}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium hidden sm:inline">
-            OpenClaw Channel
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] font-medium hidden sm:inline">
+            ThanosAI Channel
           </span>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -360,7 +361,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 sm:py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 sm:py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--thanos-amethyst)] disabled:opacity-50"
             placeholder="Type or tap mic..."
           />
 
@@ -368,7 +369,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             <button
               type="submit"
               disabled={isLoading || (!input.trim() && !selectedFile)}
-              className="px-4 py-2.5 sm:py-2 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition flex items-center gap-2 touch-manipulation flex-shrink-0"
+              className="px-4 py-2.5 sm:py-2 rounded-full bg-[color:var(--thanos-amethyst)] text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[color:var(--thanos-amethyst)]/80 transition flex items-center gap-2 touch-manipulation flex-shrink-0"
             >
               <Send className="w-4 h-4" />
               <span className="hidden sm:inline">Send</span>
@@ -398,7 +399,7 @@ function SidebarMessage({ message, showActivity }: { message: Message; showActiv
       <div
         className={cn(
           "max-w-[90%] rounded-xl px-3 py-2 text-sm leading-snug",
-          isUser ? "bg-indigo-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
+          isUser ? "bg-[color:var(--thanos-amethyst)] text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
         )}
       >
         <p className="whitespace-pre-line">{text}</p>
@@ -416,7 +417,7 @@ function SidebarMessage({ message, showActivity }: { message: Message; showActiv
                   <a 
                     href={att.url} 
                     download={att.name}
-                    className="flex items-center gap-2 text-xs text-indigo-300 hover:text-indigo-200"
+                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80"
                   >
                     <Paperclip className="w-3 h-3" />
                     {att.name}

@@ -303,7 +303,7 @@ export function EditTaskDialog({
                         type="button"
                         onClick={handleRewrite}
                         disabled={isRewriting || !title.trim()}
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-[color:var(--thanos-amethyst)]/10 text-[color:var(--thanos-amethyst)] hover:bg-[color:var(--thanos-amethyst)]/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {isRewriting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
                         Rewrite
@@ -314,7 +314,7 @@ export function EditTaskDialog({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="What needs to be done?"
-                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition text-sm"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition text-sm"
                     />
                   </div>
 
@@ -329,7 +329,7 @@ export function EditTaskDialog({
                       <select
                         value={clientId ?? ""}
                         onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
-                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition appearance-none cursor-pointer"
                       >
                         <option value="">No client</option>
                         {clients.map((client) => (
@@ -352,7 +352,7 @@ export function EditTaskDialog({
                           onClick={() => setStatus(opt.value)}
                           className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                             status === opt.value
-                              ? "bg-indigo-500 text-white"
+                              ? "bg-[color:var(--thanos-amethyst)] text-white"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -384,7 +384,7 @@ export function EditTaskDialog({
                           onClick={() => setDrainType(opt.value)}
                           className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 ${
                             drainType === opt.value
-                              ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
+                              ? "bg-zinc-700 text-white ring-2 ring-[color:var(--thanos-amethyst)]"
                               : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                           }`}
                         >
@@ -405,7 +405,7 @@ export function EditTaskDialog({
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Add any notes or context..."
                       rows={1}
-                      className="w-full px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                      className="w-full px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition resize-none"
                     />
                   </div>
 
@@ -426,10 +426,10 @@ export function EditTaskDialog({
                             <button
                               type="button"
                               onClick={() => toggleSubtask(subtask.id)}
-                              className="flex-shrink-0 text-zinc-400 hover:text-indigo-400 transition"
+                              className="flex-shrink-0 text-zinc-400 hover:text-[color:var(--thanos-amethyst)] transition"
                             >
                               {subtask.completed ? (
-                                <CheckSquare className="h-4 w-4 text-indigo-500" />
+                                <CheckSquare className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
                               ) : (
                                 <Square className="h-4 w-4" />
                               )}
@@ -495,7 +495,7 @@ export function EditTaskDialog({
                     <button
                       type="submit"
                       disabled={!title.trim() || isSubmitting}
-                      className="px-4 py-2 rounded-lg text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      className="px-4 py-2 rounded-lg text-xs font-medium bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                       {isSubmitting ? "Saving..." : "Save"}
                     </button>
@@ -544,7 +544,7 @@ export function EditTaskDialog({
                 </div>
                 <div>
                   <span className="text-zinc-500 text-xs uppercase tracking-wide">Suggested:</span>
-                  <div className="text-indigo-400 mt-1 font-medium">{rewriteSuggestion}</div>
+                  <div className="text-[color:var(--thanos-amethyst)] mt-1 font-medium">{rewriteSuggestion}</div>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -553,7 +553,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Keep Original
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRewrite} className="bg-indigo-500 text-white hover:bg-indigo-600">
+            <AlertDialogAction onClick={confirmRewrite} className="bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/80">
               Use Suggestion
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -571,7 +571,7 @@ export function EditTaskDialog({
                 <ul className="space-y-2 mt-2">
                   {subtaskSuggestions.map((subtask, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <Square className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                      <Square className="h-4 w-4 text-[color:var(--thanos-amethyst)] mt-0.5 flex-shrink-0" />
                       <span className="text-zinc-300">{subtask}</span>
                     </li>
                   ))}
@@ -586,7 +586,7 @@ export function EditTaskDialog({
             <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSubtasks} className="bg-indigo-500 text-white hover:bg-indigo-600">
+            <AlertDialogAction onClick={confirmSubtasks} className="bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/80">
               Add Subtasks
             </AlertDialogAction>
           </AlertDialogFooter>

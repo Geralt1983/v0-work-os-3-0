@@ -2,7 +2,7 @@ import { generateText } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 
 const SYSTEM_PROMPT = `
-You are Synapse, a productivity coach specializing in breaking down work tasks.
+You are ThanosAI, a productivity coach specializing in breaking down work tasks.
 
 Given a task, break it into 2-4 smaller, actionable subtasks that:
 - Each start with a strong verb

@@ -40,66 +40,74 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --thanos-obsidian: oklch(0.08 0.03 270);
+  --thanos-obsidian-2: oklch(0.12 0.04 270);
+  --thanos-amethyst: oklch(0.62 0.18 305);
+  --thanos-amethyst-muted: oklch(0.42 0.12 305);
+  --thanos-gold: oklch(0.83 0.18 85);
+  --thanos-gold-muted: oklch(0.55 0.12 85);
+  --thanos-cosmic: oklch(0.72 0.12 210);
 
-  /* Semantic Colors - WorkOS Design System */
-  --brand: oklch(0.65 0.20 264);          /* Indigo - primary brand (Linear-style) */
-  --brand-muted: oklch(0.5 0.12 264);     /* Indigo muted */
-  --success: oklch(0.7 0.18 160);         /* Emerald - completed/done */
-  --success-muted: oklch(0.35 0.1 160);   /* Emerald muted */
-  --warning: oklch(0.75 0.15 85);         /* Amber - attention needed */
-  --warning-muted: oklch(0.4 0.1 85);     /* Amber muted */
-  --urgent: oklch(0.65 0.2 25);           /* Rose - overdue/critical */
-  --urgent-muted: oklch(0.35 0.12 25);    /* Rose muted */
-  --ai: oklch(0.65 0.2 280);              /* Violet - AI/Synapse */
-  --ai-muted: oklch(0.4 0.15 280);        /* Violet muted */
+  --background: var(--thanos-obsidian);
+  --foreground: oklch(0.96 0.02 90);
+  --card: var(--thanos-obsidian-2);
+  --card-foreground: oklch(0.98 0.02 90);
+  --popover: oklch(0.1 0.02 270);
+  --popover-foreground: oklch(0.96 0.02 90);
+  --primary: var(--thanos-amethyst);
+  --primary-foreground: oklch(0.12 0.04 270);
+  --secondary: oklch(0.18 0.02 270);
+  --secondary-foreground: oklch(0.92 0.02 90);
+  --muted: oklch(0.2 0.02 270);
+  --muted-foreground: oklch(0.74 0.02 90);
+  --accent: var(--thanos-gold-muted);
+  --accent-foreground: oklch(0.1 0.02 270);
+  --destructive: oklch(0.56 0.22 27);
+  --destructive-foreground: oklch(0.95 0.02 90);
+  --border: oklch(0.22 0.03 270);
+  --input: oklch(0.22 0.03 270);
+  --ring: oklch(0.5 0.08 300);
+  --chart-1: oklch(0.54 0.2 305);
+  --chart-2: oklch(0.78 0.14 85);
+  --chart-3: oklch(0.62 0.1 210);
+  --chart-4: oklch(0.7 0.18 160);
+  --chart-5: oklch(0.6 0.2 25);
+  --sidebar: oklch(0.12 0.03 270);
+  --sidebar-foreground: oklch(0.95 0.02 90);
+  --sidebar-primary: var(--thanos-amethyst);
+  --sidebar-primary-foreground: oklch(0.95 0.02 90);
+  --sidebar-accent: oklch(0.18 0.02 270);
+  --sidebar-accent-foreground: oklch(0.95 0.02 90);
+  --sidebar-border: oklch(0.22 0.03 270);
+  --sidebar-ring: oklch(0.5 0.08 300);
+
+  /* Semantic Colors - ThanosOS Design System */
+  --brand: var(--thanos-amethyst);
+  --brand-muted: var(--thanos-amethyst-muted);
+  --success: oklch(0.7 0.18 160);
+  --success-muted: oklch(0.35 0.1 160);
+  --warning: oklch(0.75 0.15 85);
+  --warning-muted: oklch(0.4 0.1 85);
+  --urgent: oklch(0.65 0.2 25);
+  --urgent-muted: oklch(0.35 0.12 25);
+  --ai: var(--thanos-amethyst);
+  --ai-muted: var(--thanos-amethyst-muted);
 
   /* Status-specific card backgrounds */
-  --card-today: oklch(0.18 0.02 264);     /* Subtle indigo tint */
-  --card-queued: oklch(0.16 0 0);         /* Neutral */
-  --card-backlog: oklch(0.14 0 0);        /* Slightly darker */
-  --card-done: oklch(0.16 0.015 160);     /* Subtle emerald tint */
+  --card-today: oklch(0.18 0.04 300);
+  --card-queued: oklch(0.16 0.02 270);
+  --card-backlog: oklch(0.14 0.02 270);
+  --card-done: oklch(0.16 0.015 160);
 
   /* Glass effect variables */
-  --glass-bg: oklch(0.12 0 0 / 0.8);
-  --glass-border: oklch(0.3 0 0 / 0.5);
+  --glass-bg: oklch(0.1 0.02 270 / 0.82);
+  --glass-border: oklch(0.35 0.04 270 / 0.5);
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-cinzel);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -180,13 +188,91 @@
 /* Drag overlay card lift effect */
 [data-dnd-dragging="true"] {
   transform: scale(1.05) rotate(2deg);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(168, 85, 247, 0.5);
   cursor: grabbing;
 }
 
 /* ========================================
    Visual Polish - Utility Classes
    ======================================== */
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .thanos-shell {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--thanos-obsidian);
+    background-image:
+      radial-gradient(1400px circle at 10% -10%, rgba(124, 58, 237, 0.22), transparent 60%),
+      radial-gradient(900px circle at 85% 0%, rgba(234, 179, 8, 0.18), transparent 55%),
+      radial-gradient(900px circle at 50% 120%, rgba(56, 189, 248, 0.16), transparent 60%);
+  }
+
+  .thanos-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle, rgba(255, 255, 255, 0.15) 1px, transparent 1.5px);
+    background-size: 120px 120px;
+    opacity: 0.25;
+    pointer-events: none;
+    mask-image: radial-gradient(circle at top, black 0%, black 40%, transparent 75%);
+  }
+
+  .thanos-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(15, 23, 42, 0.6), transparent 45%, rgba(15, 23, 42, 0.4));
+    pointer-events: none;
+  }
+
+  .panel-obsidian {
+    background: rgba(8, 10, 20, 0.78);
+    border: 1px solid rgba(147, 125, 255, 0.18);
+    box-shadow: 0 12px 40px rgba(7, 5, 16, 0.6);
+    backdrop-filter: blur(16px);
+  }
+
+  .stone-glow {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+  }
+
+  .gold-edge {
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    box-shadow: 0 0 18px rgba(234, 179, 8, 0.25);
+  }
+
+  .stone-amethyst {
+    color: var(--thanos-amethyst);
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+  }
+
+  .stone-gold {
+    color: var(--thanos-gold);
+    background: rgba(234, 179, 8, 0.12);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+  }
+
+  .stone-cosmic {
+    color: var(--thanos-cosmic);
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+  }
+
+  .stone-emerald {
+    color: oklch(0.75 0.17 160);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+}
 
 /* Glass morphism effect */
 .glass {
@@ -205,8 +291,8 @@
 /* Status-based card styles */
 .card-today {
   background: var(--card-today);
-  border-color: oklch(0.5 0.15 264 / 0.3);
-  box-shadow: 0 0 20px -5px oklch(0.6 0.18 264 / 0.15);
+  border-color: oklch(0.6 0.14 300 / 0.3);
+  box-shadow: 0 0 20px -5px oklch(0.62 0.18 300 / 0.15);
 }
 
 .card-queued {
@@ -303,7 +389,7 @@
 
 /* Text gradient for headings */
 .text-gradient-brand {
-  background: linear-gradient(135deg, var(--brand), var(--ai));
+  background: linear-gradient(135deg, var(--brand), var(--thanos-gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

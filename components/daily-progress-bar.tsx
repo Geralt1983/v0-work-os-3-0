@@ -76,12 +76,12 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
   // Determine progress bar color
   const getProgressColor = () => {
-    if (isHoliday) return "from-cyan-500 to-teal-500"
+    if (isHoliday) return "from-[color:var(--thanos-cosmic)] to-[color:var(--thanos-amethyst)]"
     if (hasStaleBlockers) return "from-amber-500 to-amber-600"
     if (isComplete) return "from-emerald-500 to-emerald-600"
-    if (progressPercent >= 75) return "from-blue-500 to-indigo-500"
-    if (progressPercent >= 50) return "from-indigo-500 to-violet-500"
-    return "from-violet-500 to-purple-500"
+    if (progressPercent >= 75) return "from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)]"
+    if (progressPercent >= 50) return "from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-cosmic)]"
+    return "from-slate-600 to-slate-700"
   }
 
   // Determine status message
@@ -95,18 +95,18 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
   }
 
   return (
-    <div className={`rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 ${className}`}>
+    <div className={`panel-obsidian gold-edge rounded-xl p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {isHoliday ? (
-            <Palmtree className="h-5 w-5 text-cyan-400" />
+            <Palmtree className="h-5 w-5 text-[color:var(--thanos-cosmic)]" />
           ) : canCompleteDay ? (
             <Trophy className="h-5 w-5 text-emerald-400" />
           ) : hasStaleBlockers ? (
             <AlertTriangle className="h-5 w-5 text-amber-400" />
           ) : (
-            <Target className="h-5 w-5 text-indigo-400" />
+            <Target className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
           )}
           <span className="font-semibold text-zinc-100">
             {isHoliday ? "Holiday" : "Daily Progress"}
@@ -114,7 +114,7 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-2xl font-bold ${
-            isHoliday ? "text-cyan-400" :
+            isHoliday ? "text-[color:var(--thanos-cosmic)]" :
             canCompleteDay ? "text-emerald-400" :
             hasStaleBlockers ? "text-amber-400" :
             "text-zinc-100"
@@ -147,7 +147,7 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
       {/* Status row */}
       <div className="flex items-center justify-between mt-3">
         <span className={`text-sm ${
-          isHoliday ? "text-cyan-400" :
+          isHoliday ? "text-[color:var(--thanos-cosmic)]" :
           canCompleteDay ? "text-emerald-400" :
           hasStaleBlockers ? "text-amber-400" :
           "text-zinc-400"
@@ -214,7 +214,7 @@ export function DailyProgressPill({ className }: { className?: string }) {
         {isComplete ? (
           <Trophy className="h-4 w-4 text-emerald-400" />
         ) : (
-          <Target className="h-4 w-4 text-indigo-400" />
+          <Target className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
         )}
         <span className={`text-sm font-semibold ${isComplete ? "text-emerald-400" : "text-zinc-100"}`}>
           {pointsEarned}
@@ -225,7 +225,7 @@ export function DailyProgressPill({ className }: { className?: string }) {
       <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ${
-            isComplete ? "bg-emerald-500" : "bg-indigo-500"
+            isComplete ? "bg-emerald-500" : "bg-[color:var(--thanos-amethyst)]"
           }`}
           style={{ width: `${Math.min(progressPercent, 100)}%` }}
         />

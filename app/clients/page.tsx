@@ -84,11 +84,11 @@ export default function ClientsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-black text-zinc-50">
+    <div className="min-h-screen text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-zinc-100 sm:text-2xl md:text-3xl">Clients</h1>
+            <h1 className="text-xl font-display text-zinc-100 sm:text-2xl md:text-3xl tracking-[0.12em]">Clients</h1>
             <p className="hidden sm:block text-sm text-white/60 mt-1">Manage priorities and track client health</p>
           </div>
           <WorkOSNav />
@@ -97,7 +97,7 @@ export default function ClientsPage() {
         <main className="mt-8 flex flex-col gap-8 pb-20">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-[color:var(--thanos-amethyst)]" />
             </div>
           ) : error ? (
             <div className="text-center py-12">
@@ -122,8 +122,8 @@ export default function ClientsPage() {
                   <Card
                     key={client.clientId}
                     className={cn(
-                      "relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 transition-all duration-200",
-                      "hover:border-zinc-700 hover:shadow-lg hover:shadow-black/20",
+                      "relative overflow-hidden rounded-2xl panel-obsidian gold-edge transition-all duration-200",
+                      "hover:border-[color:var(--thanos-gold)]/60 hover:shadow-lg hover:shadow-black/20",
                       sentimentConfig[client.sentiment].bgClass,
                     )}
                   >
@@ -141,7 +141,7 @@ export default function ClientsPage() {
                             style={{ backgroundColor: client.color || "#666" }}
                           />
                           <span className="font-semibold text-white">{client.clientName}</span>
-                          {isSaving && <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />}
+                          {isSaving && <Loader2 className="h-3 w-3 animate-spin text-[color:var(--thanos-amethyst)]" />}
                         </div>
                         <Badge variant="outline" className={cn("text-xs", importanceConfig[client.importance].color)}>
                           {importanceConfig[client.importance].label}
@@ -163,7 +163,7 @@ export default function ClientsPage() {
                       <div className="space-y-1">
                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] transition-all duration-300"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -179,10 +179,10 @@ export default function ClientsPage() {
                             value={client.importance}
                             onValueChange={(value) => handleFieldChange(client.clientName, "importance", value)}
                           >
-                            <SelectTrigger className="h-7 w-24 bg-black/40 border-white/10 text-white text-xs">
+                            <SelectTrigger className="h-7 w-24 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-white/10">
+                            <SelectContent className="bg-zinc-900 border-[color:var(--thanos-gold)]/20">
                               <SelectItem value="high" className="text-white text-xs">
                                 High
                               </SelectItem>
@@ -203,12 +203,12 @@ export default function ClientsPage() {
                             value={client.sentiment}
                             onValueChange={(value) => handleFieldChange(client.clientName, "sentiment", value)}
                           >
-                            <SelectTrigger className="h-7 w-28 bg-black/40 border-white/10 text-white text-xs">
+                            <SelectTrigger className="h-7 w-28 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
                               <SelectValue>
                                 {sentimentConfig[client.sentiment].emoji} {sentimentConfig[client.sentiment].label}
                               </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-white/10">
+                            <SelectContent className="bg-zinc-900 border-[color:var(--thanos-gold)]/20">
                               <SelectItem value="positive" className="text-white text-xs">
                                 😊 Positive
                               </SelectItem>
@@ -231,7 +231,7 @@ export default function ClientsPage() {
                               value={tempNotes}
                               onChange={(e) => setTempNotes(e.target.value)}
                               placeholder="Add notes about this client..."
-                              className="bg-black/40 border-white/10 text-white placeholder:text-white/30 min-h-[60px] text-sm"
+                              className="panel-obsidian border-[color:var(--thanos-gold)]/20 text-white placeholder:text-white/30 min-h-[60px] text-sm"
                               autoFocus
                             />
                             <div className="flex justify-end gap-2">
@@ -248,7 +248,7 @@ export default function ClientsPage() {
                                 size="sm"
                                 onClick={() => saveNotes(client.clientName)}
                                 disabled={isSaving}
-                                className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700"
+                                className="h-7 text-xs bg-[color:var(--thanos-amethyst)] hover:bg-[color:var(--thanos-amethyst)]/80"
                               >
                                 {isSaving ? (
                                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />

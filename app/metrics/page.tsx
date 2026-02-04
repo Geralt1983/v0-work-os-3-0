@@ -32,7 +32,7 @@ function getMomentumStatusColor(status: string): string {
     case "crushing":
       return "text-emerald-400"
     case "on_track":
-      return "text-cyan-400"
+      return "text-[color:var(--thanos-amethyst)]"
     case "behind":
       return "text-amber-400"
     case "stalled":
@@ -45,9 +45,9 @@ function getMomentumStatusColor(status: string): string {
 function getMomentumGradient(status: string): string {
   switch (status) {
     case "crushing":
-      return "bg-gradient-to-r from-emerald-500 to-cyan-500"
+      return "bg-gradient-to-r from-emerald-500 to-[color:var(--thanos-amethyst)]"
     case "on_track":
-      return "bg-gradient-to-r from-cyan-500 to-blue-500"
+      return "bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)]"
     case "behind":
       return "bg-gradient-to-r from-amber-500 to-yellow-500"
     case "stalled":
@@ -240,7 +240,7 @@ export default function MetricsDashboard() {
 
 
   return (
-    <div className="min-h-screen bg-black text-zinc-50">
+    <div className="min-h-screen text-zinc-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <PageHeader title="Metrics" description="See your pacing, momentum, and weekly flow." />
@@ -250,7 +250,7 @@ export default function MetricsDashboard() {
         <main className="mt-8 flex flex-col gap-8 pb-20">
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--thanos-amethyst)] border-t-transparent" />
             </div>
           )}
 
@@ -263,11 +263,11 @@ export default function MetricsDashboard() {
           {!isLoading && !error && (
             <>
               <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-500/15">
-                        <TargetIcon className="h-4 w-4 text-cyan-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
+                        <TargetIcon className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
                       </div>
                       <h2 className="text-lg font-semibold">Today's Progress</h2>
                     </div>
@@ -284,7 +284,7 @@ export default function MetricsDashboard() {
                   <div className="mt-3 h-2 rounded-full bg-zinc-800">
                     <div
                       className={`h-full rounded-full transition-all ${paceStatus === "on_track"
-                        ? "bg-gradient-to-r from-cyan-500 to-emerald-500"
+                        ? "bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-emerald-500"
                         : "bg-gradient-to-r from-amber-500 to-orange-500"
                         }`}
                       style={{ width: pacingWidth }}
@@ -300,11 +300,11 @@ export default function MetricsDashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 flex flex-col">
+                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 flex flex-col">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-violet-500/15">
-                        <LightningBoltIcon className="h-4 w-4 text-violet-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
+                        <LightningBoltIcon className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
                       </div>
                       <h2 className="text-lg font-semibold">Momentum</h2>
                     </div>
@@ -322,18 +322,18 @@ export default function MetricsDashboard() {
                   <p className="text-sm text-zinc-400 text-center italic">"{getMomentumAdvice(momentum.status)}"</p>
                 </div>
 
-                <div className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
+                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-cyan-500/15">
-                        <BarChartIcon className="h-4 w-4 text-cyan-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
+                        <BarChartIcon className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
                       </div>
                       <h2 className="text-lg font-semibold">Daily Summary</h2>
                     </div>
                   </div>
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
-                      <div className="text-3xl font-semibold text-cyan-400">{completedCount}</div>
+                      <div className="text-3xl font-semibold text-[color:var(--thanos-amethyst)]">{completedCount}</div>
                       <div className="text-xs text-zinc-500 mt-1">tasks today</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
@@ -385,7 +385,7 @@ export default function MetricsDashboard() {
                 </section>
               )}
 
-              <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+              <section className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">
                     <PersonIcon className="h-4 w-4 text-zinc-300" />
@@ -447,7 +447,7 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-zinc-800 bg-zinc-950/90 p-5 shadow-md shadow-black/40">
+              <section className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-amber-500/15">
                     <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header"
 
 export default function HolidaysPage() {
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen text-white">
             <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
                 <div className="flex items-start justify-between gap-4">
                     <PageHeader title="Holidays" description="Manage holidays and time off." />

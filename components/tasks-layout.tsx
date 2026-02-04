@@ -71,8 +71,16 @@ export function TasksLayout({ children }: TasksLayoutProps) {
         dedupingInterval: 5000,
       }}
     >
-      <div className="min-h-screen bg-black">
-        <div className={isMobile ? "" : isCollapsed ? "" : "mr-[380px] transition-[margin] duration-300"}>
+      <div className="min-h-screen thanos-shell">
+        <div
+          className={
+            isMobile
+              ? "relative z-10"
+              : isCollapsed
+                ? "relative z-10"
+                : "mr-[380px] transition-[margin] duration-300 relative z-10"
+          }
+        >
           {children}
         </div>
 

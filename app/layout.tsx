@@ -1,16 +1,17 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Cinzel, Manrope, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { TasksLayout } from "@/components/tasks-layout"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" })
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" })
 
 export const metadata: Metadata = {
-  title: "SaaS Metrics Dashboard",
-  description: "Real-time dashboard insights",
+  title: "ThanosOS",
+  description: "Command deck for client execution",
   generator: "v0.app",
   icons: {
     icon: [
@@ -38,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans antialiased`}>
+      <body className={`${manrope.variable} ${cinzel.variable} ${jetbrains.variable} font-sans antialiased`}>
         <TasksLayout>{children}</TasksLayout>
         <Analytics />
       </body>
