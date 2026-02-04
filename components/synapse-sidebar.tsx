@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ChevronRight, AlertTriangle, Zap, Send, Paperclip, X, Trash2 } from "lucide-react"
+import { ChevronRight, AlertTriangle, Zap, Send, Paperclip, X, Trash2, Eye, EyeOff } from "lucide-react"
 import { useChat, type Message, type TaskCard, type Attachment } from "@/hooks/use-chat"
 import { VoiceRecorder } from "@/components/voice-recorder"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,24 @@ const QUICK_ACTIONS = [
   { label: "Status", prompt: "Give me a status update" },
 ]
 
+const ACTIVITY_OPEN = "[[ACTIVITY]]"
+const ACTIVITY_CLOSE = "[[/ACTIVITY]]"
+
+function extractActivity(content: string): { text: string; activity: string[] } {
+  const start = content.indexOf(ACTIVITY_OPEN)
+  const end = content.indexOf(ACTIVITY_CLOSE)
+  if (start === -1 || end === -1 || end <= start) {
+    return { text: content.trim(), activity: [] }
+  }
+  const before = content.slice(0, start).trim()
+  const block = content.slice(start + ACTIVITY_OPEN.length, end).trim()
+  const lines = block
+    .split("\n")
+    .map((line) => line.replace(/^\s*-\s*/, "").trim())
+    .filter(Boolean)
+  return { text: before, activity: lines }
+}
+
 interface SynapseSidebarProps {
   avoidanceWarning?: string | null
 }
@@ -24,6 +42,11 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === "undefined") return false
     return localStorage.getItem("synapse-sidebar-collapsed") === "true"
+  })
+  const [showActivity, setShowActivity] = useState(() => {
+    if (typeof window === "undefined") return true
+    const stored = localStorage.getItem("synapse-activity-visible")
+    return stored !== "false"
   })
   const [input, setInput] = useState("")
   const [isVoiceMode, setIsVoiceMode] = useState(false)
@@ -52,6 +75,14 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   useEffect(() => {
     scrollToBottom("auto")
   }, []) // Initial mount
+
+  const toggleActivity = () => {
+    setShowActivity((prev) => {
+      const next = !prev
+      localStorage.setItem("synapse-activity-visible", String(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     scrollToBottom("smooth")
@@ -164,17 +195,26 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   }
 
   return (
-    <aside className="fixed top-0 right-0 bottom-0 w-[380px] bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/50 flex flex-col z-40 animate-slide-in-right">
-      {/* Header with gradient accent */}
-      <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-r from-zinc-950 to-zinc-900">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
+    <aside className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] bg-zinc-950/95 backdrop-blur-xl border-l border-zinc-800/50 flex flex-col z-40 animate-slide-in-right">
+      {/* Header with gradient accent - Mobile optimized */}
+      <div className="flex-none flex items-center justify-between px-3 sm:px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-r from-zinc-950 to-zinc-900">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20 flex-shrink-0">
             <Zap className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-zinc-100 tracking-tight">{ASSISTANT_NAME}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">AI</span>
+          <span className="font-semibold text-zinc-100 tracking-tight text-sm sm:text-base truncate">{ASSISTANT_NAME}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium hidden sm:inline">
+            OpenClaw Channel
+          </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={toggleActivity}
+            className="p-2 sm:p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press touch-manipulation"
+            title={showActivity ? "Hide activity" : "Show activity"}
+          >
+            {showActivity ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
           {messages.length > 0 && (
             <button
               onClick={async () => {
@@ -187,15 +227,15 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
                 }
                 clearChat()
               }}
-              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400 transition-all btn-press"
+              className="p-2 sm:p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400 transition-all btn-press touch-manipulation"
               title="Clear chat"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4 sm:w-4 sm:h-4" />
             </button>
           )}
           <button
             onClick={() => updateCollapsed(true)}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press"
+            className="p-2 sm:p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all btn-press touch-manipulation"
             title="Collapse sidebar"
           >
             <ChevronRight className="w-5 h-5" />
@@ -237,7 +277,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
         ) : (
           <div className="flex flex-col gap-3">
             {messages.map((message) => (
-              <SidebarMessage key={message.id} message={message} />
+              <SidebarMessage key={message.id} message={message} showActivity={showActivity} />
             ))}
             {isLoading && (
               <div className="flex justify-start">
@@ -299,12 +339,12 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             className="hidden"
           />
 
-          {/* Attachment button */}
+          {/* Mobile-optimized attachment button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading}
-            className="p-2 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition disabled:opacity-50"
+            className="p-3 sm:p-2 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition disabled:opacity-50 touch-manipulation flex-shrink-0"
             title="Attach file"
           >
             <Paperclip className="w-5 h-5" />
@@ -315,7 +355,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+            className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 sm:py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
             placeholder="Type or tap mic..."
           />
 
@@ -323,18 +363,20 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
             <button
               type="submit"
               disabled={isLoading || (!input.trim() && !selectedFile)}
-              className="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition flex items-center gap-2"
+              className="px-4 py-2.5 sm:py-2 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-500 transition flex items-center gap-2 touch-manipulation flex-shrink-0"
             >
               <Send className="w-4 h-4" />
-              Send
+              <span className="hidden sm:inline">Send</span>
             </button>
           ) : (
-            <VoiceRecorder
-              onTranscription={handleTranscription}
-              onError={handleVoiceError}
-              disabled={isLoading}
-              compact
-            />
+            <div className="flex-shrink-0">
+              <VoiceRecorder
+                onTranscription={handleTranscription}
+                onError={handleVoiceError}
+                disabled={isLoading}
+                compact
+              />
+            </div>
           )}
         </form>
       </div>
@@ -342,8 +384,9 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
   )
 }
 
-function SidebarMessage({ message }: { message: Message }) {
+function SidebarMessage({ message, showActivity }: { message: Message; showActivity: boolean }) {
   const isUser = message.role === "user"
+  const { text, activity } = extractActivity(message.content)
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -353,7 +396,7 @@ function SidebarMessage({ message }: { message: Message }) {
           isUser ? "bg-indigo-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
         )}
       >
-        <p className="whitespace-pre-line">{message.content}</p>
+        <p className="whitespace-pre-line">{text}</p>
         {message.attachments && message.attachments.length > 0 && (
           <div className="mt-2 space-y-2">
             {message.attachments.map((att) => (
@@ -376,6 +419,19 @@ function SidebarMessage({ message }: { message: Message }) {
                 )}
               </div>
             ))}
+          </div>
+        )}
+        {showActivity && activity.length > 0 && (
+          <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-2.5 py-2 text-xs text-zinc-300">
+            <div className="text-[10px] uppercase tracking-wide text-zinc-500 mb-1">Activity</div>
+            <div className="space-y-1">
+              {activity.map((line, idx) => (
+                <div key={`${line}-${idx}`} className="flex items-start gap-2">
+                  <span className="text-zinc-500">•</span>
+                  <span className="flex-1">{line}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {message.taskCard && <TaskCardDisplay card={message.taskCard} />}

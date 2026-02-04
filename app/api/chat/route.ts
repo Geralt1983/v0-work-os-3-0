@@ -123,9 +123,6 @@ function parseToolCalls(content: string): Array<{tool: string, args: Record<stri
   return toolCalls.length > 0 ? toolCalls : null
 }
 
-const TOOL_RESULT_PREFIX = "TOOL_RESULT:"
-const MAX_OPENCLAW_TOOL_LOOPS = 4
-
 interface AttachmentInput {
   id: string
   url: string
@@ -245,9 +242,9 @@ export async function POST(request: Request) {
         throw new Error("OpenClaw is enabled but OPENCLAW_URL/OPENCLAW_TOKEN are not set.")
       }
 
-      // Inject current task context for OpenClaw with CRUD instructions
+      // Inject current task context for OpenClaw
       const taskContext = await getCurrentTaskContext()
-      const workosContext = `WORKOS SYNAPSE - Task Management Chat Interface
+      const workosContext = `WORKOS SYNAPSE - Chat Interface
 
 🚨 CRITICAL INSTRUCTIONS:
 - This is a CHAT CONVERSATION, NOT a heartbeat check
@@ -255,11 +252,12 @@ export async function POST(request: Request) {
 - You are talking to a USER through a chat interface
 - Always respond conversationally and helpfully
 - Be BRIEF and action-oriented
-- Use the tools below to read/write tasks
+- You have access to your full toolset; use tools autonomously when needed
+- If you use tools, append an activity log block at the end in this exact format:
 
-When a tool executes, you will receive a message like:
-${TOOL_RESULT_PREFIX} [{"tool":"create_task","result":{...}}]
-Use that result to respond. Call another tool only if needed.
+[[ACTIVITY]]
+- tool_name: short summary of what happened
+[[/ACTIVITY]]
 
 CONTEXT: You are Synapse, an AI assistant helping with task management in the WorkOS system.`
       
@@ -333,65 +331,7 @@ CONTEXT: You are Synapse, an AI assistant helping with task management in the Wo
         throw new Error(`OpenClaw request failed: ${openclawError instanceof Error ? openclawError.message : String(openclawError)}`)
       }
 
-      let toolCalls = assistantMessage.content ? parseToolCalls(assistantMessage.content) : null
-      let toolLoopCount = 0
-
-      while (toolCalls && toolLoopCount < MAX_OPENCLAW_TOOL_LOOPS) {
-        openclawMessages.push({ role: "assistant", content: assistantMessage.content || "" })
-
-        const toolResults: Array<{tool: string, args: Record<string, unknown>, result: unknown}> = []
-
-        for (const toolCall of toolCalls) {
-          try {
-            const result = await executeTool(toolCall.tool, toolCall.args || {})
-
-            if (toolCall.tool === "create_task" && (result as { task?: { title: string, id: number, status: string } }).task) {
-              const createdTask = (result as { task: { title: string, id: number, status: string } }).task
-              taskCard = {
-                title: createdTask.title,
-                taskId: String(createdTask.id),
-                status: createdTask.status,
-              }
-            }
-
-            toolResults.push({ tool: toolCall.tool, args: toolCall.args || {}, result })
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            toolResults.push({ tool: toolCall.tool, args: toolCall.args || {}, result: { error: message } })
-          }
-        }
-
-        openclawMessages.push({
-          role: "user",
-          content: `${TOOL_RESULT_PREFIX} ${JSON.stringify(toolResults)}`,
-        })
-
-        response = await openclaw.chat.completions.create({
-          model: "openclaw:synapse",
-          messages: openclawMessages,
-        })
-
-        console.log('[chat] Tool loop response:', {
-          loopCount: toolLoopCount,
-          content: response.choices?.[0]?.message?.content?.slice(0, 100),
-          hasChoices: !!response.choices?.length
-        })
-
-        assistantMessage = response.choices[0].message
-        
-        // Check for heartbeat responses in tool loop too
-        if (assistantMessage.content && assistantMessage.content.includes("HEARTBEAT_OK")) {
-          console.warn('[chat] OpenClaw returned heartbeat response in tool loop, converting')
-          assistantMessage.content = "Task completed successfully!"
-        }
-        
-        toolCalls = assistantMessage.content ? parseToolCalls(assistantMessage.content) : null
-        toolLoopCount += 1
-      }
-
-      if (toolCalls && toolLoopCount >= MAX_OPENCLAW_TOOL_LOOPS) {
-        console.warn("[chat] OpenClaw tool loop limit reached; returning last assistant message.")
-      }
+      // OpenClaw handles tools natively; return its response directly
     } else {
       // Call OpenAI with tools
       let response = await openai.chat.completions.create({
