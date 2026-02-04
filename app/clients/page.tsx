@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useClientMemory, type ClientMemory } from "@/hooks/use-client-memory"
-import { WorkOSNav } from "@/components/work-os-nav"
+import { PageShell } from "@/components/page-shell"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -84,18 +84,11 @@ export default function ClientsPage() {
   })
 
   return (
-    <div className="min-h-screen text-zinc-50">
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-xl font-display text-zinc-100 sm:text-2xl md:text-3xl tracking-[0.12em]">Clients</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">Manage priorities and track client health</p>
-          </div>
-          <WorkOSNav />
-        </div>
-
-        <main className="mt-8 flex flex-col gap-8 pb-20">
-          {isLoading ? (
+    <PageShell
+      title="Clients"
+      description="Manage priorities and track client health"
+    >
+      {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-[color:var(--thanos-amethyst)]" />
             </div>
@@ -279,8 +272,6 @@ export default function ClientsPage() {
               })}
             </div>
           )}
-        </main>
-      </div>
-    </div>
+    </PageShell>
   )
 }
