@@ -59,7 +59,7 @@ export function RewriteDialog({ open, onOpenChange, originalText, context, onAcc
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-3xl bg-zinc-950 border border-zinc-800 p-6">
+      <DialogContent className="max-w-lg rounded-2xl bg-zinc-950 border border-zinc-800 p-6">
         <DialogHeader>
           <DialogTitle className="text-white text-lg">Rewrite with {ASSISTANT_NAME}</DialogTitle>
           <DialogDescription className="text-zinc-400 text-sm">

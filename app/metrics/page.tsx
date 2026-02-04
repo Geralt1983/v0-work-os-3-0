@@ -2,8 +2,7 @@
 
 import { TargetIcon, BarChartIcon, PersonIcon, ExclamationTriangleIcon, LightningBoltIcon } from "@radix-ui/react-icons"
 import { useEffect, useState } from "react"
-import { WorkOSNav } from "@/components/work-os-nav"
-import { PageHeader } from "@/components/page-header"
+import { PageShell } from "@/components/page-shell"
 import { useMetrics } from "@/hooks/use-metrics"
 import { Button } from "@/components/ui/button"
 import { WeeklyGoals } from "@/components/weekly-goals"
@@ -240,15 +239,11 @@ export default function MetricsDashboard() {
 
 
   return (
-    <div className="min-h-screen text-zinc-50">
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
-          <PageHeader title="Metrics" description="See your pacing, momentum, and weekly flow." />
-          <WorkOSNav />
-        </div>
-
-        <main className="mt-8 flex flex-col gap-8 pb-20">
-          {isLoading && (
+    <PageShell
+      title="Metrics"
+      description="See your pacing, momentum, and weekly flow."
+    >
+      {isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--thanos-amethyst)] border-t-transparent" />
             </div>
@@ -263,7 +258,7 @@ export default function MetricsDashboard() {
           {!isLoading && !error && (
             <>
               <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
+                <div className="rounded-2xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
@@ -300,7 +295,7 @@ export default function MetricsDashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 flex flex-col">
+                <div className="rounded-2xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 flex flex-col">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
@@ -322,7 +317,7 @@ export default function MetricsDashboard() {
                   <p className="text-sm text-zinc-400 text-center italic">"{getMomentumAdvice(momentum.status)}"</p>
                 </div>
 
-                <div className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
+                <div className="rounded-2xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40 md:col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[color:var(--thanos-amethyst)]/15">
@@ -364,7 +359,7 @@ export default function MetricsDashboard() {
               <WeeklyGoals />
 
               {staleClients.length > 0 && (
-                <section className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
+                <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-md shadow-black/40">
                   <div className="flex items-center gap-2">
                     <ExclamationTriangleIcon className="h-5 w-5 text-amber-400" />
                     <h2 className="text-lg font-semibold text-amber-300">
@@ -385,7 +380,7 @@ export default function MetricsDashboard() {
                 </section>
               )}
 
-              <section className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
+              <section className="rounded-2xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-zinc-700/40">
                     <PersonIcon className="h-4 w-4 text-zinc-300" />
@@ -447,7 +442,7 @@ export default function MetricsDashboard() {
                 </div>
               </section>
 
-              <section className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
+              <section className="rounded-2xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-amber-500/15">
                     <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -485,8 +480,6 @@ export default function MetricsDashboard() {
               </section>
             </>
           )}
-        </main>
-      </div>
-    </div>
+    </PageShell>
   )
 }
