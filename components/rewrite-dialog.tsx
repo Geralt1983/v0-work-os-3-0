@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
-const ASSISTANT_NAME = "Synapse"
+const ASSISTANT_NAME = "ThanosAI"
 
 type RewriteContext = {
   client?: string

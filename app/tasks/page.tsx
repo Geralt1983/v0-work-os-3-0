@@ -8,7 +8,7 @@ import { NewTaskDialog } from "@/components/new-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair } from "lucide-react"
+import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair, Inbox, CheckCircle2 } from "lucide-react"
 import { DailyProgressBar } from "@/components/daily-progress-bar"
 import { getTaskPoints, getValueTierConfig, type ValueTier } from "@/lib/domain/task-types"
 import { WorkOSNav } from "@/components/work-os-nav"
@@ -297,6 +297,54 @@ export default function MovesPage() {
     return [...byStatus.today, ...byStatus.upnext]
   }, [byStatus.today, byStatus.upnext])
 
+  const todayPoints = useMemo(() => {
+    return byStatus.today.reduce((sum, task) => sum + getTaskPoints(task), 0)
+  }, [byStatus.today])
+
+  const { doneTodayCount, doneTodayPoints } = useMemo(() => {
+    const today = new Date().toDateString()
+    let count = 0
+    let points = 0
+    tasks.forEach((task) => {
+      if (task.status !== "done" || !task.completedAt) return
+      if (new Date(task.completedAt).toDateString() !== today) return
+      count += 1
+      points += getTaskPoints(task)
+    })
+    return { doneTodayCount: count, doneTodayPoints: points }
+  }, [tasks])
+
+  const statCards = [
+    {
+      label: "Today",
+      value: byStatus.today.length,
+      meta: `${todayPoints} pts queued`,
+      stoneClass: "stone-amethyst",
+      icon: Zap,
+    },
+    {
+      label: "Queued",
+      value: byStatus.upnext.length,
+      meta: "Next to execute",
+      stoneClass: "stone-cosmic",
+      icon: Clock,
+    },
+    {
+      label: "Backlog",
+      value: byStatus.backlog.length,
+      meta: "Unscoped work",
+      stoneClass: "stone-gold",
+      icon: Inbox,
+    },
+    {
+      label: "Done Today",
+      value: doneTodayCount,
+      meta: `${doneTodayPoints} pts banked`,
+      stoneClass: "stone-emerald",
+      icon: CheckCircle2,
+    },
+  ]
+
   const handleComplete = async (id: string) => {
     await completeTask(id)
     refresh()
@@ -330,7 +378,7 @@ export default function MovesPage() {
       <div
         ref={setNodeRef}
         className={`col-span-1 rounded-xl transition-all duration-200 relative ${isOver
-          ? "bg-indigo-500/20 ring-2 ring-indigo-500/50 scale-[1.01]"
+          ? "bg-[color:var(--thanos-amethyst)]/15 ring-2 ring-[color:var(--thanos-amethyst)]/40 scale-[1.01]"
           : showDropTarget
             ? "ring-1 ring-dashed ring-zinc-600"
             : ""
@@ -338,7 +386,7 @@ export default function MovesPage() {
       >
         {showDropTarget && (
           <div
-            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${isOver ? "bg-indigo-500/10" : "bg-transparent"
+            className={`absolute inset-0 z-10 rounded-xl transition-colors pointer-events-none ${isOver ? "bg-[color:var(--thanos-amethyst)]/10" : "bg-transparent"
               }`}
           />
         )}
@@ -347,11 +395,11 @@ export default function MovesPage() {
         {showDropTarget && (
           <div
             className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${isOver
-              ? "bg-indigo-500/20 border-2 border-dashed border-indigo-500/50"
+              ? "bg-[color:var(--thanos-amethyst)]/20 border-2 border-dashed border-[color:var(--thanos-amethyst)]/50"
               : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
               }`}
           >
-            <span className={`text-sm ${isOver ? "text-indigo-400" : "text-zinc-500"}`}>
+            <span className={`text-sm ${isOver ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-500"}`}>
               {isOver ? "Release to move to backlog" : "Drop here to send to backlog"}
             </span>
           </div>
@@ -361,19 +409,75 @@ export default function MovesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-zinc-100 sm:text-2xl md:text-3xl tracking-tight">Tasks</h1>
-            <p className="hidden sm:block text-sm text-white/60 mt-1">One task per client, every day.</p>
+    <div className="min-h-screen text-white">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 md:py-10">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.32em] text-[color:var(--thanos-gold)]/80">
+              <span className="h-2 w-2 rounded-full bg-[color:var(--thanos-gold)] shadow-[0_0_12px_rgba(234,179,8,0.6)]" />
+              ThanosOS
+            </div>
+            <h1 className="text-2xl font-display text-zinc-100 sm:text-3xl md:text-4xl tracking-[0.12em]">
+              ThanosOS Command Deck
+            </h1>
+            <p className="text-sm text-white/60">One task per client. Zero drift.</p>
           </div>
-          <WorkOSNav />
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              className="bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] hover:from-[color:var(--thanos-amethyst)] hover:to-[color:var(--thanos-gold)] text-black h-9 px-4 shadow-lg shadow-[0_0_20px_rgba(168,85,247,0.25)] hover:shadow-[0_0_24px_rgba(234,179,8,0.3)] btn-press transition-all"
+              onClick={() => setIsNewTaskOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              New Task
+            </Button>
+            <WorkOSNav />
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {statCards.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <div
+                key={stat.label}
+                className="panel-obsidian gold-edge rounded-2xl px-4 py-3 flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.26em] text-white/50">{stat.label}</p>
+                  <p className={`text-2xl font-display ${stat.stoneClass}`}>{stat.value}</p>
+                  <p className="text-xs text-white/40">{stat.meta}</p>
+                </div>
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.stoneClass}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-4">
+            <div className="panel-obsidian gold-edge rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-white/50">Quick Capture</p>
+                <span className="text-[11px] text-white/40">Enter to estimate</span>
+              </div>
+              <QuickCapture onTaskCreated={refresh} />
+            </div>
+            <div className="hidden lg:block">
+              <SynapsePicks />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <DailyProgressBar className="border-[color:var(--thanos-gold)]/30" />
+            <DoneToday />
+          </div>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
           <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-[140px] bg-zinc-900 border-zinc-700 text-zinc-100">
+            <SelectTrigger className="w-[160px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
               <SelectValue placeholder="All Clients" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -388,43 +492,50 @@ export default function MovesPage() {
             </SelectContent>
           </Select>
 
-          <Button
-            size="sm"
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white h-9 px-4 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 btn-press transition-all"
-            onClick={() => setIsNewTaskOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Task
-          </Button>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {statusOptions.map((opt) => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[130px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {typeOptions.map((opt) => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <div className="mt-4">
-          <DailyProgressBar />
-        </div>
-
-        <div className="mt-4">
-          <DoneToday />
-        </div>
-
-        <div className="mt-4">
-          <QuickCapture onTaskCreated={refresh} />
-        </div>
-
-        <div className="mt-4 hidden lg:block">
-          <SynapsePicks />
-        </div>
-
-
 
         <div className="hidden lg:flex items-center justify-between gap-2 mt-4">
-          <div className="flex items-center gap-1 bg-zinc-900 rounded-full p-1">
+          <div className="flex items-center gap-1 panel-obsidian rounded-full p-1 border border-[color:var(--thanos-gold)]/20">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setView("board")}
               className={`rounded-full px-3 h-8 ${view === "board"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
+                : "text-zinc-400 hover:text-white hover:bg-white/10"
                 }`}
             >
               <LayoutGrid className="h-4 w-4 mr-1.5" />
@@ -435,8 +546,8 @@ export default function MovesPage() {
               size="sm"
               onClick={() => setView("list")}
               className={`rounded-full px-3 h-8 ${view === "list"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
+                : "text-zinc-400 hover:text-white hover:bg-white/10"
                 }`}
             >
               <List className="h-4 w-4 mr-1.5" />
@@ -447,49 +558,13 @@ export default function MovesPage() {
               size="sm"
               onClick={() => setView("focus")}
               className={`rounded-full px-3 h-8 ${view === "focus"
-                ? "bg-indigo-600 text-white hover:bg-indigo-600"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
+                : "text-zinc-400 hover:text-white hover:bg-white/10"
                 }`}
             >
               <Crosshair className="h-4 w-4 mr-1.5" />
               Focus
             </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] bg-zinc-900 border-zinc-700 text-zinc-100">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
-                {statusOptions.map((opt) => (
-                  <SelectItem
-                    key={opt.value}
-                    value={opt.value}
-                    className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100"
-                  >
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-700 text-zinc-100">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
-                {typeOptions.map((opt) => (
-                  <SelectItem
-                    key={opt.value}
-                    value={opt.value}
-                    className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100"
-                  >
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -499,7 +574,7 @@ export default function MovesPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab.key
-                ? "border-indigo-500 text-white"
+                ? "border-[color:var(--thanos-gold)] text-white"
                 : "border-transparent text-zinc-400 hover:text-white"
                 }`}
             >
@@ -562,7 +637,7 @@ export default function MovesPage() {
                 }}
               >
                 {activeTask ? (
-                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-indigo-500/50 rounded-2xl">
+                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-[color:var(--thanos-amethyst)]/50 rounded-2xl">
                     <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
                   </div>
                 ) : null}
@@ -745,19 +820,19 @@ function ViewToggle({ view, onChange }: { view: TasksView; onChange: (v: TasksVi
     <div className="inline-flex rounded-full bg-zinc-900 p-1">
       <button
         onClick={() => onChange("board")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <LayoutGrid className="h-3.5 w-3.5" /> Board
       </button>
       <button
         onClick={() => onChange("list")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <List className="h-3.5 w-3.5" /> List
       </button>
       <button
         onClick={() => onChange("focus")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-indigo-500 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
       >
         <Crosshair className="h-3.5 w-3.5" /> Focus
       </button>
@@ -808,11 +883,11 @@ function TaskCard({
   // Status-based card styling
   const getStatusStyles = () => {
     if (isDragging) {
-      return "border-indigo-500/50 bg-zinc-900 shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-500/30"
+      return "border-[color:var(--thanos-amethyst)]/50 bg-zinc-900 shadow-xl shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-2 ring-[color:var(--thanos-amethyst)]/30"
     }
     switch (task.status) {
       case "today":
-        return "card-today border hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10"
+        return "card-today border hover:border-[color:var(--thanos-amethyst)]/40 hover:shadow-lg hover:shadow-[0_0_18px_rgba(168,85,247,0.18)]"
       case "upnext":
         return "card-queued border hover:border-zinc-600 hover:shadow-lg"
       case "done":
@@ -847,7 +922,7 @@ function TaskCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-indigo-400 ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
+          <div className={`font-medium text-[color:var(--thanos-gold)] ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
           <h3
             className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
@@ -889,7 +964,7 @@ function TaskCard({
           <CheckSquare className="h-3.5 w-3.5 text-zinc-500" />
           <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
+              className="h-full bg-[color:var(--thanos-amethyst)] transition-all duration-300"
               style={{ width: `${totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0}%` }}
             />
           </div>
@@ -929,7 +1004,7 @@ function UndoToast({
         >
           <div className="flex items-center gap-3 rounded-full bg-zinc-800 border border-zinc-700 px-4 py-2 shadow-lg">
             <span className="text-sm text-zinc-300">Move completed</span>
-            <button onClick={onUndo} className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+            <button onClick={onUndo} className="text-sm font-medium text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80">
               Undo
             </button>
           </div>
@@ -958,9 +1033,9 @@ function DroppableColumn({
   const getColumnIcon = () => {
     switch (id) {
       case "today-column":
-        return <Zap className="h-5 w-5 text-indigo-400" />
+        return <Zap className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
       case "upnext-column":
-        return <Clock className="h-5 w-5 text-zinc-400" />
+        return <Clock className="h-5 w-5 text-[color:var(--thanos-gold)]" />
       default:
         return null
     }
@@ -982,7 +1057,7 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${isOver ? "bg-indigo-500/5 ring-2 ring-indigo-500/30 scale-[1.01]" : ""
+      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${isOver ? "bg-[color:var(--thanos-amethyst)]/5 ring-2 ring-[color:var(--thanos-amethyst)]/30 scale-[1.01]" : ""
         }`}
     >
       <div className="flex items-center gap-2 mb-3">

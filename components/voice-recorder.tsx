@@ -185,19 +185,19 @@ export function VoiceRecorder({
           "border border-zinc-700/50",
           "shadow-lg shadow-black/20",
           "transition-all duration-300 ease-out",
-          "hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/10",
-          "hover:border-indigo-500/30",
+          "hover:scale-105 hover:shadow-xl hover:shadow-[0_0_16px_rgba(168,85,247,0.18)]",
+          "hover:border-[color:var(--thanos-amethyst)]/30",
           "active:scale-95",
           "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
           compact ? "w-10 h-10" : "w-12 h-12",
           className,
         )}
       >
-        <div className="absolute inset-0 rounded-full bg-indigo-500/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 rounded-full bg-[color:var(--thanos-amethyst)]/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
         <Mic
           className={cn(
             "relative transition-colors duration-200",
-            "text-zinc-400 group-hover:text-indigo-400",
+            "text-zinc-400 group-hover:text-[color:var(--thanos-amethyst)]",
             compact ? "w-4 h-4" : "w-5 h-5",
           )}
         />
@@ -212,13 +212,13 @@ export function VoiceRecorder({
           "flex items-center gap-3 px-4 py-2",
           "bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900",
           "border border-zinc-700/50 rounded-full",
-          "shadow-lg shadow-indigo-500/5",
+          "shadow-lg shadow-[0_0_12px_rgba(168,85,247,0.2)]",
           className,
         )}
       >
         <div className="relative">
-          <Loader className="w-5 h-5 text-indigo-400 animate-spin" />
-          <div className="absolute inset-0 blur-md bg-indigo-500/30 animate-pulse" />
+          <Loader className="w-5 h-5 text-[color:var(--thanos-amethyst)] animate-spin" />
+          <div className="absolute inset-0 blur-md bg-[color:var(--thanos-amethyst)]/30 animate-pulse" />
         </div>
         <span className="text-sm text-zinc-400 font-medium tracking-wide">Transcribing...</span>
       </div>

@@ -1,0 +1,22 @@
+import type React from "react"
+
+export function ThanosAIIcon({
+  className,
+  title = "ThanosAI",
+}: {
+  className?: string
+  title?: string
+}) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label={title}
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M32 6c-9.5 0-17.5 6.4-20.1 15.7l-1.9 7.1c-.8 3 .-0.3 6.1 1.4 8.7l4.1 6.6c1.4 2.3 3.9 3.7 6.6 3.7h19.8c2.7 0 5.2-1.4 6.6-3.7l4.1-6.6c1.7-2.6 2.2-5.7 1.4-8.7l-1.9-7.1C49.5 12.4 41.5 6 32 6zm-12.7 22 1.5-5.4c1.7-6.1 7.2-10.3 13.6-10.3s11.9 4.2 13.6 10.3l1.5 5.4H19.3zm4.5 22.7v-7.8h16.4v7.8c0 3.1-2.6 5.7-5.7 5.7h-5c-3.2 0-5.7-2.6-5.7-5.7z" />
+      <path d="M18 38.5c4.1-4 8.3-4 14.1 0 5.8-4 10-4 14.1 0l-2.7 3.2c-3-2.2-5.9-2.2-11.4 0-5.5-2.2-8.4-2.2-11.4 0L18 38.5z" />
+    </svg>
+  )
+}

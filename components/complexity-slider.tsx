@@ -78,8 +78,8 @@ export function ComplexitySlider({ value, onChange, aiEstimate, className }: Com
         </div>
 
         {showAiDiff && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-            <span className="text-[10px] text-indigo-400">AI suggested</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[color:var(--thanos-amethyst)]/10 border border-[color:var(--thanos-amethyst)]/20">
+            <span className="text-[10px] text-[color:var(--thanos-amethyst)]">AI suggested</span>
             <span className={cn("text-xs font-semibold", getTextColor(aiEstimate!))}>{aiEstimate}</span>
           </div>
         )}
@@ -132,7 +132,7 @@ export function ComplexitySlider({ value, onChange, aiEstimate, className }: Com
         {/* AI estimate marker */}
         {showAiDiff && (
           <div
-            className="absolute top-0 w-1.5 h-6 rounded-full bg-indigo-500/60 -translate-x-1/2 transition-all"
+            className="absolute top-0 w-1.5 h-6 rounded-full bg-[color:var(--thanos-amethyst)]/60 -translate-x-1/2 transition-all"
             style={{ left: `${((aiEstimate! - 1) / 9) * 100}%` }}
             title={`AI suggested ${aiEstimate}`}
           />

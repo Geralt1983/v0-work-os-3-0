@@ -56,7 +56,7 @@ export function ValueTierSelector({
             >
               {/* AI suggestion indicator */}
               {isAiSuggested && (
-                <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[9px] font-medium bg-indigo-500 text-white rounded-full">
+                <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[9px] font-medium bg-[color:var(--thanos-gold)] text-black rounded-full">
                   AI
                 </div>
               )}

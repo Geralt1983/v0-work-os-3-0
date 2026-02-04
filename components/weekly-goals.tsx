@@ -11,7 +11,11 @@ function getStatusBadge(status: string) {
     case "ideal_hit":
       return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Target Hit</Badge>
     case "minimum_met":
-      return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">Minimum Met</Badge>
+      return (
+        <Badge className="bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] border-[color:var(--thanos-amethyst)]/30">
+          Minimum Met
+        </Badge>
+      )
     case "on_track":
       return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">On Track</Badge>
     case "behind":
@@ -26,10 +30,10 @@ export function WeeklyGoals() {
 
   if (isLoading || !data) {
     return (
-      <Card className="border-border/50 bg-card/50">
+      <Card className="panel-obsidian gold-edge">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Target className="h-5 w-5 text-cyan-500" />
+            <Target className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
             Weekly Goals
           </CardTitle>
         </CardHeader>
@@ -44,11 +48,11 @@ export function WeeklyGoals() {
   }
 
   return (
-    <Card className="border-border/50 bg-card/50">
+    <Card className="panel-obsidian gold-edge">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Target className="h-5 w-5 text-cyan-500" />
+            <Target className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
             Weekly Goals
           </CardTitle>
           {getStatusBadge(data.status)}
@@ -65,7 +69,7 @@ export function WeeklyGoals() {
             </div>
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                className="h-full bg-[color:var(--thanos-amethyst)] rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(100, data.minimumPercent)}%` }}
               />
             </div>
@@ -89,7 +93,7 @@ export function WeeklyGoals() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/30">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-400" />
+            <Zap className="h-4 w-4 text-[color:var(--thanos-gold)]" />
             <div>
               <div className="text-sm font-medium">{data.totalPoints} pts</div>
               <div className="text-[10px] text-muted-foreground">this week</div>

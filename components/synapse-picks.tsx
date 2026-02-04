@@ -92,13 +92,13 @@ export function SynapsePicks() {
     return (
       <button
         onClick={handleToggleCollapse}
-        className="mb-6 w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-indigo-500/30 bg-gradient-to-r from-indigo-950/20 to-purple-950/20 hover:from-indigo-950/30 hover:to-purple-950/30 transition"
+        className="mb-6 w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-[color:var(--thanos-amethyst)]/30 bg-gradient-to-r from-[color:var(--thanos-amethyst)]/10 to-[color:var(--thanos-gold)]/10 hover:from-[color:var(--thanos-amethyst)]/20 hover:to-[color:var(--thanos-gold)]/20 transition"
       >
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-indigo-500" />
-          <span className="text-sm font-medium text-foreground">Show Synapse Picks</span>
+          <Sparkles className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
+          <span className="text-sm font-medium text-foreground">Show ThanosAI Picks</span>
           {recommendations.length > 0 && (
-            <Badge variant="secondary" className="text-xs bg-indigo-900/50 text-indigo-300">
+            <Badge variant="secondary" className="text-xs bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)]">
               {recommendations.length}
             </Badge>
           )}
@@ -115,12 +115,12 @@ export function SynapsePicks() {
   }
 
   return (
-    <Card className="mb-6 border-indigo-500/30 bg-gradient-to-r from-indigo-950/30 to-purple-950/30">
+    <Card className="mb-6 panel-obsidian gold-edge bg-gradient-to-r from-[color:var(--thanos-amethyst)]/15 to-[color:var(--thanos-gold)]/10">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg text-foreground">
-            <Sparkles className="h-5 w-5 text-indigo-500" />
-            Synapse Picks
+            <Sparkles className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
+            ThanosAI Picks
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="h-8 w-8 p-0">
@@ -161,7 +161,7 @@ export function SynapsePicks() {
 
         {isLoading && (
           <div className="animate-pulse flex items-center gap-2 py-4">
-            <span className="text-indigo-300">Analyzing backlog...</span>
+            <span className="text-[color:var(--thanos-amethyst)]">Analyzing backlog...</span>
           </div>
         )}
 
@@ -229,7 +229,7 @@ export function SynapsePicks() {
                     className={`shrink-0 transition-colors ${
                       wasPromoted
                         ? "bg-green-950/50 border-green-500/50 text-green-400"
-                        : "hover:bg-indigo-950/50 hover:border-indigo-500/50 bg-transparent"
+                        : "hover:bg-[color:var(--thanos-amethyst)]/10 hover:border-[color:var(--thanos-amethyst)]/50 bg-transparent"
                     }`}
                     onClick={() => handlePromote(rec.id)}
                     disabled={isPromoting || wasPromoted}

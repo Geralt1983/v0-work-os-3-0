@@ -147,7 +147,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="What needs to be done?"
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition"
                     autoFocus
                   />
                 </div>
@@ -171,7 +171,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                       value={clientId ?? ""}
                       onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : undefined)}
                       aria-label="Select client"
-                      className={`w-full px-3 py-2 bg-zinc-800 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer ${
+                      className={`w-full px-3 py-2 bg-zinc-800 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition appearance-none cursor-pointer ${
                         !clientId ? "border-red-500" : "border-zinc-700"
                       }`}
                     >
@@ -196,7 +196,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                         onClick={() => setStatus(opt.value)}
                         className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                           status === opt.value
-                            ? "bg-indigo-500 text-white"
+                            ? "bg-[color:var(--thanos-amethyst)] text-white"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -227,7 +227,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                         onClick={() => setDrainType(opt.value)}
                         className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 ${
                           drainType === opt.value
-                            ? "bg-zinc-700 text-white ring-2 ring-indigo-500"
+                            ? "bg-zinc-700 text-white ring-2 ring-[color:var(--thanos-amethyst)]"
                             : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
                         }`}
                       >
@@ -248,7 +248,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add any notes or context..."
                     rows={2}
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[color:var(--thanos-amethyst)] focus:border-transparent transition resize-none"
                   />
                 </div>
               </div>
@@ -265,7 +265,7 @@ export function NewTaskDialog({ open, onClose, onSubmit }: NewTaskDialogProps) {
                 <button
                   type="submit"
                   disabled={!title.trim() || !clientId || isSubmitting}
-                  className="px-4 py-2 rounded-lg text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="px-4 py-2 rounded-lg text-xs font-medium bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {isSubmitting ? "Creating..." : "Create"}
                 </button>

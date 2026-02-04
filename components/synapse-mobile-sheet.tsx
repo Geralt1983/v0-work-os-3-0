@@ -2,12 +2,13 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { Zap, ChevronDown, Send, Paperclip, Trash2, X, Eye, EyeOff } from "lucide-react"
+import { ChevronDown, Send, Paperclip, Trash2, X, Eye, EyeOff } from "lucide-react"
 import { useChat, type Message, type TaskCard, type Attachment } from "@/hooks/use-chat"
 import { VoiceRecorder } from "@/components/voice-recorder"
+import { ThanosAIIcon } from "@/components/thanosai-icon"
 import { cn } from "@/lib/utils"
 
-const ASSISTANT_NAME = "Synapse"
+const ASSISTANT_NAME = "ThanosAI"
 
 const QUICK_ACTIONS = [
   { label: "What's next?", prompt: "What should I work on next?" },
@@ -153,13 +154,13 @@ export function SynapseMobileSheet() {
       <button
         onClick={handleOpen}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 transition-all hover:scale-105",
+          "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-[color:var(--thanos-amethyst)] text-white shadow-lg hover:bg-[color:var(--thanos-amethyst)]/80 transition-all hover:scale-105",
           isOpen && "hidden",
         )}
       >
-        <Zap className="w-6 h-6" />
+        <ThanosAIIcon className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs bg-white text-indigo-600 rounded-full font-medium">
+          <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs bg-white text-[color:var(--thanos-amethyst)] rounded-full font-medium">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -171,7 +172,7 @@ export function SynapseMobileSheet() {
       {/* Bottom sheet */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 bg-zinc-950 rounded-t-2xl border-t border-zinc-800 transition-transform duration-300 ease-out",
+          "fixed inset-x-0 bottom-0 z-50 bg-[color:var(--thanos-obsidian)] rounded-t-2xl border-t border-[color:var(--thanos-amethyst)]/30 transition-transform duration-300 ease-out",
           isOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{ height: "85vh" }}
@@ -182,12 +183,12 @@ export function SynapseMobileSheet() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[color:var(--thanos-amethyst)]/20">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-indigo-400" />
+            <ThanosAIIcon className="w-5 h-5 text-[color:var(--thanos-amethyst)]" />
             <span className="font-semibold text-zinc-100">{ASSISTANT_NAME}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">
-              OpenClaw Channel
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] font-medium">
+              ThanosAI Channel
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -311,7 +312,7 @@ export function SynapseMobileSheet() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
-              className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="flex-1 min-w-0 rounded-full bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--thanos-amethyst)] disabled:opacity-50"
               placeholder="Type or tap mic..."
             />
 
@@ -319,7 +320,7 @@ export function SynapseMobileSheet() {
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && !selectedFile)}
-                className="px-4 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-indigo-500 transition flex items-center gap-2"
+                className="px-4 py-2.5 rounded-full bg-[color:var(--thanos-amethyst)] text-white text-sm font-medium disabled:opacity-50 hover:bg-[color:var(--thanos-amethyst)]/80 transition flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 Send
@@ -348,7 +349,7 @@ function MobileMessage({ message, showActivity }: { message: Message; showActivi
       <div
         className={cn(
           "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-snug",
-          isUser ? "bg-indigo-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
+          isUser ? "bg-[color:var(--thanos-amethyst)] text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-100",
         )}
       >
         <p className="whitespace-pre-line">{text}</p>
@@ -368,7 +369,7 @@ function MobileMessage({ message, showActivity }: { message: Message; showActivi
                   <a
                     href={att.url}
                     download={att.name}
-                    className="flex items-center gap-2 text-xs text-indigo-300 hover:text-indigo-200"
+                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80"
                   >
                     <Paperclip className="w-3 h-3" />
                     {att.name}

@@ -2,7 +2,7 @@ import { generateText } from "ai"
 import { NextResponse } from "next/server"
 
 const SYSTEM_PROMPT = `
-You are Synapse, a productivity coach.
+You are ThanosAI, a productivity coach.
 
 Rewrite the user text as a single clear action that is:
 - Specific
