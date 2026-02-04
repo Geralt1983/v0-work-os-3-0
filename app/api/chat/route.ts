@@ -68,6 +68,20 @@ const openclaw = openclawBaseUrl
   : null
 const openclawEnabled = process.env.OPENCLAW_ENABLED === "true"
 
+const ACTIVITY_OPEN = "[[ACTIVITY]]"
+const ACTIVITY_CLOSE = "[[/ACTIVITY]]"
+
+function stripActivity(content: string): string {
+  const start = content.indexOf(ACTIVITY_OPEN)
+  const end = content.indexOf(ACTIVITY_CLOSE)
+  if (start === -1 || end === -1 || end <= start) {
+    return content.trim()
+  }
+  const before = content.slice(0, start).trim()
+  const after = content.slice(end + ACTIVITY_CLOSE.length).trim()
+  return [before, after].filter(Boolean).join("\n\n").trim()
+}
+
 // Generate tool documentation for the system prompt
 function getToolDocumentation(): string {
   const toolDocs = chatTools.map(t => {
@@ -136,11 +150,18 @@ interface AttachmentInput {
 export async function POST(request: Request) {
   try {
     const db = getDb()
-    const { sessionId: providedSessionId, message, imageBase64, attachments } = await request.json() as {
+    const {
+      sessionId: providedSessionId,
+      message,
+      imageBase64,
+      attachments,
+      activityMode,
+    } = await request.json() as {
       sessionId?: string
       message: string
       imageBase64?: string
       attachments?: AttachmentInput[]
+      activityMode?: "show" | "hide" | boolean
     }
 
     const sessionId = providedSessionId || randomUUID()
@@ -237,6 +258,9 @@ export async function POST(request: Request) {
     let assistantMessage: OpenAI.ChatCompletionMessage
     let taskCard = null
 
+    const activityPreference =
+      activityMode === "hide" || activityMode === false ? "hide" : "show"
+
     if (openclawEnabled) {
       if (!openclaw) {
         throw new Error("OpenClaw is enabled but OPENCLAW_URL/OPENCLAW_TOKEN are not set.")
@@ -253,11 +277,11 @@ export async function POST(request: Request) {
 - Always respond conversationally and helpfully
 - Be BRIEF and action-oriented
 - You have access to your full toolset; use tools autonomously when needed
-- If you use tools, append an activity log block at the end in this exact format:
-
-[[ACTIVITY]]
-- tool_name: short summary of what happened
-[[/ACTIVITY]]
+- ${
+        activityPreference === "show"
+          ? "If you use tools, append an activity log block at the end in this exact format:\n\n[[ACTIVITY]]\n- tool_name: short summary of what happened\n[[/ACTIVITY]]"
+          : "Do NOT include [[ACTIVITY]] blocks in your response."
+      }
 
 CONTEXT: You are Synapse, an AI assistant helping with task management in the WorkOS system.`
       
@@ -385,7 +409,11 @@ CONTEXT: You are Synapse, an AI assistant helping with task management in the Wo
 
     // Save assistant message
     const assistantMsgId = randomUUID()
-    const assistantContent = assistantMessage.content || "Done."
+    let assistantContent = assistantMessage.content || "Done."
+
+    if (activityPreference === "hide") {
+      assistantContent = stripActivity(assistantContent) || "Done."
+    }
 
     console.log('[chat] Final assistant message:', {
       originalContent: assistantMessage.content,

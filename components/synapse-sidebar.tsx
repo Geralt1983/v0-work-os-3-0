@@ -157,18 +157,23 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     }
     
     setSelectedFile(null)
-    await sendMessage(message, imageBase64, attachments.length > 0 ? attachments : undefined)
+    await sendMessage(
+      message,
+      imageBase64,
+      attachments.length > 0 ? attachments : undefined,
+      showActivity ? "show" : "hide",
+    )
   }
 
   const handleQuickAction = async (prompt: string) => {
     if (isLoading) return
-    await sendMessage(prompt)
+    await sendMessage(prompt, undefined, undefined, showActivity ? "show" : "hide")
   }
 
   const handleTranscription = (text: string) => {
     setIsVoiceMode(false)
     // Send directly for natural voice experience
-    sendMessage(text)
+    sendMessage(text, undefined, undefined, showActivity ? "show" : "hide")
   }
 
   const handleVoiceError = (error: string) => {

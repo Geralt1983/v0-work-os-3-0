@@ -134,7 +134,12 @@ export function useChat() {
 
   // Send a message
   const sendMessage = useCallback(
-    async (content: string, imageBase64?: string, attachments?: Attachment[]) => {
+    async (
+      content: string,
+      imageBase64?: string,
+      attachments?: Attachment[],
+      activityMode?: "show" | "hide",
+    ) => {
       if (!content.trim() && !imageBase64 && (!attachments || attachments.length === 0)) return
 
       const requestId = ++requestIdRef.current
@@ -156,6 +161,7 @@ export function useChat() {
           body: JSON.stringify({
             sessionId: sessionId || undefined,
             message: content,
+            activityMode: activityMode || "show",
             ...(imageBase64 && { imageBase64 }),
             ...(attachments && attachments.length > 0 && { attachments }),
           }),
