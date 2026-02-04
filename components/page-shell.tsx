@@ -50,7 +50,7 @@ export function PageShell({
         </div>
 
         {/* Main content */}
-        <main className="mt-8 flex flex-col gap-6 pb-20">
+        <main className="mt-8 flex flex-col gap-8 pb-20">
           {children}
         </main>
       </div>
