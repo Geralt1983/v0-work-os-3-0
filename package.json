@@ -123,6 +123,7 @@
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "autoprefixer": "^10.4.20",
+    "baseline-browser-mapping": "2.9.19",
     "drizzle-kit": "^0.28.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
@@ -134,7 +135,7 @@
     "prettier": "^3.7.4",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1"
   },
   "trustedDependencies": [
