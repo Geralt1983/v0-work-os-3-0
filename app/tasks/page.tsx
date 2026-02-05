@@ -1092,6 +1092,16 @@ function DroppableColumn({
   isEmpty: boolean
   children: React.ReactNode
 }) {
+  const shouldReduceMotion = useReducedMotion()
+  const baseEase: [number, number, number, number] = [0.16, 1, 0.3, 1]
+  const localItemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase },
+    },
+  }
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: { type: "column" },
@@ -1124,7 +1134,7 @@ function DroppableColumn({
   return (
     <motion.div
       ref={setNodeRef}
-      variants={itemVariants}
+      variants={localItemVariants}
       className={`col-span-1 min-h-[240px] panel-obsidian rounded-xl border border-white/10 p-4 transition-all duration-200 ${isOver ? "ring-2 ring-[color:var(--thanos-amethyst)]/30 scale-[1.01]" : ""
         }`}
     >
