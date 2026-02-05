@@ -139,19 +139,19 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
     <div className="w-full space-y-3">
       {/* Input Section with glow effect */}
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[color:var(--thanos-amethyst)]/20 to-[color:var(--thanos-gold)]/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -inset-0.5 bg-[color:var(--thanos-amethyst)]/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="What needs to get done? Press Enter to estimate..."
+          placeholder="Describe the task to estimate points..."
           disabled={isEstimating || !!estimate}
           className={cn(
             "relative w-full px-4 py-3.5 rounded-xl",
-            "bg-zinc-900/80 border border-zinc-700/50",
+            "bg-zinc-950/40 border border-white/10",
             "text-zinc-100 placeholder:text-zinc-500",
-            "focus:outline-none focus:border-[color:var(--thanos-amethyst)]/60 focus:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--thanos-amethyst)]/40 focus-visible:border-[color:var(--thanos-amethyst)]/50",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "transition-all duration-200"
           )}
@@ -163,8 +163,8 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             className={cn(
               "absolute right-2 top-1/2 -translate-y-1/2",
               "p-2.5 rounded-lg btn-press",
-              "bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] hover:from-[color:var(--thanos-amethyst)] hover:to-[color:var(--thanos-gold)]",
-              "shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.25)] hover:shadow-[0_0_22px_rgba(234,179,8,0.3)]",
+              "bg-[color:var(--thanos-amethyst)] hover:bg-[color:var(--thanos-amethyst)]/90 text-white",
+              "shadow-[0_0_16px_rgba(168,85,247,0.25)]",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
               "transition-all duration-200"
             )}
@@ -187,12 +187,12 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
       {/* Estimate Result */}
       {estimate && (
-        <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-700/50 space-y-4 animate-fade-in-up">
+        <div className="p-4 rounded-xl bg-zinc-950/40 border border-white/10 space-y-4 animate-fade-in-up">
           {/* Client Selector & Title */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="w-[160px] bg-zinc-800 border-zinc-700 text-zinc-100">
+                <SelectTrigger className="w-[160px] bg-zinc-950/60 border border-white/10 text-zinc-100">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -258,7 +258,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
             <Button
               onClick={handleAddToBacklog}
               disabled={isAdding}
-              className="flex-1 bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] hover:from-[color:var(--thanos-amethyst)] hover:to-[color:var(--thanos-gold)] text-black shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.25)] hover:shadow-[0_0_22px_rgba(234,179,8,0.3)] btn-press transition-all"
+              className="flex-1 rounded-lg bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/90 shadow-[0_0_16px_rgba(168,85,247,0.25)] btn-press transition-all"
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -273,7 +273,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
               variant="outline"
               onClick={resetCapture}
               disabled={isAdding}
-              className="bg-zinc-800/50 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 text-zinc-300 btn-press transition-all"
+              className="rounded-lg bg-zinc-900/60 border-white/10 hover:bg-zinc-800/60 text-zinc-300 btn-press transition-all"
             >
               Cancel
             </Button>

@@ -77,11 +77,11 @@ export function DoneToday() {
 
   if (doneTodayTasks.length === 0) {
     return (
-      <Card className="border-dashed border-border/50 bg-muted/30">
+      <Card className="panel-obsidian rounded-xl border border-white/10">
         <CardContent className="py-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CheckCircle2 className="h-5 w-5" />
-            <span>No tasks completed yet today. Let's change that!</span>
+          <div className="flex items-center gap-2 text-white/60">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400/70" />
+            <span className="text-sm">No tasks completed yet today.</span>
           </div>
         </CardContent>
       </Card>
@@ -92,10 +92,10 @@ export function DoneToday() {
   const isComplete = totalPoints >= DAILY_TARGET_POINTS
 
   return (
-    <Card className={`${isComplete ? "border-emerald-500/50" : "border-emerald-500/30"} bg-emerald-950/20`}>
+    <Card className={`panel-obsidian rounded-xl border ${isComplete ? "border-emerald-500/40" : "border-white/10"}`}>
       <CardHeader className="pb-2">
         <button onClick={() => setExpanded(!expanded)} className="flex items-center justify-between w-full">
-          <CardTitle className="flex items-center gap-2 text-lg text-emerald-100">
+          <CardTitle className="flex items-center gap-2 text-base text-emerald-100">
             <CheckCircle2 className={`h-5 w-5 ${isComplete ? "text-emerald-400" : "text-emerald-500/70"}`} />
             Done Today
             <Badge variant="secondary" className={`ml-2 ${

@@ -19,8 +19,7 @@ import { Graveyard } from "@/components/graveyard"
 import { GroupedBacklog } from "@/components/grouped-backlog"
 import { QuickCapture } from "@/components/quick-capture"
 import { CheckSquare } from "lucide-react"
-import { motion } from "framer-motion"
-import { AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { DoneToday } from "@/components/done-today"
 
 import {
@@ -67,6 +66,34 @@ export default function MovesPage() {
   } = useTasks()
   const { clients } = useClients()
   const { mutate: globalMutate } = useSWRConfig()
+  const shouldReduceMotion = useReducedMotion()
+  const baseEase: [number, number, number, number] = [0.16, 1, 0.3, 1]
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 14 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: shouldReduceMotion ? 0 : 0.35, ease: baseEase },
+    },
+  }
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.06,
+        delayChildren: shouldReduceMotion ? 0 : 0.05,
+      },
+    },
+  }
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase },
+    },
+  }
 
   const [view, setView] = useState<TasksView>("board")
   const [clientFilter, setClientFilter] = useState("all")
@@ -319,28 +346,32 @@ export default function MovesPage() {
       label: "Today",
       value: byStatus.today.length,
       meta: `${todayPoints} pts queued`,
-      stoneClass: "stone-amethyst",
+      tone: "text-[color:var(--thanos-amethyst)]",
+      chip: "bg-[color:var(--thanos-amethyst)]/15 border border-[color:var(--thanos-amethyst)]/35 text-[color:var(--thanos-amethyst)]",
       icon: Zap,
     },
     {
       label: "Queued",
       value: byStatus.upnext.length,
       meta: "Next to execute",
-      stoneClass: "stone-cosmic",
+      tone: "text-[color:var(--thanos-cosmic)]",
+      chip: "bg-[color:var(--thanos-cosmic)]/12 border border-[color:var(--thanos-cosmic)]/35 text-[color:var(--thanos-cosmic)]",
       icon: Clock,
     },
     {
       label: "Backlog",
       value: byStatus.backlog.length,
       meta: "Unscoped work",
-      stoneClass: "stone-gold",
+      tone: "text-[color:var(--thanos-gold)]",
+      chip: "bg-[color:var(--thanos-gold)]/12 border border-[color:var(--thanos-gold)]/35 text-[color:var(--thanos-gold)]",
       icon: Inbox,
     },
     {
       label: "Done Today",
       value: doneTodayCount,
       meta: `${doneTodayPoints} pts banked`,
-      stoneClass: "stone-emerald",
+      tone: "text-emerald-300",
+      chip: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300",
       icon: CheckCircle2,
     },
   ]
@@ -365,7 +396,7 @@ export default function MovesPage() {
 
   const displayItems = draggedItems || byStatus
 
-  function BacklogDropZone({ children }: { children: React.ReactNode }) {
+  function BacklogDropZone({ children, count }: { children: React.ReactNode; count: number }) {
     const { setNodeRef, isOver, active } = useDroppable({
       id: "backlog-column",
       data: { type: "column", status: "backlog" },
@@ -375,12 +406,13 @@ export default function MovesPage() {
     const showDropTarget = !!active
 
     return (
-      <div
+      <motion.div
         ref={setNodeRef}
-        className={`col-span-1 rounded-xl transition-all duration-200 relative ${isOver
-          ? "bg-[color:var(--thanos-amethyst)]/15 ring-2 ring-[color:var(--thanos-amethyst)]/40 scale-[1.01]"
+        variants={itemVariants}
+        className={`col-span-1 panel-obsidian rounded-xl border border-white/10 p-4 transition-all duration-200 relative ${isOver
+          ? "ring-2 ring-[color:var(--thanos-amethyst)]/40 scale-[1.01]"
           : showDropTarget
-            ? "ring-1 ring-dashed ring-zinc-600"
+            ? "ring-1 ring-dashed ring-white/20"
             : ""
           }`}
       >
@@ -390,11 +422,17 @@ export default function MovesPage() {
               }`}
           />
         )}
-        <h2 className="text-xl font-bold text-zinc-100 mb-3 relative z-20">Backlog</h2>
+        <div className="flex items-center justify-between mb-3 relative z-20">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+            <Inbox className="h-4 w-4 text-[color:var(--thanos-gold)]" />
+            Backlog
+          </div>
+          <span className="text-xs text-white/40 font-mono tabular-nums">{count}</span>
+        </motion.div>
         <div className="relative z-0">{children}</div>
         {showDropTarget && (
           <div
-            className={`h-16 rounded-lg mt-2 flex items-center justify-center transition-colors ${isOver
+            className={`h-16 rounded-lg mt-3 flex items-center justify-center transition-colors ${isOver
               ? "bg-[color:var(--thanos-amethyst)]/20 border-2 border-dashed border-[color:var(--thanos-amethyst)]/50"
               : "bg-zinc-800/30 border-2 border-dashed border-zinc-700"
               }`}
@@ -404,64 +442,69 @@ export default function MovesPage() {
             </span>
           </div>
         )}
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="min-h-screen text-white">
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 md:py-10">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div className="min-h-screen text-white noise-overlay">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="relative z-10 mx-auto max-w-7xl px-4 py-6 md:py-10"
+      >
+        <motion.div variants={sectionVariants} className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-2">
             <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.32em] text-[color:var(--thanos-gold)]/80">
               <span className="h-2 w-2 rounded-full bg-[color:var(--thanos-gold)] shadow-[0_0_12px_rgba(234,179,8,0.6)]" />
               ThanosOS
             </div>
-            <h1 className="text-2xl font-display text-zinc-100 sm:text-3xl md:text-4xl tracking-[0.12em]">
+            <h1 className="text-2xl font-display text-gradient-brand sm:text-3xl md:text-4xl tracking-[0.12em]">
               ThanosOS Command Deck
             </h1>
             <p className="text-sm text-white/60">One task per client. Zero drift.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] hover:from-[color:var(--thanos-amethyst)] hover:to-[color:var(--thanos-gold)] text-black h-9 px-4 shadow-lg shadow-[0_0_20px_rgba(168,85,247,0.25)] hover:shadow-[0_0_24px_rgba(234,179,8,0.3)] btn-press transition-all"
-              onClick={() => setIsNewTaskOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Task
-            </Button>
             <WorkOSNav />
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <motion.div variants={sectionVariants} className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
             const Icon = stat.icon
             return (
-              <div
+              <motion.div
                 key={stat.label}
-                className="panel-obsidian gold-edge rounded-2xl px-4 py-3 flex items-center justify-between"
+                variants={itemVariants}
+                className="panel-obsidian rounded-xl border border-white/10 px-5 py-4 flex items-center justify-between"
               >
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.26em] text-white/50">{stat.label}</p>
-                  <p className={`text-2xl font-display ${stat.stoneClass}`}>{stat.value}</p>
+                  <p className={`mt-1 text-3xl font-semibold font-mono tabular-nums ${stat.tone}`}>
+                    {stat.value}
+                  </p>
                   <p className="text-xs text-white/40">{stat.meta}</p>
                 </div>
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.stoneClass}`}>
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${stat.chip}`}>
                   <Icon className="h-5 w-5" />
                 </div>
-              </div>
+              </motion.div>
             )
           })}
-        </div>
+        </motion.div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <motion.div variants={sectionVariants} className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-4">
-            <div className="panel-obsidian gold-edge rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] uppercase tracking-[0.3em] text-white/50">Quick Capture</p>
-                <span className="text-[11px] text-white/40">Enter to estimate</span>
+            <div className="panel-obsidian rounded-xl border border-white/10 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-white/50">Quick Capture</p>
+                  <p className="text-xs text-white/40 mt-1">Enter to estimate. Shift+Enter for new line.</p>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.24em] text-[color:var(--thanos-amethyst)]/70">
+                  AI Assist
+                </span>
               </div>
               <QuickCapture onTaskCreated={refresh} />
             </div>
@@ -470,14 +513,14 @@ export default function MovesPage() {
             </div>
           </div>
           <div className="space-y-4">
-            <DailyProgressBar className="border-[color:var(--thanos-gold)]/30" />
+            <DailyProgressBar className="border-white/10" />
             <DoneToday />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-2">
+        <motion.div variants={sectionVariants} className="mt-8 flex flex-wrap items-center gap-3">
           <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-[160px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
+            <SelectTrigger className="w-[170px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
               <SelectValue placeholder="All Clients" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -493,7 +536,7 @@ export default function MovesPage() {
           </Select>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
+            <SelectTrigger className="w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -510,7 +553,7 @@ export default function MovesPage() {
           </Select>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[130px] panel-obsidian border-[color:var(--thanos-gold)]/20 text-zinc-100">
+            <SelectTrigger className="w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -525,56 +568,44 @@ export default function MovesPage() {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
 
-        <div className="hidden lg:flex items-center justify-between gap-2 mt-4">
-          <div className="flex items-center gap-1 panel-obsidian rounded-full p-1 border border-[color:var(--thanos-gold)]/20">
+        <motion.div variants={sectionVariants} className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-xs text-white/40">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+              <span className="h-2 w-2 rounded-full bg-[color:var(--thanos-amethyst)]/80 shadow-[0_0_12px_rgba(168,85,247,0.35)]" />
+              Task Board
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <span>{byStatus.today.length} Today</span>
+              <span className="text-white/20">•</span>
+              <span>{byStatus.upnext.length} Queued</span>
+              <span className="text-white/20">•</span>
+              <span>{byStatus.backlog.length} Backlog</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:block">
+              <ViewToggle view={view} onChange={setView} />
+            </div>
             <Button
-              variant="ghost"
               size="sm"
-              onClick={() => setView("board")}
-              className={`rounded-full px-3 h-8 ${view === "board"
-                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/10"
-                }`}
+              className="rounded-lg bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]/90 shadow-[0_0_18px_rgba(168,85,247,0.25)] focus-visible:ring-2 focus-visible:ring-[color:var(--thanos-amethyst)]/60 btn-press"
+              onClick={() => setIsNewTaskOpen(true)}
             >
-              <LayoutGrid className="h-4 w-4 mr-1.5" />
-              Board
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("list")}
-              className={`rounded-full px-3 h-8 ${view === "list"
-                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/10"
-                }`}
-            >
-              <List className="h-4 w-4 mr-1.5" />
-              List
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("focus")}
-              className={`rounded-full px-3 h-8 ${view === "focus"
-                ? "bg-[color:var(--thanos-amethyst)] text-white hover:bg-[color:var(--thanos-amethyst)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/10"
-                }`}
-            >
-              <Crosshair className="h-4 w-4 mr-1.5" />
-              Focus
+              <Plus className="h-4 w-4" />
+              New Task
             </Button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="lg:hidden mt-4 flex items-center gap-2 border-b border-zinc-800">
+        <div className="lg:hidden mt-4 flex items-center gap-2 border-b border-white/10">
           {mobileTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab.key
-                ? "border-[color:var(--thanos-gold)] text-white"
+                ? "border-[color:var(--thanos-amethyst)] text-white"
                 : "border-transparent text-zinc-400 hover:text-white"
                 }`}
             >
@@ -586,161 +617,195 @@ export default function MovesPage() {
           ))}
         </div>
 
-        <div className="hidden lg:block mt-6">
-          {view === "board" && (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DroppableColumn id="today-column" title="Today" isEmpty={displayItems.today.length === 0}>
-                  <SortableContext items={displayItems.today.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                    {displayItems.today.map((task) => (
-                      <SortableTaskCard
-                        key={task.id}
-                        task={task}
-                        variant="primary"
-                        onComplete={handleComplete}
-                        onEdit={() => setEditingTask(task)}
-                        isDragging={activeId === task.id}
-                        justDropped={recentlyDropped === task.id}
-                      />
-                    ))}
-                  </SortableContext>
-                </DroppableColumn>
-                <DroppableColumn id="upnext-column" title="Queued" isEmpty={displayItems.upnext.length === 0}>
-                  <SortableContext items={displayItems.upnext.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                    {displayItems.upnext.map((task) => (
-                      <SortableTaskCard
-                        key={task.id}
-                        task={task}
-                        variant="primary"
-                        onComplete={handleComplete}
-                        onEdit={() => setEditingTask(task)}
-                        isDragging={activeId === task.id}
-                        justDropped={recentlyDropped === task.id}
-                      />
-                    ))}
-                  </SortableContext>
-                </DroppableColumn>
-                <BacklogDropZone>
-                  <GroupedBacklog onEditMove={handleEditFromBacklog} />
-                </BacklogDropZone>
-              </div>
-              <DragOverlay
-                dropAnimation={{
-                  duration: 300,
-                  easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
-                }}
+        <motion.div variants={sectionVariants} className="hidden lg:block mt-6">
+          <AnimatePresence mode="wait">
+            {view === "board" && (
+              <motion.div
+                key="board"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase }}
               >
-                {activeTask ? (
-                  <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-[color:var(--thanos-amethyst)]/50 rounded-2xl">
-                    <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCorners}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                >
+                  <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <DroppableColumn
+                      id="today-column"
+                      title="Today"
+                      count={displayItems.today.length}
+                      isEmpty={displayItems.today.length === 0}
+                    >
+                      <SortableContext items={displayItems.today.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                        {displayItems.today.map((task) => (
+                          <SortableTaskCard
+                            key={task.id}
+                            task={task}
+                            variant="primary"
+                            onComplete={handleComplete}
+                            onEdit={() => setEditingTask(task)}
+                            isDragging={activeId === task.id}
+                            justDropped={recentlyDropped === task.id}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DroppableColumn>
+                    <DroppableColumn
+                      id="upnext-column"
+                      title="Queued"
+                      count={displayItems.upnext.length}
+                      isEmpty={displayItems.upnext.length === 0}
+                    >
+                      <SortableContext items={displayItems.upnext.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                        {displayItems.upnext.map((task) => (
+                          <SortableTaskCard
+                            key={task.id}
+                            task={task}
+                            variant="primary"
+                            onComplete={handleComplete}
+                            onEdit={() => setEditingTask(task)}
+                            isDragging={activeId === task.id}
+                            justDropped={recentlyDropped === task.id}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DroppableColumn>
+                    <BacklogDropZone count={byStatus.backlog.length}>
+                      <GroupedBacklog onEditMove={handleEditFromBacklog} />
+                    </BacklogDropZone>
+                  </motion.div>
+                  <DragOverlay
+                    dropAnimation={{
+                      duration: 300,
+                      easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    }}
+                  >
+                    {activeTask ? (
+                      <div className="transform scale-105 rotate-2 shadow-2xl shadow-black/50 ring-2 ring-[color:var(--thanos-amethyst)]/50 rounded-xl">
+                        <TaskCard task={activeTask} variant="primary" onComplete={handleComplete} isDragging={true} />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              </motion.div>
+            )}
+
+            {view === "list" && (
+              <motion.div
+                key="list"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase }}
+                className="space-y-6"
+              >
+                {/* Active & Queued - compact rows */}
+                <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900">
+                    <h3 className="text-[11px] uppercase tracking-[0.3em] text-white/50">Active & Queued</h3>
                   </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          )}
-
-          {view === "list" && (
-            <div className="space-y-6">
-              {/* Active & Queued - compact rows */}
-              <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
-                <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900">
-                  <h3 className="text-sm font-medium text-zinc-400">Active & Queued</h3>
-                </div>
-                <div className="divide-y divide-zinc-800/50">
-                  {filteredTasks
-                    .filter((t) => t.status === "today" || t.status === "upnext")
-                    .map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-3 py-2 px-4 hover:bg-zinc-800/50 cursor-pointer transition-colors"
-                        onClick={() => setEditingTask(task)}
-                      >
-                        {/* Client badge - fixed width */}
-                        <Badge
-                          variant="outline"
-                          className="w-24 justify-center text-xs shrink-0 truncate"
-                          style={{
-                            borderColor: task.clientColor || "#6b7280",
-                            color: task.clientColor || "#6b7280",
-                          }}
+                  <div className="divide-y divide-zinc-800/50">
+                    {filteredTasks
+                      .filter((t) => t.status === "today" || t.status === "upnext")
+                      .map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-3 py-2 px-4 hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                          onClick={() => setEditingTask(task)}
                         >
-                          {task.client}
-                        </Badge>
-
-                        {/* Title - grows to fill space, truncate with ellipsis */}
-                        <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
-
-                        {/* Points badge */}
-                        {(() => {
-                          const points = getTaskPoints(task)
-                          const tierConfig = getValueTierConfig(task.valueTier)
-                          return (
-                            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium tabular-nums ${tierConfig.bgColor} ${tierConfig.color}`}>
-                              {points}pt{points > 1 ? "s" : ""}
-                            </span>
-                          )
-                        })()}
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            className="p-1.5 hover:bg-zinc-700 rounded transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleComplete(task.id)
+                          {/* Client badge - fixed width */}
+                          <Badge
+                            variant="outline"
+                            className="w-24 justify-center text-xs shrink-0 truncate"
+                            style={{
+                              borderColor: task.clientColor || "#6b7280",
+                              color: task.clientColor || "#6b7280",
                             }}
                           >
-                            <Check className="h-4 w-4 text-zinc-500 hover:text-emerald-400" />
-                          </button>
+                            {task.client}
+                          </Badge>
+
+                          {/* Title - grows to fill space, truncate with ellipsis */}
+                          <span className="flex-1 text-sm text-zinc-100 truncate">{task.title}</span>
+
+                          {/* Points badge */}
+                          {(() => {
+                            const points = getTaskPoints(task)
+                            const tierConfig = getValueTierConfig(task.valueTier)
+                            return (
+                              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium tabular-nums ${tierConfig.bgColor} ${tierConfig.color}`}>
+                                {points}pt{points > 1 ? "s" : ""}
+                              </span>
+                            )
+                          })()}
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              className="p-1.5 hover:bg-zinc-700 rounded transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleComplete(task.id)
+                              }}
+                            >
+                              <Check className="h-4 w-4 text-zinc-500 hover:text-emerald-400" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  {filteredTasks.filter((t) => t.status === "today" || t.status === "upnext").length === 0 && (
-                    <div className="py-4 px-4 text-sm text-zinc-500 text-center">No active or queued tasks</div>
+                      ))}
+                    {filteredTasks.filter((t) => t.status === "today" || t.status === "upnext").length === 0 && (
+                      <div className="py-4 px-4 text-sm text-zinc-500 text-center">No active or queued tasks</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Backlog section */}
+                <div className="pt-4 border-t border-zinc-800">
+                  <h2 className="text-[11px] uppercase tracking-[0.3em] text-white/50 mb-3">Backlog</h2>
+                  <GroupedBacklog onEditMove={handleEditFromBacklog} />
+                </div>
+              </motion.div>
+            )}
+
+            {view === "focus" && (
+              <motion.div
+                key="focus"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase }}
+                className="space-y-6"
+              >
+                <div className="flex flex-col gap-4">
+                  {activeTasks.length === 0 ? (
+                    <p className="text-zinc-500 text-center py-8">No active tasks. Promote something from backlog!</p>
+                  ) : (
+                    activeTasks.map((task, index) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        variant="primary"
+                        onComplete={handleComplete}
+                        onEdit={() => setEditingTask(task)}
+                        isDragging={focusIndex === index}
+                        onClick={() => setFocusIndex(index)}
+                      />
+                    ))
                   )}
                 </div>
-              </div>
-
-              {/* Backlog section */}
-              <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
-                <GroupedBacklog onEditMove={handleEditFromBacklog} />
-              </div>
-            </div>
-          )}
-
-          {view === "focus" && (
-            <div className="space-y-6">
-              <div className="flex flex-col gap-4">
-                {activeTasks.length === 0 ? (
-                  <p className="text-zinc-500 text-center py-8">No active tasks. Promote something from backlog!</p>
-                ) : (
-                  activeTasks.map((task, index) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      variant="primary"
-                      onComplete={handleComplete}
-                      onEdit={() => setEditingTask(task)}
-                      isDragging={focusIndex === index}
-                      onClick={() => setFocusIndex(index)}
-                    />
-                  ))
-                )}
-              </div>
-              <div className="pt-4 border-t border-zinc-800">
-                <h2 className="text-xl font-bold text-zinc-100 mb-3">Backlog</h2>
-                <GroupedBacklog onEditMove={handleEditFromBacklog} />
-              </div>
-            </div>
-          )}
-        </div>
+                <div className="pt-4 border-t border-zinc-800">
+                  <h2 className="text-[11px] uppercase tracking-[0.3em] text-white/50 mb-3">Backlog</h2>
+                  <GroupedBacklog onEditMove={handleEditFromBacklog} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <div className="lg:hidden mt-4">
           <div className="flex flex-col gap-4">
@@ -776,9 +841,9 @@ export default function MovesPage() {
           </div>
         </div>
 
-        <div className="mt-8 pt-4 border-t border-zinc-800/50">
+        <motion.div variants={sectionVariants} className="mt-8 pt-4 border-t border-white/10">
           <Graveyard />
-        </div>
+        </motion.div>
       </div>
 
       <NewTaskDialog
@@ -811,28 +876,29 @@ export default function MovesPage() {
           refresh()
         }}
       />
+      </motion.div>
     </div>
   )
 }
 
 function ViewToggle({ view, onChange }: { view: TasksView; onChange: (v: TasksView) => void }) {
   return (
-    <div className="inline-flex rounded-full bg-zinc-900 p-1">
+    <div className="inline-flex items-center gap-1 rounded-full bg-zinc-900/70 border border-white/10 p-1">
       <button
         onClick={() => onChange("board")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "board" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--thanos-amethyst)]/60 ${view === "board" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"}`}
       >
         <LayoutGrid className="h-3.5 w-3.5" /> Board
       </button>
       <button
         onClick={() => onChange("list")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "list" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--thanos-amethyst)]/60 ${view === "list" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"}`}
       >
         <List className="h-3.5 w-3.5" /> List
       </button>
       <button
         onClick={() => onChange("focus")}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${view === "focus" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+        className={`flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--thanos-amethyst)]/60 ${view === "focus" ? "bg-[color:var(--thanos-amethyst)] text-white" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"}`}
       >
         <Crosshair className="h-3.5 w-3.5" /> Focus
       </button>
@@ -918,13 +984,13 @@ function TaskCard({
         damping: 30,
       }}
       style={{ perspective: 1000 }}
-      className={`group relative rounded-2xl transition-all ${onClick ? "cursor-pointer" : "cursor-grab"} active:cursor-grabbing ${getStatusStyles()} ${isCompact ? "p-3" : "p-4"}`}
+      className={`group relative rounded-xl transition-all ${onClick ? "cursor-pointer" : "cursor-grab"} active:cursor-grabbing ${getStatusStyles()} ${isCompact ? "p-3" : "p-4"}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className={`font-medium text-[color:var(--thanos-gold)] ${isCompact ? "text-xs" : "text-sm"}`}>{task.client}</div>
+          <div className={`text-[11px] uppercase tracking-[0.24em] text-white/50 ${isCompact ? "text-[10px]" : ""}`}>{task.client}</div>
           <h3
-            className={`font-semibold text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
+            className={`font-medium text-zinc-100 leading-snug break-words ${isCompact ? "text-sm mt-0.5" : "text-base mt-1"}`}
           >
             {task.title}
           </h3>
@@ -936,7 +1002,7 @@ function TaskCard({
                 e.stopPropagation()
                 onEdit()
               }}
-              className="flex-shrink-0 p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition"
+              className="flex-shrink-0 p-2 rounded-lg bg-zinc-900/60 border border-white/10 text-zinc-400 hover:bg-zinc-800/60 hover:text-white transition"
             >
               <GripVertical className={`${isCompact ? "h-4 w-4" : "h-5 w-5"}`} />
             </button>
@@ -949,7 +1015,7 @@ function TaskCard({
             disabled={completing}
             aria-label={`Complete task: ${task.title}`}
             title={`Complete: ${task.title}`}
-            className={`flex-shrink-0 p-2 rounded-xl btn-press focus-ring transition-all ${completing
+            className={`flex-shrink-0 p-2 rounded-lg btn-press focus-ring transition-all ${completing
               ? "bg-emerald-500 text-white animate-celebrate glow-success"
               : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 hover:scale-105"
               }`}
@@ -980,7 +1046,7 @@ function TaskCard({
             {taskPoints}pt{taskPoints > 1 ? "s" : ""}
           </span>
         </div>
-        <span className="text-sm text-zinc-500">{task.ageLabel}</span>
+        <span className="text-xs text-white/40">{task.ageLabel}</span>
       </div>
     </motion.div>
   )
@@ -1017,11 +1083,13 @@ function UndoToast({
 function DroppableColumn({
   id,
   title,
+  count,
   isEmpty,
   children,
 }: {
   id: string
   title: string
+  count: number
   isEmpty: boolean
   children: React.ReactNode
 }) {
@@ -1033,9 +1101,9 @@ function DroppableColumn({
   const getColumnIcon = () => {
     switch (id) {
       case "today-column":
-        return <Zap className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
+        return <Zap className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
       case "upnext-column":
-        return <Clock className="h-5 w-5 text-[color:var(--thanos-gold)]" />
+        return <Clock className="h-4 w-4 text-[color:var(--thanos-cosmic)]" />
       default:
         return null
     }
@@ -1044,35 +1112,47 @@ function DroppableColumn({
   const getEmptyMessage = () => {
     switch (id) {
       case "today-column":
-        return { title: "Ready for action", subtitle: "Drag tasks here to tackle today" }
+        return { title: "Ready for action", subtitle: "Drag tasks here to tackle today", icon: <Zap className="h-5 w-5" /> }
       case "upnext-column":
-        return { title: "Queue is clear", subtitle: "Add tasks for later" }
+        return { title: "Queue is clear", subtitle: "Add tasks for later", icon: <Clock className="h-5 w-5" /> }
       default:
-        return { title: "Empty", subtitle: "Drop tasks here" }
+        return { title: "Empty", subtitle: "Drop tasks here", icon: <Inbox className="h-5 w-5" /> }
     }
   }
 
   const emptyMsg = getEmptyMessage()
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
-      className={`col-span-1 min-h-[200px] rounded-xl transition-all duration-200 ${isOver ? "bg-[color:var(--thanos-amethyst)]/5 ring-2 ring-[color:var(--thanos-amethyst)]/30 scale-[1.01]" : ""
+      variants={itemVariants}
+      className={`col-span-1 min-h-[240px] panel-obsidian rounded-xl border border-white/10 p-4 transition-all duration-200 ${isOver ? "ring-2 ring-[color:var(--thanos-amethyst)]/30 scale-[1.01]" : ""
         }`}
     >
-      <div className="flex items-center gap-2 mb-3">
-        {getColumnIcon()}
-        <h2 className="text-xl font-bold text-zinc-100">{title}</h2>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+          {getColumnIcon()}
+          {title}
+        </div>
+        <span className="text-xs text-white/40 font-mono tabular-nums">{count}</span>
       </div>
       {isEmpty && !isOver ? (
-        <div className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
-          <p className="text-zinc-400 text-sm font-medium">{emptyMsg.title}</p>
-          <p className="text-zinc-600 text-xs mt-1">{emptyMsg.subtitle}</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.25, ease: baseEase }}
+          className="flex flex-col items-center justify-center h-36 border border-dashed border-white/10 rounded-xl bg-zinc-950/40 text-center"
+        >
+          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-white/5 text-white/60 mb-2">
+            {emptyMsg.icon}
+          </div>
+          <p className="text-zinc-300 text-sm font-medium">{emptyMsg.title}</p>
+          <p className="text-zinc-500 text-xs mt-1">{emptyMsg.subtitle}</p>
+        </motion.div>
       ) : (
         <div className="space-y-3">{children}</div>
       )}
-    </div>
+    </motion.div>
   )
 }
 

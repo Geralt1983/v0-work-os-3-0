@@ -6,9 +6,7 @@ import { useTasks } from "@/hooks/use-tasks"
 import {
   getTaskPoints,
   DAILY_TARGET_POINTS,
-  getPointsProgress,
-  VALUE_TIER_CONFIG,
-  type ValueTier
+  getPointsProgress
 } from "@/lib/domain/task-types"
 import { isRealClient } from "@/lib/constants"
 import { AlertTriangle, Trophy, Target, TrendingUp, Palmtree } from "lucide-react"
@@ -86,8 +84,8 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
   // Determine status message
   const getStatusMessage = () => {
-    if (isHoliday) return holidayInfo?.description ? `🏝️ ${holidayInfo.description}` : "🏝️ Holiday Mode"
-    if (canCompleteDay) return "Day complete! 🎉"
+    if (isHoliday) return holidayInfo?.description ? holidayInfo.description : "Holiday Mode"
+    if (canCompleteDay) return "Day complete"
     if (hasStaleBlockers) return `Stale wall: ${staleClients.length} client${staleClients.length > 1 ? "s" : ""} need attention`
     if (isComplete) return "Target reached!"
     const remaining = DAILY_TARGET_POINTS - pointsEarned
@@ -95,25 +93,23 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
   }
 
   return (
-    <div className={`panel-obsidian gold-edge rounded-xl p-4 ${className}`}>
+    <div className={`panel-obsidian rounded-xl border border-white/10 p-5 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
           {isHoliday ? (
-            <Palmtree className="h-5 w-5 text-[color:var(--thanos-cosmic)]" />
+            <Palmtree className="h-4 w-4 text-[color:var(--thanos-cosmic)]" />
           ) : canCompleteDay ? (
-            <Trophy className="h-5 w-5 text-emerald-400" />
+            <Trophy className="h-4 w-4 text-emerald-400" />
           ) : hasStaleBlockers ? (
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <AlertTriangle className="h-4 w-4 text-amber-400" />
           ) : (
-            <Target className="h-5 w-5 text-[color:var(--thanos-amethyst)]" />
+            <Target className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
           )}
-          <span className="font-semibold text-zinc-100">
-            {isHoliday ? "Holiday" : "Daily Progress"}
-          </span>
+          <span>{isHoliday ? "Holiday" : "Daily Progress"}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-2xl font-bold ${
+        <div className="flex items-baseline gap-2">
+          <span className={`text-3xl font-semibold font-mono tabular-nums ${
             isHoliday ? "text-[color:var(--thanos-cosmic)]" :
             canCompleteDay ? "text-emerald-400" :
             hasStaleBlockers ? "text-amber-400" :
@@ -122,7 +118,7 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
             {isHoliday ? "Off" : pointsEarned}
           </span>
           {!isHoliday && (
-            <span className="text-zinc-500">/ {DAILY_TARGET_POINTS} pts</span>
+            <span className="text-xs text-white/40 font-mono tabular-nums">/ {DAILY_TARGET_POINTS}</span>
           )}
         </div>
       </div>
@@ -146,16 +142,16 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
       {/* Status row */}
       <div className="flex items-center justify-between mt-3">
-        <span className={`text-sm ${
+        <span className={`text-xs ${
           isHoliday ? "text-[color:var(--thanos-cosmic)]" :
           canCompleteDay ? "text-emerald-400" :
           hasStaleBlockers ? "text-amber-400" :
-          "text-zinc-400"
+          "text-white/50"
         }`}>
           {getStatusMessage()}
         </span>
         {!isHoliday && (
-          <div className="flex items-center gap-1 text-xs text-zinc-500">
+          <div className="flex items-center gap-1 text-xs text-white/40">
             <TrendingUp className="h-3 w-3" />
             {completedCount} task{completedCount !== 1 ? "s" : ""}
           </div>
