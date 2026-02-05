@@ -428,7 +428,7 @@ export default function MovesPage() {
             Backlog
           </div>
           <span className="text-xs text-white/40 font-mono tabular-nums">{count}</span>
-        </motion.div>
+        </div>
         <div className="relative z-0">{children}</div>
         {showDropTarget && (
           <div
