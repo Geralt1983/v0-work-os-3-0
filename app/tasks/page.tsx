@@ -844,7 +844,7 @@ export default function MovesPage() {
         <motion.div variants={sectionVariants} className="mt-8 pt-4 border-t border-white/10">
           <Graveyard />
         </motion.div>
-      </div>
+      </motion.div>
 
       <NewTaskDialog
         open={isNewTaskOpen}
@@ -876,7 +876,6 @@ export default function MovesPage() {
           refresh()
         }}
       />
-      </motion.div>
     </div>
   )
 }
