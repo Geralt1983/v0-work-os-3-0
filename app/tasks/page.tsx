@@ -468,7 +468,7 @@ export default function MovesPage() {
           <div className="flex items-center gap-3">
             <WorkOSNav />
           </div>
-        </div>
+        </motion.div>
 
         <motion.div variants={sectionVariants} className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
