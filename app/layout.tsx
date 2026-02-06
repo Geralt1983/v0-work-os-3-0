@@ -10,7 +10,7 @@ const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" })
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" })
 
 export const metadata: Metadata = {
-  title: "ThanosOS",
+  title: "Thanos OS",
   description: "Command deck for client execution",
   generator: "v0.app",
   icons: {

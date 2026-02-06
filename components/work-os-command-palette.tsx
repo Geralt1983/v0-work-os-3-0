@@ -207,7 +207,7 @@ export function WorkOSCommandPalette() {
       onOpenChange={setOpen}
       title="WorkOS Command Palette"
       description="Search for a page or an action"
-      className="panel-obsidian border-white/10 shadow-2xl shadow-black/60"
+      className="comic-dialog panel-obsidian border-white/10 shadow-2xl shadow-black/60"
       showCloseButton={false}
     >
       <CommandInput placeholder="Type a command or search..." />

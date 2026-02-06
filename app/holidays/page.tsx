@@ -13,7 +13,7 @@ export default function HolidaysPage() {
           <WorkOSNav />
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 animate-comic-pop">
           <HolidayManager />
         </div>
       </div>

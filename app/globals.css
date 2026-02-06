@@ -199,8 +199,12 @@
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-transform: none;
+  }
+
+  .comic-title {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 16px 44px rgba(0, 0, 0, 0.35);
   }
 
   .thanos-shell {
@@ -234,10 +238,30 @@
   }
 
   .panel-obsidian {
-    background: rgba(8, 10, 20, 0.78);
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(900px circle at 14% 10%, rgba(124, 58, 237, 0.1), transparent 58%),
+      radial-gradient(800px circle at 86% 0%, rgba(234, 179, 8, 0.08), transparent 52%),
+      rgba(8, 10, 20, 0.78);
     border: 1px solid rgba(147, 125, 255, 0.18);
-    box-shadow: 0 12px 40px rgba(7, 5, 16, 0.6);
+    box-shadow:
+      0 12px 40px rgba(7, 5, 16, 0.62),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(16px);
+  }
+
+  .panel-obsidian::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.14) 1px, transparent 1.6px);
+    background-size: 14px 14px;
+    opacity: 0.045;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    -webkit-mask-image: radial-gradient(circle at 12% 16%, black 0%, transparent 60%);
+    mask-image: radial-gradient(circle at 12% 16%, black 0%, transparent 60%);
   }
 
   .stone-glow {
@@ -326,11 +350,16 @@
 
 /* Button press animation */
 .btn-press {
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition:
+    transform 0.11s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.11s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.11s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: 50% 60%;
 }
 
 .btn-press:active {
-  transform: scale(0.97);
+  transform: translateY(1px) scale(0.965) rotate(-0.35deg);
+  filter: saturate(1.06) contrast(1.03);
 }
 
 /* Shimmer loading effect */
@@ -396,6 +425,16 @@
 }
 
 /* Subtle noise texture overlay */
+.noise-overlay {
+  position: relative;
+  isolation: isolate;
+}
+
+.noise-overlay > * {
+  position: relative;
+  z-index: 1;
+}
+
 .noise-overlay::before {
   content: "";
   position: absolute;
@@ -404,6 +443,26 @@
   opacity: 0.03;
   pointer-events: none;
   mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+.noise-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 1.6px);
+  background-size: 13px 13px;
+  opacity: 0.05;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  transform: rotate(8deg) scale(1.15);
+  -webkit-mask-image:
+    radial-gradient(circle at 12% 18%, black 0%, transparent 55%),
+    radial-gradient(circle at 85% 72%, black 0%, transparent 58%);
+  mask-image:
+    radial-gradient(circle at 12% 18%, black 0%, transparent 55%),
+    radial-gradient(circle at 85% 72%, black 0%, transparent 58%);
+  z-index: 0;
 }
 
 /* Completion celebration */
@@ -431,32 +490,113 @@
 
 /* Slide in from right for sidebar */
 @keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
+  0% {
+    transform: translateX(110%) rotate(1.2deg);
     opacity: 0;
   }
-  to {
-    transform: translateX(0);
+  70% {
+    transform: translateX(-8px) rotate(-0.25deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
     opacity: 1;
   }
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
+  animation: slide-in-right 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Fade in up for cards */
 @keyframes fade-in-up {
-  from {
-    transform: translateY(10px);
+  0% {
+    transform: translateY(14px) scale(0.985) rotate(-0.35deg);
     opacity: 0;
   }
-  to {
-    transform: translateY(0);
+  65% {
+    transform: translateY(-2px) scale(1.01) rotate(0.12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
     opacity: 1;
   }
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.3s ease-out;
+  animation: fade-in-up 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Comic-book: panel pop + title slam */
+@keyframes comic-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.975) rotate(-0.6deg);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01) rotate(0.15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+.animate-comic-pop {
+  animation: comic-pop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes comic-pop-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+.comic-dialog[data-state="open"] {
+  animation: comic-pop 0.34s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+.comic-dialog[data-state="closed"] {
+  animation: comic-pop-out 0.18s cubic-bezier(0.4, 0, 0.2, 1) both !important;
+}
+
+@keyframes comic-title-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-comic-title {
+  animation: comic-title-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-comic-pop,
+  .animate-comic-title,
+  .comic-dialog[data-state="open"],
+  .comic-dialog[data-state="closed"],
+  .animate-slide-in-right,
+  .animate-fade-in-up,
+  .animate-thud,
+  .animate-celebrate,
+  .pulse-glow,
+  .shimmer {
+    animation: none !important;
+  }
 }
