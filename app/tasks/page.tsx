@@ -71,12 +71,16 @@ export default function MovesPage() {
   const { mutate: globalMutate } = useSWRConfig()
   const shouldReduceMotion = useReducedMotion()
   const baseEase: [number, number, number, number] = [0.16, 1, 0.3, 1]
+  const popSpring = shouldReduceMotion
+    ? { duration: 0 }
+    : { type: "spring", stiffness: 420, damping: 32, mass: 0.75 }
   const sectionVariants = {
-    hidden: { opacity: 0, y: 14 },
+    hidden: { opacity: 0, y: 16, scale: 0.985 },
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: shouldReduceMotion ? 0 : 0.35, ease: baseEase },
+      scale: 1,
+      transition: popSpring,
     },
   }
   const containerVariants = {
@@ -90,11 +94,13 @@ export default function MovesPage() {
     },
   }
   const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
+    hidden: { opacity: 0, y: 12, scale: 0.98, rotate: -0.35 },
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: shouldReduceMotion ? 0 : 0.3, ease: baseEase },
+      scale: 1,
+      rotate: 0,
+      transition: popSpring,
     },
   }
 

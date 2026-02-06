@@ -200,7 +200,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
       {/* Estimate Result */}
       {estimate && (
-        <div className="p-4 rounded-xl bg-zinc-950/40 border border-white/10 space-y-4 animate-fade-in-up">
+        <div className="p-4 rounded-xl bg-zinc-950/40 border border-white/10 space-y-4 animate-comic-pop">
           {/* Client Selector & Title */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
