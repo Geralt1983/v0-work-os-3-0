@@ -65,7 +65,7 @@ export function SynapseMobileSheet() {
     const message = input
     setInput("")
 
-    let attachments: Attachment[] = []
+    const attachments: Attachment[] = []
     let imageBase64: string | undefined
 
     if (selectedFile) {
@@ -152,7 +152,10 @@ export function SynapseMobileSheet() {
     <>
       {/* Floating button */}
       <button
+        type="button"
         onClick={handleOpen}
+        aria-label="Open ThanosAI"
+        title="Open ThanosAI"
         className={cn(
           "fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-[color:var(--thanos-amethyst)] text-white shadow-lg hover:bg-[color:var(--thanos-amethyst)]/80 transition-all hover:scale-105",
           isOpen && "hidden",

@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     console.log("[Urgency Check] Running for", todayStr, "at hour", currentHour)
 
     // Get or create today's daily goal entry
-    let todayGoal = await db.select().from(dailyGoals).where(eq(dailyGoals.date, todayStr)).limit(1)
+    const todayGoal = await db.select().from(dailyGoals).where(eq(dailyGoals.date, todayStr)).limit(1)
 
     let dailyGoalEntry = todayGoal[0]
 

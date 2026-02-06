@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useTasks, useClients, type Task } from "@/hooks/use-tasks"
 import { NewTaskDialog } from "@/components/new-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
@@ -51,6 +52,7 @@ type SortDir = "asc" | "desc"
 type TaskStatus = "today" | "upnext" | "backlog" | "done"
 
 export default function MovesPage() {
+  const router = useRouter()
   const {
     tasks,
     isLoading,
@@ -127,6 +129,48 @@ export default function MovesPage() {
     upnext: Task[]
   } | null>(null)
   const [recentlyDropped, setRecentlyDropped] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const viewParam = params.get("view")
+    const shouldOpenNewTask = params.get("newTask") === "1" || params.get("newTask") === "true"
+    const shouldFocusCapture = params.get("focus") === "1" || params.get("focus") === "true"
+
+    let shouldReplace = false
+
+    if (viewParam === "board" || viewParam === "list" || viewParam === "focus") {
+      setView(viewParam)
+      shouldReplace = true
+    }
+
+    if (shouldOpenNewTask) {
+      setIsNewTaskOpen(true)
+      shouldReplace = true
+    }
+
+    if (shouldFocusCapture) {
+      window.dispatchEvent(new Event("workos:focus-quick-capture"))
+      shouldReplace = true
+    }
+
+    if (shouldReplace) router.replace("/tasks")
+  }, [router])
+
+  useEffect(() => {
+    const onNewTask = () => setIsNewTaskOpen(true)
+
+    const onSetTasksView = (event: Event) => {
+      const detail = (event as CustomEvent<{ view?: TasksView }>).detail
+      if (detail?.view) setView(detail.view)
+    }
+
+    window.addEventListener("workos:new-task", onNewTask)
+    window.addEventListener("workos:set-tasks-view", onSetTasksView)
+    return () => {
+      window.removeEventListener("workos:new-task", onNewTask)
+      window.removeEventListener("workos:set-tasks-view", onSetTasksView)
+    }
+  }, [])
 
   // DND sensors
   const sensors = useSensors(

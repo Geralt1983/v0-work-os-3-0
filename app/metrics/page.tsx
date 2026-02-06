@@ -2,6 +2,7 @@
 
 import { TargetIcon, BarChartIcon, PersonIcon, ExclamationTriangleIcon, LightningBoltIcon } from "@radix-ui/react-icons"
 import { useEffect, useState } from "react"
+import { Flame, CheckCircle2, AlertTriangle, CircleAlert } from "lucide-react"
 import { WorkOSNav } from "@/components/work-os-nav"
 import { PageHeader } from "@/components/page-header"
 import { useMetrics } from "@/hooks/use-metrics"
@@ -87,18 +88,18 @@ function getMomentumStatusLabel(status: string): string {
   }
 }
 
-function getMomentumStatusEmoji(status: string): string {
+function getMomentumStatusIcon(status: string) {
   switch (status) {
     case "crushing":
-      return "🔥"
+      return Flame
     case "on_track":
-      return "✅"
+      return CheckCircle2
     case "behind":
-      return "⚠️"
+      return AlertTriangle
     case "stalled":
-      return "🚨"
+      return CircleAlert
     default:
-      return ""
+      return CircleAlert
   }
 }
 
@@ -107,6 +108,35 @@ function getMomentumScoreColor(score: number): string {
   if (score >= 70) return "text-emerald-400" // green for on track
   if (score >= 40) return "text-amber-500" // orange for behind
   return "text-rose-400" // red for stalled
+}
+
+function MetricsSkeleton() {
+  const block = "animate-pulse rounded-md bg-white/5"
+  return (
+    <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, idx) => (
+        <div key={idx} className="rounded-3xl panel-obsidian gold-edge p-5 shadow-md shadow-black/40">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className={`${block} h-8 w-8 rounded-2xl`} />
+              <div className={`${block} h-5 w-40`} />
+            </div>
+            <div className={`${block} h-8 w-14`} />
+          </div>
+          <div className="mt-5 space-y-3">
+            <div className={`${block} h-4 w-56`} />
+            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className={`${block} h-full w-2/3 rounded-full`} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className={`${block} h-3 w-28`} />
+              <div className={`${block} h-3 w-28`} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
 }
 
 export default function MetricsDashboard() {
@@ -164,6 +194,7 @@ export default function MetricsDashboard() {
     actualPoints: 0,
     dayProgress: 0,
   }
+  const MomentumIcon = getMomentumStatusIcon(momentum.status)
 
   const staleClients = clients.filter((c) => c.isStale)
   const activeClients = clients.filter((c) => c.activeTasks > 0)
@@ -236,11 +267,8 @@ export default function MetricsDashboard() {
     setTimeout(() => setNotificationStatus(null), 5000)
   }
 
-
-
-
   return (
-    <div className="min-h-screen text-zinc-50">
+    <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <PageHeader title="Metrics" description="See your pacing, momentum, and weekly flow." />
@@ -248,11 +276,7 @@ export default function MetricsDashboard() {
         </div>
 
         <main className="mt-8 flex flex-col gap-8 pb-20">
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--thanos-amethyst)] border-t-transparent" />
-            </div>
-          )}
+          {isLoading && <MetricsSkeleton />}
 
           {error && (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300">
@@ -314,8 +338,9 @@ export default function MetricsDashboard() {
                   </div>
 
                   <div className="flex-1 flex flex-col items-center justify-center py-6">
-                    <span className={`text-2xl ${getMomentumStatusColor(momentum.status)}`}>
-                      {getMomentumStatusEmoji(momentum.status)} {getMomentumStatusLabel(momentum.status)}
+                    <span className={`inline-flex items-center gap-2 text-2xl ${getMomentumStatusColor(momentum.status)}`}>
+                      <MomentumIcon className="h-6 w-6" aria-hidden="true" />
+                      {getMomentumStatusLabel(momentum.status)}
                     </span>
                   </div>
 

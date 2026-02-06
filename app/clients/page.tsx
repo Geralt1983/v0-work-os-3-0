@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
 import { useClientMemory, type ClientMemory } from "@/hooks/use-client-memory"
 import { WorkOSNav } from "@/components/work-os-nav"
@@ -8,13 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Users, Loader2, Check, Pencil, X } from "lucide-react"
+import { Users, Loader2, Check, Pencil, X, Smile, Meh, Frown, CircleAlert, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const sentimentConfig = {
-  positive: { label: "Positive", emoji: "😊", bgClass: "bg-emerald-500/10" },
-  neutral: { label: "Neutral", emoji: "😐", bgClass: "" },
-  challenging: { label: "Concerned", emoji: "😟", bgClass: "bg-amber-500/10" },
+  positive: { label: "Positive", icon: Smile, iconClass: "text-emerald-300", bgClass: "bg-emerald-500/10" },
+  neutral: { label: "Neutral", icon: Meh, iconClass: "text-zinc-200", bgClass: "" },
+  challenging: { label: "Concerned", icon: Frown, iconClass: "text-amber-300", bgClass: "bg-amber-500/10" },
 }
 
 const importanceConfig = {
@@ -23,10 +24,14 @@ const importanceConfig = {
   low: { label: "Low", color: "text-zinc-400 border-zinc-500/40 bg-zinc-500/10" },
 }
 
-function getStalenessIndicator(days: number | null) {
-  if (days === null) return { icon: null, color: "", label: "No activity" }
-  if (days >= 4) return { icon: "🔴", color: "text-red-400", label: `${days} days ago` }
-  if (days >= 2) return { icon: "⚠️", color: "text-amber-400", label: `${days} days ago` }
+function getStalenessIndicator(days: number | null): {
+  icon: React.ComponentType<{ className?: string }> | null
+  color: string
+  label: string
+} {
+  if (days === null) return { icon: null, color: "text-white/60", label: "No activity" }
+  if (days >= 4) return { icon: CircleAlert, color: "text-rose-400", label: `${days} days ago` }
+  if (days >= 2) return { icon: AlertTriangle, color: "text-amber-400", label: `${days} days ago` }
   return {
     icon: null,
     color: "text-white/60",
@@ -84,7 +89,7 @@ export default function ClientsPage() {
   })
 
   return (
-    <div className="min-h-screen text-zinc-50">
+    <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -117,6 +122,9 @@ export default function ClientsPage() {
                 const progress = getProgressPercent(client.tasksThisWeek, client.importance)
                 const isEditing = editingNotes === client.clientName
                 const isSaving = savingClient === client.clientName
+                const sentiment = sentimentConfig[client.sentiment]
+                const SentimentIcon = sentiment.icon
+                const StalenessIcon = staleness.icon
 
                 return (
                   <Card
@@ -124,7 +132,7 @@ export default function ClientsPage() {
                     className={cn(
                       "relative overflow-hidden rounded-2xl panel-obsidian gold-edge transition-all duration-200",
                       "hover:border-[color:var(--thanos-gold)]/60 hover:shadow-lg hover:shadow-black/20",
-                      sentimentConfig[client.sentiment].bgClass,
+                      sentiment.bgClass,
                     )}
                   >
                     <div
@@ -153,8 +161,8 @@ export default function ClientsPage() {
                         <span className="text-white/70">
                           <span className="font-medium text-white">{client.tasksThisWeek}</span> tasks this week
                         </span>
-                        <span className={cn("flex items-center gap-1", staleness.color)}>
-                          {staleness.icon && <span>{staleness.icon}</span>}
+                        <span className={cn("flex items-center gap-1.5", staleness.color)}>
+                          {StalenessIcon && <StalenessIcon className="h-3.5 w-3.5" aria-hidden="true" />}
                           Last: {staleness.label}
                         </span>
                       </div>
@@ -171,7 +179,7 @@ export default function ClientsPage() {
                       </div>
 
                       {/* Inline dropdowns row */}
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-3">
                         {/* Importance dropdown */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-white/50">Importance:</span>
@@ -203,21 +211,23 @@ export default function ClientsPage() {
                             value={client.sentiment}
                             onValueChange={(value) => handleFieldChange(client.clientName, "sentiment", value)}
                           >
-                            <SelectTrigger className="h-7 w-28 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
+                            <SelectTrigger className="h-7 w-32 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
                               <SelectValue>
-                                {sentimentConfig[client.sentiment].emoji} {sentimentConfig[client.sentiment].label}
+                                <SentimentIcon className={cn("h-3.5 w-3.5", sentiment.iconClass)} aria-hidden="true" />
+                                {sentiment.label}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-[color:var(--thanos-gold)]/20">
-                              <SelectItem value="positive" className="text-white text-xs">
-                                😊 Positive
-                              </SelectItem>
-                              <SelectItem value="neutral" className="text-white text-xs">
-                                😐 Neutral
-                              </SelectItem>
-                              <SelectItem value="challenging" className="text-white text-xs">
-                                😟 Concerned
-                              </SelectItem>
+                              {(["positive", "neutral", "challenging"] as const).map((value) => {
+                                const cfg = sentimentConfig[value]
+                                const Icon = cfg.icon
+                                return (
+                                  <SelectItem key={value} value={value} className="text-white text-xs">
+                                    <Icon className={cn("h-3.5 w-3.5", cfg.iconClass)} aria-hidden="true" />
+                                    {cfg.label}
+                                  </SelectItem>
+                                )
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
