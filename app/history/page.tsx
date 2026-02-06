@@ -6,7 +6,7 @@ import { WorkOSNav } from "@/components/work-os-nav"
 
 export default function HistoryPage() {
   return (
-    <div className="min-h-screen text-zinc-50">
+    <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

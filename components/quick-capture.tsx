@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Loader2, Sparkles, Send } from "lucide-react"
@@ -29,6 +29,7 @@ interface QuickCaptureProps {
 
 export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
   const { clients } = useClients()
+  const inputRef = useRef<HTMLInputElement>(null)
   const [input, setInput] = useState("")
   const [isEstimating, setIsEstimating] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
@@ -39,6 +40,17 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
   const currentTier = adjustedTier ?? estimate?.valueTier ?? "progress"
   const currentPoints = VALUE_POINTS[currentTier]
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (isEstimating || !!estimate) return
+      inputRef.current?.focus()
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+
+    window.addEventListener("workos:focus-quick-capture", onFocus)
+    return () => window.removeEventListener("workos:focus-quick-capture", onFocus)
+  }, [estimate, isEstimating])
 
   // When estimate comes in, try to match the detected client
   useEffect(() => {
@@ -141,6 +153,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
       <div className="relative group">
         <div className="absolute -inset-0.5 bg-[color:var(--thanos-amethyst)]/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300" />
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}

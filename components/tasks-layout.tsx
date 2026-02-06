@@ -7,6 +7,7 @@ import { SWRConfig } from "swr"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { SynapseSidebar } from "@/components/synapse-sidebar"
 import { SynapseMobileSheet } from "@/components/synapse-mobile-sheet"
+import { WorkOSCommandPalette } from "@/components/work-os-command-palette"
 import useSWR from "swr"
 
 interface TasksLayoutProps {
@@ -72,6 +73,7 @@ export function TasksLayout({ children }: TasksLayoutProps) {
       }}
     >
       <div className="min-h-screen thanos-shell">
+        <WorkOSCommandPalette />
         <div
           className={
             isMobile

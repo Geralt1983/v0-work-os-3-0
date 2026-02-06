@@ -122,7 +122,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     const message = input
     setInput("")
     
-    let attachments: Attachment[] = []
+    const attachments: Attachment[] = []
     let imageBase64: string | undefined
     
     if (selectedFile) {
