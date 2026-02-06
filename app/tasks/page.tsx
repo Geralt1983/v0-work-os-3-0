@@ -13,6 +13,7 @@ import { Plus, LayoutGrid, List, GripVertical, Clock, Zap, Check, Crosshair, Inb
 import { DailyProgressBar } from "@/components/daily-progress-bar"
 import { getTaskPoints, getValueTierConfig, type ValueTier } from "@/lib/domain/task-types"
 import { WorkOSNav } from "@/components/work-os-nav"
+import { PageHeader } from "@/components/page-header"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { SynapsePicks } from "@/components/synapse-picks"
@@ -490,29 +491,18 @@ export default function MovesPage() {
     )
   }
 
-  return (
-    <div className="min-h-screen text-white noise-overlay">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="relative z-10 mx-auto max-w-7xl px-4 py-6 md:py-10"
-      >
-        <motion.div variants={sectionVariants} className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-2">
-            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.32em] text-[color:var(--thanos-gold)]/80">
-              <span className="h-2 w-2 rounded-full bg-[color:var(--thanos-gold)] shadow-[0_0_12px_rgba(234,179,8,0.6)]" />
-              ThanosOS
-            </div>
-            <h1 className="text-2xl font-display text-gradient-brand sm:text-3xl md:text-4xl tracking-[0.12em]">
-              ThanosOS Command Deck
-            </h1>
-            <p className="text-sm text-white/60">One task per client. Zero drift.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <WorkOSNav />
-          </div>
-        </motion.div>
+	  return (
+	    <div className="min-h-screen text-white noise-overlay">
+	      <motion.div
+	        variants={containerVariants}
+	        initial="hidden"
+	        animate="show"
+	        className="relative z-10 mx-auto max-w-6xl px-4 py-6 md:py-8"
+	      >
+	        <motion.div variants={sectionVariants} className="flex items-start justify-between gap-4">
+	          <PageHeader title="Tasks" description="One task per client. Zero drift." />
+	          <WorkOSNav />
+	        </motion.div>
 
         <motion.div variants={sectionVariants} className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
