@@ -115,7 +115,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
     <div className={cn("panel-obsidian gold-edge rounded-xl p-4", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Palmtree className="h-5 w-5 text-[color:var(--thanos-cosmic)]" />
+        <Palmtree className="h-5 w-5 text-[color:var(--thanos-amethyst)]/80" />
         <h3 className="font-semibold text-zinc-100">Holiday Mode</h3>
         {isTodayHoliday && (
           <span className="px-2 py-0.5 text-xs rounded-full bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] ml-auto">
@@ -126,8 +126,8 @@ export function HolidayManager({ className }: HolidayManagerProps) {
 
       {/* Add Holiday Form */}
       <div className="space-y-2 mb-4 p-3 rounded-lg bg-zinc-800/50">
-        <div className="flex gap-2">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1 min-w-0">
             <Input
               type="date"
               value={newDate}
@@ -135,7 +135,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
               className="bg-zinc-900 border-zinc-700 text-zinc-100"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Input
               type="text"
               placeholder="Description (optional)"
@@ -179,31 +179,35 @@ export function HolidayManager({ className }: HolidayManagerProps) {
             <div
               key={holiday.id}
               className={cn(
-                "flex items-center justify-between p-2 rounded-lg",
+                "flex items-start justify-between gap-3 p-2 rounded-lg",
                 isToday(holiday.date)
                   ? "bg-[color:var(--thanos-amethyst)]/10 border border-[color:var(--thanos-amethyst)]/30"
                   : "bg-zinc-800/50"
               )}
             >
-              <div className="flex items-center gap-2">
-                <Palmtree className={cn(
-                  "h-4 w-4",
-                  isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-500"
-                )} />
-                <div>
-                  <span className={cn(
-                    "text-sm font-medium",
-                    isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-300"
-                  )}>
-                    {formatDate(holiday.date)}
-                  </span>
-                  {holiday.description && (
-                    <span className="text-xs text-zinc-500 ml-2">
-                      {holiday.description}
-                    </span>
+              <div className="flex items-start gap-2 min-w-0">
+                <Palmtree
+                  className={cn(
+                    "h-4 w-4 mt-0.5 shrink-0",
+                    isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-500"
                   )}
-                  {isToday(holiday.date) && (
-                    <span className="text-xs text-[color:var(--thanos-gold)] ml-2">(Today)</span>
+                />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span
+                      className={cn(
+                        "text-sm font-medium break-words",
+                        isToday(holiday.date) ? "text-[color:var(--thanos-amethyst)]" : "text-zinc-300"
+                      )}
+                    >
+                      {formatDate(holiday.date)}
+                    </span>
+                    {isToday(holiday.date) && (
+                      <span className="text-xs text-[color:var(--thanos-amethyst)]/80">(Today)</span>
+                    )}
+                  </div>
+                  {holiday.description && (
+                    <div className="text-xs text-zinc-500 break-words">{holiday.description}</div>
                   )}
                 </div>
               </div>
@@ -212,7 +216,7 @@ export function HolidayManager({ className }: HolidayManagerProps) {
                 size="sm"
                 onClick={() => handleDeleteHoliday(holiday.id)}
                 disabled={deletingId === holiday.id}
-                className="h-8 w-8 p-0 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                className="h-8 w-8 p-0 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
               >
                 {deletingId === holiday.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

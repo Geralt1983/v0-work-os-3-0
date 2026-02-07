@@ -405,16 +405,16 @@ export default function MovesPage() {
       label: "Queued",
       value: byStatus.upnext.length,
       meta: "Next to execute",
-      tone: "text-[color:var(--thanos-cosmic)]",
-      chip: "bg-[color:var(--thanos-cosmic)]/12 border border-[color:var(--thanos-cosmic)]/35 text-[color:var(--thanos-cosmic)]",
+      tone: "text-zinc-100",
+      chip: "bg-white/5 border border-white/10 text-white/70",
       icon: Clock,
     },
     {
       label: "Backlog",
       value: byStatus.backlog.length,
       meta: "Unscoped work",
-      tone: "text-[color:var(--thanos-gold)]",
-      chip: "bg-[color:var(--thanos-gold)]/12 border border-[color:var(--thanos-gold)]/35 text-[color:var(--thanos-gold)]",
+      tone: "text-zinc-100",
+      chip: "bg-white/5 border border-white/10 text-white/70",
       icon: Inbox,
     },
     {
@@ -475,7 +475,7 @@ export default function MovesPage() {
         )}
         <div className="flex items-center justify-between mb-3 relative z-20">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
-            <Inbox className="h-4 w-4 text-[color:var(--thanos-gold)]" />
+            <Inbox className="h-4 w-4 text-white/60" />
             Backlog
           </div>
           <span className="text-xs text-white/40 font-mono tabular-nums">{count}</span>
@@ -505,10 +505,13 @@ export default function MovesPage() {
 	        animate="show"
 	        className="relative z-10 mx-auto max-w-6xl px-4 py-6 md:py-8"
 	      >
-	        <motion.div variants={sectionVariants} className="flex items-start justify-between gap-4">
-	          <PageHeader title="Tasks" description="One task per client. Zero drift." />
-	          <WorkOSNav />
-	        </motion.div>
+		        <motion.div
+		          variants={sectionVariants}
+		          className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+		        >
+		          <PageHeader title="Tasks" description="One task per client. Zero drift." />
+		          <WorkOSNav />
+		        </motion.div>
 
         <motion.div variants={sectionVariants} className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
@@ -558,12 +561,12 @@ export default function MovesPage() {
           </div>
         </motion.div>
 
-        <motion.div variants={sectionVariants} className="mt-8 flex flex-wrap items-center gap-3">
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-[170px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
-              <SelectValue placeholder="All Clients" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+	        <motion.div variants={sectionVariants} className="mt-8 flex flex-wrap items-center gap-3">
+	          <Select value={clientFilter} onValueChange={setClientFilter}>
+	            <SelectTrigger className="w-full sm:w-[170px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
+	              <SelectValue placeholder="All Clients" />
+	            </SelectTrigger>
+	            <SelectContent className="bg-zinc-900 border-zinc-800">
               <SelectItem value="all" className="text-zinc-100 focus:bg-zinc-800 focus:text-zinc-100">
                 All Clients
               </SelectItem>
@@ -573,13 +576,13 @@ export default function MovesPage() {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+	          </Select>
+	
+	          <Select value={statusFilter} onValueChange={setStatusFilter}>
+	            <SelectTrigger className="w-full sm:w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
+	              <SelectValue placeholder="All Statuses" />
+	            </SelectTrigger>
+	            <SelectContent className="bg-zinc-900 border-zinc-800">
               {statusOptions.map((opt) => (
                 <SelectItem
                   key={opt.value}
@@ -590,13 +593,13 @@ export default function MovesPage() {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
-
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+	          </Select>
+	
+	          <Select value={typeFilter} onValueChange={setTypeFilter}>
+	            <SelectTrigger className="w-full sm:w-[150px] panel-obsidian border-white/10 text-zinc-100 rounded-lg">
+	              <SelectValue placeholder="All Types" />
+	            </SelectTrigger>
+	            <SelectContent className="bg-zinc-900 border-zinc-800">
               {typeOptions.map((opt) => (
                 <SelectItem
                   key={opt.value}
@@ -1109,7 +1112,10 @@ function UndoToast({
         >
           <div className="flex items-center gap-3 rounded-full bg-zinc-800 border border-zinc-700 px-4 py-2 shadow-lg">
             <span className="text-sm text-zinc-300">Move completed</span>
-            <button onClick={onUndo} className="text-sm font-medium text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80">
+            <button
+              onClick={onUndo}
+              className="text-sm font-medium text-[color:var(--thanos-amethyst)] hover:text-[color:var(--thanos-amethyst)]/80"
+            >
               Undo
             </button>
           </div>
@@ -1147,16 +1153,16 @@ function DroppableColumn({
     data: { type: "column" },
   })
 
-  const getColumnIcon = () => {
-    switch (id) {
-      case "today-column":
-        return <Zap className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
-      case "upnext-column":
-        return <Clock className="h-4 w-4 text-[color:var(--thanos-cosmic)]" />
-      default:
-        return null
-    }
-  }
+	  const getColumnIcon = () => {
+	    switch (id) {
+	      case "today-column":
+	        return <Zap className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
+	      case "upnext-column":
+	        return <Clock className="h-4 w-4 text-white/60" />
+	      default:
+	        return null
+	    }
+	  }
 
   const getEmptyMessage = () => {
     switch (id) {

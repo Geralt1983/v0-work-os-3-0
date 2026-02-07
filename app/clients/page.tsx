@@ -92,7 +92,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <PageHeader title="Clients" description="Manage priorities and track client health." />
           <WorkOSNav />
         </div>
@@ -129,7 +129,7 @@ export default function ClientsPage() {
                     key={client.clientId}
                     className={cn(
                       "relative overflow-hidden rounded-2xl panel-obsidian gold-edge transition-all duration-200",
-                      "hover:border-[color:var(--thanos-gold)]/60 hover:shadow-lg hover:shadow-black/20",
+                      "hover:border-white/20 hover:shadow-lg hover:shadow-black/25",
                       sentiment.bgClass,
                     )}
                   >
@@ -169,7 +169,7 @@ export default function ClientsPage() {
                       <div className="space-y-1">
                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-amethyst-muted)] transition-all duration-300"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -185,10 +185,10 @@ export default function ClientsPage() {
                             value={client.importance}
                             onValueChange={(value) => handleFieldChange(client.clientName, "importance", value)}
                           >
-                            <SelectTrigger className="h-7 w-24 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
+                            <SelectTrigger className="h-7 w-24 panel-obsidian border-white/10 text-white text-xs">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-[color:var(--thanos-gold)]/20">
+                            <SelectContent className="bg-zinc-900 border-white/10">
                               <SelectItem value="high" className="text-white text-xs">
                                 High
                               </SelectItem>
@@ -209,13 +209,13 @@ export default function ClientsPage() {
                             value={client.sentiment}
                             onValueChange={(value) => handleFieldChange(client.clientName, "sentiment", value)}
                           >
-                            <SelectTrigger className="h-7 w-32 panel-obsidian border-[color:var(--thanos-gold)]/20 text-white text-xs">
+                            <SelectTrigger className="h-7 w-32 panel-obsidian border-white/10 text-white text-xs">
                               <SelectValue>
                                 <SentimentIcon className={cn("h-3.5 w-3.5", sentiment.iconClass)} aria-hidden="true" />
                                 {sentiment.label}
                               </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-[color:var(--thanos-gold)]/20">
+                            <SelectContent className="bg-zinc-900 border-white/10">
                               {(["positive", "neutral", "challenging"] as const).map((value) => {
                                 const cfg = sentimentConfig[value]
                                 const Icon = cfg.icon
@@ -239,7 +239,7 @@ export default function ClientsPage() {
                               value={tempNotes}
                               onChange={(e) => setTempNotes(e.target.value)}
                               placeholder="Add notes about this client..."
-                              className="panel-obsidian border-[color:var(--thanos-gold)]/20 text-white placeholder:text-white/30 min-h-[60px] text-sm"
+                              className="panel-obsidian border-white/10 text-white placeholder:text-white/30 min-h-[60px] text-sm"
                               autoFocus
                             />
                             <div className="flex justify-end gap-2">

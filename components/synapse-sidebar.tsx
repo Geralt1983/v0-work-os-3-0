@@ -187,7 +187,7 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
     return (
       <button
         onClick={() => updateCollapsed(false)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] px-5 py-3 text-black shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.25)] hover:shadow-[0_0_22px_rgba(234,179,8,0.3)] hover:scale-105 transition-all duration-200 btn-press"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-amethyst-muted)] px-5 py-3 text-white shadow-lg shadow-black/40 hover:shadow-black/55 hover:scale-105 transition-all duration-200 btn-press"
       >
         <ThanosAIIcon className="w-5 h-5 animate-pulse" />
         <span className="font-semibold tracking-tight">ThanosAI</span>
@@ -205,8 +205,8 @@ export function SynapseSidebar({ avoidanceWarning }: SynapseSidebarProps) {
       {/* Header with gradient accent - Mobile optimized */}
       <div className="flex-none flex items-center justify-between px-3 sm:px-4 py-3 border-b border-[color:var(--thanos-amethyst)]/20 bg-gradient-to-r from-[color:var(--thanos-obsidian)] to-[color:var(--thanos-obsidian-2)]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)] shadow-lg shadow-[0_0_18px_rgba(168,85,247,0.2)] flex-shrink-0">
-            <ThanosAIIcon className="w-4 h-4 text-black" />
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-amethyst-muted)] shadow-lg shadow-black/30 flex-shrink-0">
+            <ThanosAIIcon className="w-4 h-4 text-white" />
           </div>
           <span className="font-semibold text-zinc-100 tracking-tight text-sm sm:text-base truncate">{ASSISTANT_NAME}</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[color:var(--thanos-amethyst)]/20 text-[color:var(--thanos-amethyst)] font-medium hidden sm:inline">
@@ -417,7 +417,7 @@ function SidebarMessage({ message, showActivity }: { message: Message; showActiv
                   <a 
                     href={att.url} 
                     download={att.name}
-                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80"
+                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-amethyst)] hover:text-[color:var(--thanos-amethyst)]/80"
                   >
                     <Paperclip className="w-3 h-3" />
                     {att.name}

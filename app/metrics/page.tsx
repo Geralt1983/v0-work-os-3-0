@@ -48,7 +48,7 @@ function getMomentumGradient(status: string): string {
     case "crushing":
       return "bg-gradient-to-r from-emerald-500 to-[color:var(--thanos-amethyst)]"
     case "on_track":
-      return "bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)]"
+      return "bg-gradient-to-r from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-amethyst-muted)]"
     case "behind":
       return "bg-gradient-to-r from-amber-500 to-yellow-500"
     case "stalled":
@@ -270,7 +270,7 @@ export default function MetricsDashboard() {
   return (
     <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <PageHeader title="Metrics" description="See your pacing, momentum, and weekly flow." />
           <WorkOSNav />
         </div>

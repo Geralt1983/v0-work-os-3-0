@@ -74,11 +74,11 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
 
   // Determine progress bar color
   const getProgressColor = () => {
-    if (isHoliday) return "from-[color:var(--thanos-cosmic)] to-[color:var(--thanos-amethyst)]"
+    if (isHoliday) return "from-[color:var(--thanos-amethyst-muted)] to-[color:var(--thanos-amethyst)]"
     if (hasStaleBlockers) return "from-amber-500 to-amber-600"
     if (isComplete) return "from-emerald-500 to-emerald-600"
-    if (progressPercent >= 75) return "from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-gold)]"
-    if (progressPercent >= 50) return "from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-cosmic)]"
+    if (progressPercent >= 75) return "from-[color:var(--thanos-amethyst)] to-[color:var(--thanos-amethyst-muted)]"
+    if (progressPercent >= 50) return "from-[color:var(--thanos-amethyst-muted)] to-slate-600"
     return "from-slate-600 to-slate-700"
   }
 
@@ -95,10 +95,10 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
   return (
     <div className={`panel-obsidian rounded-xl border border-white/10 p-5 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
           {isHoliday ? (
-            <Palmtree className="h-4 w-4 text-[color:var(--thanos-cosmic)]" />
+            <Palmtree className="h-4 w-4 text-[color:var(--thanos-amethyst)]/80" />
           ) : canCompleteDay ? (
             <Trophy className="h-4 w-4 text-emerald-400" />
           ) : hasStaleBlockers ? (
@@ -110,7 +110,7 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
         </div>
         <div className="flex items-baseline gap-2">
           <span className={`text-3xl font-semibold font-mono tabular-nums ${
-            isHoliday ? "text-[color:var(--thanos-cosmic)]" :
+            isHoliday ? "text-[color:var(--thanos-amethyst)]" :
             canCompleteDay ? "text-emerald-400" :
             hasStaleBlockers ? "text-amber-400" :
             "text-zinc-100"
@@ -141,9 +141,9 @@ export function DailyProgressBar({ className }: DailyProgressBarProps) {
       </div>
 
       {/* Status row */}
-      <div className="flex items-center justify-between mt-3">
-        <span className={`text-xs ${
-          isHoliday ? "text-[color:var(--thanos-cosmic)]" :
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-3">
+        <span className={`text-xs break-words ${
+          isHoliday ? "text-[color:var(--thanos-amethyst)]/80" :
           canCompleteDay ? "text-emerald-400" :
           hasStaleBlockers ? "text-amber-400" :
           "text-white/50"

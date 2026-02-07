@@ -372,7 +372,7 @@ function MobileMessage({ message, showActivity }: { message: Message; showActivi
                   <a
                     href={att.url}
                     download={att.name}
-                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-gold)] hover:text-[color:var(--thanos-gold)]/80"
+                    className="flex items-center gap-2 text-xs text-[color:var(--thanos-amethyst)] hover:text-[color:var(--thanos-amethyst)]/80"
                   >
                     <Paperclip className="w-3 h-3" />
                     {att.name}
