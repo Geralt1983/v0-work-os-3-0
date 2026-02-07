@@ -43,14 +43,18 @@ export function WorkOSNav() {
   ]
 
   return (
-    <nav className="flex items-center gap-2 p-1 rounded-2xl glass" role="navigation" aria-label="Main navigation">
+    <nav
+      className="flex items-center gap-1 sm:gap-2 p-0.5 sm:p-1 rounded-2xl glass max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      role="navigation"
+      aria-label="Main navigation"
+    >
       <button
         type="button"
         aria-label="Command palette"
         title="Command palette (Ctrl+K / Cmd+K)"
         onClick={() => window.dispatchEvent(new Event(WORKOS_COMMAND_PALETTE_OPEN_EVENT))}
         className={cn(
-          "relative h-10 w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
+          "relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
           "text-white/60 hover:text-white hover:bg-white/10",
         )}
       >
@@ -71,9 +75,9 @@ export function WorkOSNav() {
             onMouseEnter={() => prefetchRoute(href)}
             onFocus={() => prefetchRoute(href)}
             className={cn(
-              "relative h-10 w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
+              "relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl transition-all duration-200 btn-press focus-ring",
               "text-white/60 hover:text-white hover:bg-white/10",
-              active && "text-[color:var(--thanos-gold)] bg-[color:var(--thanos-amethyst)]/20 ring-1 ring-[color:var(--thanos-gold)]/60 glow-brand",
+              active && "text-zinc-100 bg-white/10 ring-1 ring-white/15",
             )}
           >
             <Icon className={cn("h-5 w-5 transition-transform", active && "scale-110")} aria-hidden="true" />

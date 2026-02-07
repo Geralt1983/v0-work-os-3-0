@@ -9,7 +9,7 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen text-zinc-50 noise-overlay">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <PageHeader title="History" description="Track your progress and patterns over time." />
           <WorkOSNav />
         </div>

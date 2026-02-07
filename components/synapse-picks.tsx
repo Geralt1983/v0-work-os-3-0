@@ -98,7 +98,7 @@ export function SynapsePicks() {
     return (
       <button
         onClick={handleToggleCollapse}
-        className="mb-6 w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-[color:var(--thanos-amethyst)]/30 bg-gradient-to-r from-[color:var(--thanos-amethyst)]/10 to-[color:var(--thanos-gold)]/10 hover:from-[color:var(--thanos-amethyst)]/20 hover:to-[color:var(--thanos-gold)]/20 transition"
+        className="mb-6 w-full flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/8 transition"
       >
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[color:var(--thanos-amethyst)]" />
@@ -121,7 +121,7 @@ export function SynapsePicks() {
   }
 
   return (
-    <Card className="mb-6 panel-obsidian rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-transparent to-[color:var(--thanos-amethyst)]/10">
+    <Card className="mb-6 panel-obsidian rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-transparent to-[color:var(--thanos-amethyst)]/7">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>

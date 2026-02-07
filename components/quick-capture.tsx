@@ -203,9 +203,9 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
         <div className="p-4 rounded-xl bg-zinc-950/40 border border-white/10 space-y-4 animate-comic-pop">
           {/* Client Selector & Title */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="w-[160px] bg-zinc-950/60 border border-white/10 text-zinc-100">
+                <SelectTrigger className="w-full sm:w-[160px] bg-zinc-950/60 border border-white/10 text-zinc-100">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -224,7 +224,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
                 </SelectContent>
               </Select>
               {estimate.client && selectedClientId === "none" && (
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-zinc-500 break-words">
                   AI detected: {estimate.client}
                 </span>
               )}
@@ -234,8 +234,8 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
 
           {/* Value Tier Display & Adjustment */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <span className={cn("text-3xl font-bold tabular-nums", tierConfig.color)}>
                   {currentPoints}
                 </span>
@@ -248,7 +248,7 @@ export function QuickCapture({ onTaskCreated }: QuickCaptureProps) {
               </div>
 
               {adjustedTier !== null && adjustedTier !== estimate.valueTier && (
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-zinc-500 break-words sm:text-right">
                   AI suggested: {VALUE_TIER_CONFIG[estimate.valueTier].label}
                 </span>
               )}
