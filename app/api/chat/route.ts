@@ -17,23 +17,23 @@ const execFileAsync = promisify(execFile)
 
 async function getCurrentTaskContext(): Promise<string> {
   const db = getDb()
-  
+
   // Get all active clients
   const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
-  
+
   // Get all non-done tasks
   const allTasks = await db.select().from(tasks).where(ne(tasks.status, "done"))
-  
+
   const lines: string[] = ["## CLIENTS (for clientId)"]
   allClients.forEach(c => lines.push(`- ${c.name}: id=${c.id}`))
-  
+
   lines.push("\n## CURRENT TASKS")
-  
+
   for (const client of allClients) {
     const clientTasks = allTasks.filter(t => t.clientId === client.id)
     const active = clientTasks.filter(t => t.status === "active")
     const queued = clientTasks.filter(t => t.status === "queued")
-    
+
     if (active.length > 0 || queued.length > 0) {
       lines.push(`\n### ${client.name} (clientId=${client.id})`)
       if (active.length > 0) {
@@ -46,7 +46,7 @@ async function getCurrentTaskContext(): Promise<string> {
       }
     }
   }
-  
+
   // Tasks without clients
   const noClientTasks = allTasks.filter(t => !t.clientId && (t.status === "active" || t.status === "queued"))
   if (noClientTasks.length > 0) {
@@ -54,19 +54,19 @@ async function getCurrentTaskContext(): Promise<string> {
     noClientTasks.filter(t => t.status === "active").forEach(t => lines.push(`- [id=${t.id}] ${t.title}`))
     noClientTasks.filter(t => t.status === "queued").forEach(t => lines.push(`- [id=${t.id}] ${t.title}`))
   }
-  
+
   if (allTasks.length === 0) {
     lines.push("\nNo active or queued tasks.")
   }
-  
+
   return lines.join("\n")
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const openclawBaseUrl = process.env.OPENCLAW_URL?.replace(/\/$/, "")
 const openclaw = openclawBaseUrl
-  ? new OpenAI({ 
-      apiKey: process.env.OPENCLAW_TOKEN, 
+  ? new OpenAI({
+      apiKey: process.env.OPENCLAW_TOKEN,
       baseURL: `${openclawBaseUrl}/v1`,
       timeout: 30000, // 30 second timeout
       maxRetries: 1 // Only retry once
@@ -295,7 +295,7 @@ async function createTodoistTask(content: string): Promise<{status: "created" | 
 // Generate tool documentation for the system prompt
 function getToolDocumentation(): string {
   const toolDocs = chatTools.map(t => {
-    const params = t.function.parameters?.properties 
+    const params = t.function.parameters?.properties
       ? Object.entries(t.function.parameters.properties as Record<string, {type?: string, description?: string}>)
           .map(([k, v]) => `  - ${k}: ${v.type || 'any'} - ${v.description || ''}`)
           .join('\n')
@@ -316,7 +316,7 @@ ${toolDocs}`
 // Parse tool calls from assistant response
 function parseToolCalls(content: string): Array<{tool: string, args: Record<string, unknown>}> | null {
   const toolCalls: Array<{tool: string, args: Record<string, unknown>}> = []
-  
+
   // Match ```tool ... ``` blocks
   const fencedRegex = /```tool\s*\n?([\s\S]*?)\n?```/g
   let match
@@ -330,7 +330,7 @@ function parseToolCalls(content: string): Array<{tool: string, args: Record<stri
       console.log('[chat] Failed to parse tool call:', match[1], e)
     }
   }
-  
+
   // Also match TOOL: prefix format
   const inlineRegex = /TOOL:\s*({[^}]+})/g
   while ((match = inlineRegex.exec(content)) !== null) {
@@ -343,7 +343,7 @@ function parseToolCalls(content: string): Array<{tool: string, args: Record<stri
       console.log('[chat] Failed to parse inline tool call:', match[1], e)
     }
   }
-  
+
   return toolCalls.length > 0 ? toolCalls : null
 }
 
@@ -401,8 +401,8 @@ export async function POST(request: Request) {
     // Save attachments if provided
     if (attachments && attachments.length > 0) {
       for (const att of attachments) {
-        const attType = att.mime.startsWith("audio/") ? "audio" 
-          : att.mime.startsWith("image/") ? "image" 
+        const attType = att.mime.startsWith("audio/") ? "audio"
+          : att.mime.startsWith("image/") ? "image"
           : "document"
         await db.insert(messageAttachments).values({
           id: att.id,
@@ -546,39 +546,12 @@ export async function POST(request: Request) {
 
       // Inject current task context for OpenClaw
       const taskContext = await getCurrentTaskContext()
-      const workosContext = `WORKOS THANOSAI - Chat Interface
+      const activityRule = activityPreference === "show"
+        ? "If you use tools, append an activity log block at the end in this exact format:\n\n[[ACTIVITY]]\n- tool_name: short summary of what happened\n[[/ACTIVITY]]"
+        : "Do NOT include [[ACTIVITY]] blocks in your response."
 
-ROLE
-- You are ThanosAI, a task-management chat assistant for WorkOS (work/client tasks only).
+      const workosContext = `${WORK_OS_PROMPT}\n\nACTIVITY LOG\n- ${activityRule}`
 
-STYLE
-- 1-2 sentences unless the user asks for more.
-- No tool narration, no apologies, no blame.
-- Ask at most ONE clarifying question if needed.
-- If the user corrects you, acknowledge and comply without extra questions unless required to act.
-- Do not mention internal file paths.
-
-EXECUTION RULES
-- WorkOS is for work/client tasks only.
-- Personal tasks live in Todoist. Use Todoist MCP tools for personal tasks.
-- Auto-classify work vs personal using client names and keywords.
-- If a work task is requested without a client, ask which client before adding to WorkOS.
-- Use the provided function tools for WorkOS task operations (search/create/update/complete/delete/promote/demote).
-- Do NOT mention Things.
-- Only say you did something if you actually executed a tool.
-- If the user says a task is personal or “get rid of/remove it”:
-  - Do NOT add personal tasks to WorkOS.
-- If you cannot safely act, ask a single short question.
-
-ACTIVITY LOG
-- ${
-        activityPreference === "show"
-          ? "If you use tools, append an activity log block at the end in this exact format:\n\n[[ACTIVITY]]\n- tool_name: short summary of what happened\n[[/ACTIVITY]]"
-          : "Do NOT include [[ACTIVITY]] blocks in your response."
-      }
-
-CONTEXT: You are ThanosAI, an AI assistant helping with task management in the WorkOS system.`
-      
       // Pass through messages without modification (synapse workspace handles heartbeat override)
       const chatMessages = openaiMessages.slice(1)
 
@@ -686,7 +659,7 @@ CONTEXT: You are ThanosAI, an AI assistant helping with task management in the W
           messageCount: openclawMessages.length,
           tokenPresent: !!process.env.OPENCLAW_TOKEN
         })
-        
+
         // Fallback to OpenAI if OpenClaw fails
         console.log('[chat] Falling back to OpenAI due to OpenClaw error')
         throw new Error(`OpenClaw request failed: ${openclawError instanceof Error ? openclawError.message : String(openclawError)}`)
