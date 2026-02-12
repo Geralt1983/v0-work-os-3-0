@@ -3,7 +3,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "get_all_client_pipelines",
-      description: "Get pipeline status for ALL clients. Returns active/queued/backlog tasks for every client.",
+      description:
+        "Get pipeline status for ALL clients. Use first for portfolio/status questions so you can answer decisively from live data.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -12,7 +13,7 @@ export const chatTools = [
     function: {
       name: "search_tasks",
       description:
-        "Search for tasks by title or client name. Use this FIRST to find the task ID before completing, updating, or deleting.",
+        "Search tasks by title/client for disambiguation. Use this before asking clarifying questions when a lookup can resolve IDs or exact matches.",
       parameters: {
         type: "object",
         properties: {
@@ -33,7 +34,7 @@ export const chatTools = [
     function: {
       name: "create_task",
       description:
-        "Create a new task for a client. Infer drain_type: deep=focused technical work, shallow=emails/calls/coordination, admin=paperwork/documentation.",
+        "Create a new WorkOS task immediately when user intent is to add work. Infer drain_type: deep=focused technical work, shallow=emails/calls/coordination, admin=paperwork/documentation.",
       parameters: {
         type: "object",
         properties: {
@@ -64,7 +65,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "update_task",
-      description: "Update an existing task's title, description, status, effort, or drain type.",
+      description:
+        "Update an existing task's title, description, status, effort, or drain type. If task identity is unclear, run search_tasks first instead of asking immediately.",
       parameters: {
         type: "object",
         properties: {
@@ -83,7 +85,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "complete_task",
-      description: "Mark a task as complete/done. Use search_tasks first to find the task_id.",
+      description:
+        "Mark a task as complete/done. Use search_tasks first to resolve task_id, then complete without extra clarification when match is unambiguous.",
       parameters: {
         type: "object",
         properties: {
@@ -97,7 +100,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "delete_task",
-      description: "Permanently delete a task. Use this to remove duplicate or cancelled tasks.",
+      description:
+        "Permanently delete a task. Use search_tasks first to resolve task_id when needed, then execute decisively if there is one clear match.",
       parameters: {
         type: "object",
         properties: {
@@ -111,7 +115,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "promote_task",
-      description: "Move a task from backlog to queued, or from queued to active.",
+      description:
+        "Move a task from backlog to queued, or from queued to active. Prefer executing movement over discussing movement.",
       parameters: {
         type: "object",
         properties: {
@@ -126,7 +131,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "demote_task",
-      description: "Move a task from active to queued, or from queued to backlog.",
+      description:
+        "Move a task from active to queued, or from queued to backlog. Prefer executing movement over discussing movement.",
       parameters: {
         type: "object",
         properties: {
@@ -141,7 +147,8 @@ export const chatTools = [
     type: "function" as const,
     function: {
       name: "suggest_next_task",
-      description: "Suggest the best task to work on based on context.",
+      description:
+        "Suggest the best task to work on based on live pipeline context. Use for 'what should I do' requests instead of generic advice.",
       parameters: {
         type: "object",
         properties: {
@@ -157,7 +164,7 @@ export const chatTools = [
     function: {
       name: "get_avoidance_report",
       description:
-        "Get a comprehensive avoidance behavior report. Shows stale clients, frequently deferred tasks, and behavioral patterns. Use this when asked about productivity issues, stale clients, or work avoidance.",
+        "Get a comprehensive avoidance behavior report. Shows stale clients, frequently deferred tasks, and behavioral patterns. Use this first for productivity/avoidance questions.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -166,7 +173,7 @@ export const chatTools = [
     function: {
       name: "get_task_history",
       description:
-        "Get the event history for a specific task. Shows all promotions, demotions, deferrals, and completions.",
+        "Get the event history for a specific task. Shows promotions, demotions, deferrals, and completions. Use this to answer timeline questions from records, not memory.",
       parameters: {
         type: "object",
         properties: {

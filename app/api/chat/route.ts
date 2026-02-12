@@ -149,6 +149,21 @@ function findMentionedClient(message: string, clientNames: string[]): string | n
   return null
 }
 
+function shouldRequireToolCall(message: string): boolean {
+  const text = String(message || "").trim().toLowerCase()
+  if (!text) return false
+
+  // Keep simple conversational turns free-form.
+  if (/^(hi|hello|hey|thanks|thank you|yo)[!. ]*$/.test(text)) return false
+
+  const taskActionPattern =
+    /\b(add|create|new|remind|complete|finish|done|check off|mark as done|update|rename|change|delete|remove|drop|clear|promote|demote|move|start|defer)\b/
+  const statusPattern =
+    /\b(task|tasks|pipeline|active|queued|backlog|client|clients|status|history|avoidance|stale|what should i do|next task)\b/
+
+  return taskActionPattern.test(text) || statusPattern.test(text)
+}
+
 type TaskDomain = "work" | "personal" | "unknown"
 
 const WORK_KEYWORDS = [
@@ -427,6 +442,7 @@ export async function POST(request: Request) {
     const domain = classifyTaskDomain(message, clientNames)
     const action = extractTaskAction(message)
     const mentionedClient = findMentionedClient(message, clientNames)
+    const requireToolCall = shouldRequireToolCall(message)
 
     // If work task requested without a client, ask before adding to WorkOS
     if (action?.type === "create" && domain === "work" && !mentionedClient) {
@@ -584,7 +600,7 @@ export async function POST(request: Request) {
           model: openclawModel,
           messages: clawConversation,
           tools: chatTools,
-          tool_choice: "auto",
+          tool_choice: requireToolCall ? "required" : "auto",
         })
 
         console.log('[chat] OpenClaw response:', {
@@ -670,7 +686,7 @@ export async function POST(request: Request) {
         model: "gpt-4o",
         messages: openaiMessages,
         tools: chatTools,
-        tool_choice: "auto",
+        tool_choice: requireToolCall ? "required" : "auto",
       })
 
       assistantMessage = response.choices[0].message

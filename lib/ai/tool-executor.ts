@@ -49,10 +49,12 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
       // Filter by query, client, and status
       const filtered = allTasks.filter((t) => {
         const titleMatch = t.title.toLowerCase().includes(query)
+        const queryClientMatch = t.clientName ? t.clientName.toLowerCase().includes(query) : false
+        const queryMatch = titleMatch || queryClientMatch
         const clientMatch =
           !clientName || (t.clientName && t.clientName.toLowerCase().includes(clientName.toLowerCase()))
         const statusMatch = !status || t.status === status
-        return titleMatch && clientMatch && statusMatch
+        return queryMatch && clientMatch && statusMatch
       })
 
       return {
