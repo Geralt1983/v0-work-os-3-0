@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import useSWR from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { apiFetch, SWR_CONFIG } from "@/lib/fetch-utils"
 
 // =============================================================================
@@ -196,6 +196,13 @@ export function useChat() {
 
         markAsSeen()
         window.dispatchEvent(new Event("chat-message-received"))
+
+        // Revalidate task lists after chat (Thanos may have created/updated/completed tasks)
+        globalMutate("/api/tasks")
+        globalMutate("/api/backlog/grouped")
+        globalMutate("/api/backlog/recommendations")
+        globalMutate("/api/metrics/today")
+        globalMutate("/api/metrics/clients")
 
         mutateHistory()
       } catch (err) {
