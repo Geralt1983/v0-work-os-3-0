@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db"
 import { getTaskPoints } from "@/lib/domain"
 import { DAILY_TARGET_POINTS, DAILY_MINIMUM_POINTS } from "@/lib/constants"
 import { generateEndOfDaySummary, calculateWeeklyDebt } from "@/lib/urgency-system"
+import { getESTNow, getESTDateString, getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 
 // Verify cron secret
 function verifyCronSecret(request: Request): boolean {
@@ -29,11 +30,10 @@ export async function GET(request: Request) {
   try {
     // Get today's stats
     const now = new Date()
-    const estOffset = -5 * 60
-    const estNow = new Date(now.getTime() + (estOffset - now.getTimezoneOffset()) * 60000)
-    const todayStr = estNow.toISOString().split("T")[0]
-    const todayStart = new Date(todayStr + "T00:00:00-05:00")
-    const dayOfWeek = DAYS_OF_WEEK[estNow.getDay()]
+    const estNow = getESTNow(now)
+    const todayStr = getESTDateString(now)
+    const todayStart = estToUTC(getESTTodayStart(now))
+    const dayOfWeek = DAYS_OF_WEEK[estNow.getUTCDay()]
 
     const dbInstance = await getDb()
     const completedToday = await dbInstance
@@ -49,11 +49,11 @@ export async function GET(request: Request) {
     const dailyDebt = Math.max(0, DAILY_TARGET_POINTS - earnedPoints)
 
     // Get week's data for weekly debt
-    const dayNum = estNow.getDay()
+    const dayNum = estNow.getUTCDay()
     const weekStart = new Date(estNow)
     const daysSinceMonday = dayNum === 0 ? 6 : dayNum - 1
-    weekStart.setDate(weekStart.getDate() - daysSinceMonday)
-    weekStart.setHours(0, 0, 0, 0)
+    weekStart.setUTCDate(weekStart.getUTCDate() - daysSinceMonday)
+    weekStart.setUTCHours(0, 0, 0, 0)
     const weekStartStr = weekStart.toISOString().split("T")[0]
 
     const weekGoals = await dbInstance

@@ -542,6 +542,8 @@ export async function POST(request: Request) {
         throw new Error("OpenClaw is enabled but OPENCLAW_URL/OPENCLAW_TOKEN are not set.")
       }
 
+      const openclawModel = "openclaw:synapse"
+
       // Inject current task context for OpenClaw
       const taskContext = await getCurrentTaskContext()
       const workosContext = `WORKOS THANOSAI - Chat Interface
@@ -561,12 +563,10 @@ EXECUTION RULES
 - Personal tasks live in Todoist. Use Todoist MCP tools for personal tasks.
 - Auto-classify work vs personal using client names and keywords.
 - If a work task is requested without a client, ask which client before adding to WorkOS.
-- Use MCP server "workos" for work/client tasks (tool names prefixed "workos.").
-- Use MCP server "todoist" for personal tasks (tool names prefixed "todoist.").
+- Use the provided function tools for WorkOS task operations (search/create/update/complete/delete/promote/demote).
 - Do NOT mention Things.
 - Only say you did something if you actually executed a tool.
 - If the user says a task is personal or “get rid of/remove it”:
-  - Use Todoist: find it (list_tasks with a filter), then delete_task.
   - Do NOT add personal tasks to WorkOS.
 - If you cannot safely act, ask a single short question.
 
@@ -598,16 +598,20 @@ CONTEXT: You are ThanosAI, an AI assistant helping with task management in the W
 
       console.log('[chat] OpenClaw request:', {
         url: `${openclawBaseUrl}/v1/chat/completions`,
-        model: "openclaw:synapse",
+        model: openclawModel,
         messageCount: openclawMessages.length,
         lastUserMessage: openclawMessages[openclawMessages.length - 1]?.content?.toString().slice(0, 100)
       })
 
       let response
       try {
+        const clawConversation: OpenAI.ChatCompletionMessageParam[] = [...openclawMessages]
+
         response = await openclaw.chat.completions.create({
-          model: "openclaw:synapse",
-          messages: openclawMessages,
+          model: openclawModel,
+          messages: clawConversation,
+          tools: chatTools,
+          tool_choice: "auto",
         })
 
         console.log('[chat] OpenClaw response:', {
@@ -636,6 +640,45 @@ CONTEXT: You are ThanosAI, an AI assistant helping with task management in the W
           console.warn('[chat] OpenClaw returned heartbeat response, converting to chat response')
           assistantMessage.content = "I'm here and ready to help! What can I assist you with today?"
         }
+
+        // Handle tool calls (same pattern as OpenAI path)
+        while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+          clawConversation.push(assistantMessage)
+
+          for (const toolCall of assistantMessage.tool_calls) {
+            if (!("function" in toolCall)) continue
+            const toolName = toolCall.function.name
+            const toolArgs = JSON.parse(toolCall.function.arguments)
+
+            console.log(`[chat] OpenClaw calling tool: ${toolName}`, toolArgs)
+
+            const result = await executeTool(toolName, toolArgs)
+
+            if (toolName === "create_task" && (result as any)?.task) {
+              const task = (result as any).task
+              taskCard = {
+                title: task.title,
+                taskId: String(task.id),
+                status: task.status,
+              }
+            }
+
+            clawConversation.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(result),
+            })
+          }
+
+          response = await openclaw.chat.completions.create({
+            model: openclawModel,
+            messages: clawConversation,
+            tools: chatTools,
+            tool_choice: "auto",
+          })
+
+          assistantMessage = response.choices[0].message
+        }
       } catch (openclawError) {
         console.error('[chat] OpenClaw API error:', openclawError)
         console.error('[chat] OpenClaw request details:', {
@@ -648,8 +691,6 @@ CONTEXT: You are ThanosAI, an AI assistant helping with task management in the W
         console.log('[chat] Falling back to OpenAI due to OpenClaw error')
         throw new Error(`OpenClaw request failed: ${openclawError instanceof Error ? openclawError.message : String(openclawError)}`)
       }
-
-      // OpenClaw handles tools natively; return its response directly
     } else {
       // Call OpenAI with tools
       let response = await openai.chat.completions.create({

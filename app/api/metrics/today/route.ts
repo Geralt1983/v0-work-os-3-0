@@ -13,7 +13,7 @@ export async function GET() {
 
     const now = new Date()
     const estNow = getESTNow(now)
-    const todayUTC = estToUTC(getESTTodayStart(now), now)
+    const todayUTC = estToUTC(getESTTodayStart(now))
 
     const completedToday = await db
       .select()
@@ -51,7 +51,7 @@ export async function GET() {
       paceStatus = "behind" // No progress yet
     } else {
       // Calculate day progress
-      const estHour = estNow.getHours() + estNow.getMinutes() / 60
+      const estHour = estNow.getUTCHours() + estNow.getUTCMinutes() / 60
       const dayProgress = Math.max(0, Math.min(100, ((estHour - WORK_START_HOUR) / (WORK_END_HOUR - WORK_START_HOUR)) * 100))
 
       paceStatus = percentOfTarget >= dayProgress ? "on_track" : "behind"

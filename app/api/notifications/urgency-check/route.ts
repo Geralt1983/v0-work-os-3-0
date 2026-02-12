@@ -12,6 +12,7 @@ import {
   calculateWeeklyDebt,
 } from "@/lib/urgency-system"
 import { DAILY_TARGET_POINTS } from "@/lib/constants"
+import { getESTNow, getESTDateString, getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 
 // Verify cron secret
 function verifyCronSecret(request: Request): boolean {
@@ -35,10 +36,9 @@ export async function GET(request: Request) {
 
     // Get current time in EST
     const now = new Date()
-    const estOffset = -5 * 60
-    const estNow = new Date(now.getTime() + (estOffset - now.getTimezoneOffset()) * 60000)
-    const todayStr = estNow.toISOString().split("T")[0]
-    const currentHour = estNow.getHours()
+    const estNow = getESTNow(now)
+    const todayStr = getESTDateString(now)
+    const currentHour = estNow.getUTCHours()
 
     console.log("[Urgency Check] Running for", todayStr, "at hour", currentHour)
 
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     }
 
     // Calculate current earned points from completed tasks today
-    const todayStart = new Date(todayStr + "T00:00:00-05:00")
+    const todayStart = estToUTC(getESTTodayStart(now))
     const completedToday = await db
       .select({
         points: sql<number>`COALESCE(${tasks.pointsFinal}, ${tasks.pointsAiGuess}, ${tasks.effortEstimate}, 2)`,
@@ -78,11 +78,11 @@ export async function GET(request: Request) {
     const taskCount = completedToday.length
 
     // Get week's data for weekly debt calculation
-    const dayOfWeek = estNow.getDay() // 0=Sunday, 1=Monday, etc
+    const dayOfWeek = estNow.getUTCDay() // 0=Sunday, 1=Monday, etc
     const weekStart = new Date(estNow)
     const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    weekStart.setDate(weekStart.getDate() - daysSinceMonday)
-    weekStart.setHours(0, 0, 0, 0)
+    weekStart.setUTCDate(weekStart.getUTCDate() - daysSinceMonday)
+    weekStart.setUTCHours(0, 0, 0, 0)
     const weekStartStr = weekStart.toISOString().split("T")[0]
 
     const weekGoals = await db

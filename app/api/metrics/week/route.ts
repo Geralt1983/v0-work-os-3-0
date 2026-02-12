@@ -20,12 +20,12 @@ export async function GET() {
     // Calculate work week boundaries (Mon-Fri)
     const weekStartEST = getESTWeekStart(now)
     const weekEndEST = new Date(weekStartEST)
-    weekEndEST.setDate(weekStartEST.getDate() + 4) // Friday
-    weekEndEST.setHours(23, 59, 59, 999)
+    weekEndEST.setUTCDate(weekStartEST.getUTCDate() + 4) // Friday
+    weekEndEST.setUTCHours(23, 59, 59, 999)
 
     // Convert to UTC for database queries
-    const weekStartUTC = estToUTC(weekStartEST, now)
-    const weekEndUTC = estToUTC(weekEndEST, now)
+    const weekStartUTC = estToUTC(weekStartEST)
+    const weekEndUTC = estToUTC(weekEndEST)
 
     // Workdays passed (Mon = 1, Tue = 2, Wed = 3, Thu = 4, Fri = 5)
     // On weekends, all 5 workdays have passed

@@ -4,6 +4,7 @@ import { tasks, clients, clientMemory, dailySnapshots, taskEvents } from "@/lib/
 import { eq, and, gte, lt, inArray, sql } from "drizzle-orm"
 import { getTaskPoints } from "@/lib/domain"
 import { DAILY_TARGET_POINTS } from "@/lib/constants"
+import { getESTNow, getESTDateString, getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -17,13 +18,14 @@ export async function GET(request: Request) {
 
     // Get today's date in EST
     const now = new Date()
-    const estOffset = -5 * 60
-    const estTime = new Date(now.getTime() + estOffset * 60 * 1000)
-    const today = estTime.toISOString().split("T")[0]
+    const estTime = getESTNow(now)
+    const today = getESTDateString(now)
 
     // Get start/end of today in EST
-    const startOfDay = new Date(`${today}T00:00:00-05:00`)
-    const endOfDay = new Date(`${today}T23:59:59-05:00`)
+    const startOfDay = estToUTC(getESTTodayStart(now))
+    const tomorrowStartEST = getESTTodayStart(now)
+    tomorrowStartEST.setUTCDate(tomorrowStartEST.getUTCDate() + 1)
+    const endOfDay = estToUTC(tomorrowStartEST)
 
     // Get completed tasks today
     const completedToday = await db

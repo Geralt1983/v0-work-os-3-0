@@ -8,6 +8,7 @@ import { eq, gte, and, ne, inArray, sql } from "drizzle-orm"
 import { DAILY_TARGET_POINTS, DAILY_MINIMUM_POINTS } from "@/lib/constants"
 import { getTaskPoints } from "@/lib/domain"
 import { analyzePace, getUrgencyPriority, calculateWeeklyDebt } from "@/lib/urgency-system"
+import { getESTNow, getESTDateString, getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 
 export async function GET() {
   console.log("[Afternoon Summary] Starting")
@@ -16,13 +17,10 @@ export async function GET() {
     const db = getDb()
 
     const now = new Date()
-    const estOffset = -5 * 60
-    const utcOffset = now.getTimezoneOffset()
-    const estTime = new Date(now.getTime() + (utcOffset + estOffset) * 60 * 1000)
-
-    const todayStr = estTime.toISOString().split("T")[0]
-    const todayStart = new Date(`${todayStr}T00:00:00-05:00`)
-    const currentHour = estTime.getHours()
+    const estTime = getESTNow(now)
+    const todayStr = getESTDateString(now)
+    const todayStart = estToUTC(getESTTodayStart(now))
+    const currentHour = estTime.getUTCHours()
 
     console.log("[Afternoon Summary] Today start:", todayStart.toISOString())
 
@@ -61,11 +59,11 @@ export async function GET() {
     ])
 
     // Get weekly debt for context
-    const dayOfWeek = estTime.getDay()
+    const dayOfWeek = estTime.getUTCDay()
     const weekStart = new Date(estTime)
     const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    weekStart.setDate(weekStart.getDate() - daysSinceMonday)
-    weekStart.setHours(0, 0, 0, 0)
+    weekStart.setUTCDate(weekStart.getUTCDate() - daysSinceMonday)
+    weekStart.setUTCHours(0, 0, 0, 0)
     const weekStartStr = weekStart.toISOString().split("T")[0]
 
     const weekGoals = await db

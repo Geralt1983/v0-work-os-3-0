@@ -3,14 +3,12 @@ import { dailyLog, dailyGoals } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import { sendMilestoneAlert } from "@/lib/notifications"
 import { MILESTONES } from "@/lib/constants"
+import { getESTDateString, getESTTodayStart, estToUTC } from "@/lib/domain/timezone"
 
 function getESTDate(): { dateStr: string; startOfDay: Date } {
   const now = new Date()
-  const estOffset = -5 * 60
-  const utcOffset = now.getTimezoneOffset()
-  const estTime = new Date(now.getTime() + (utcOffset + estOffset) * 60 * 1000)
-  const dateStr = estTime.toISOString().split("T")[0]
-  const startOfDay = new Date(`${dateStr}T00:00:00-05:00`)
+  const dateStr = getESTDateString(now)
+  const startOfDay = estToUTC(getESTTodayStart(now))
   return { dateStr, startOfDay }
 }
 

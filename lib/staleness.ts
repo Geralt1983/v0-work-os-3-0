@@ -170,7 +170,7 @@ export async function getStaleBlockers(): Promise<string[]> {
 export async function canCompleteDay(): Promise<DayCompletionStatus> {
   const db = getDb()
   const now = new Date()
-  const todayUTC = estToUTC(getESTTodayStart(now), now)
+  const todayUTC = estToUTC(getESTTodayStart(now))
 
   // Get tasks completed today
   const completedToday = await db
