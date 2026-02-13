@@ -9,6 +9,7 @@ import { chatTools } from "@/lib/ai/tools"
 import { executeTool } from "@/lib/ai/tool-executor"
 import { getAvoidanceSummary } from "@/lib/ai/avoidance"
 import { shouldForceDecompositionWorkflow } from "@/lib/ai/decomposition-intent"
+import { resolveCodingExecutor, type CodingExecutor } from "@/lib/ai/coding-executor"
 import {
   buildMergedContextBlock,
   buildDecompositionRagContext,
@@ -425,6 +426,7 @@ export async function POST(request: Request) {
       candidateNotebookIds,
       source,
       sourceMetadata,
+      executor,
     } = await request.json() as {
       sessionId?: string
       message: string
@@ -436,6 +438,7 @@ export async function POST(request: Request) {
       candidateNotebookIds?: string[]
       source?: IngestionSource
       sourceMetadata?: SourceMetadata
+      executor?: CodingExecutor
     }
 
     const sessionId = providedSessionId || randomUUID()
@@ -628,6 +631,10 @@ export async function POST(request: Request) {
 - After tool result, respond with the resulting subtasks and concise sequencing guidance.`
       : ""
     const enhancedPrompt = `${WORK_OS_PROMPT}\n\n${mergedContext}${decompositionWorkflowInstruction}`
+    const selectedExecutor = resolveCodingExecutor({
+      executor,
+      openclawEnabled,
+    })
 
     const conversationMessages: OpenAI.ChatCompletionMessageParam[] = history.slice(-20).map((m) => ({
       role: m.role as "user" | "assistant",
@@ -663,7 +670,7 @@ export async function POST(request: Request) {
     const activityPreference =
       activityMode === "hide" || activityMode === false ? "hide" : "show"
 
-    if (openclawEnabled) {
+    if (selectedExecutor === "opencode") {
       if (!openclaw) {
         throw new Error("OpenClaw is enabled but OPENCLAW_URL/OPENCLAW_TOKEN are not set.")
       }
@@ -889,7 +896,8 @@ export async function POST(request: Request) {
       finalContent: assistantContent,
       contentLength: assistantContent?.length,
       taskCard: !!taskCard,
-      openclawEnabled
+      openclawEnabled,
+      selectedExecutor,
     })
 
     // Check for suspicious content that might indicate an API issue

@@ -62,6 +62,7 @@ export interface ChatRagOptions {
   notebookId?: string
   ragRouteMode?: "auto" | "specific"
   candidateNotebookIds?: string[]
+  executor?: "codex" | "opencode"
 }
 
 // =============================================================================
@@ -184,6 +185,7 @@ export function useChat() {
             ...(ragOptions?.candidateNotebookIds && ragOptions.candidateNotebookIds.length > 0
               ? { candidateNotebookIds: ragOptions.candidateNotebookIds }
               : {}),
+            ...(ragOptions?.executor ? { executor: ragOptions.executor } : {}),
             ...(imageBase64 && { imageBase64 }),
             ...(attachments && attachments.length > 0 && { attachments }),
           }),
