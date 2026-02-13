@@ -8,6 +8,15 @@ import { WORK_OS_PROMPT } from "@/lib/ai/prompts"
 import { chatTools } from "@/lib/ai/tools"
 import { executeTool } from "@/lib/ai/tool-executor"
 import { getAvoidanceSummary } from "@/lib/ai/avoidance"
+import { shouldForceDecompositionWorkflow } from "@/lib/ai/decomposition-intent"
+import {
+  buildMergedContextBlock,
+  buildDecompositionRagContext,
+  type NotebookRoutingMode,
+  type NotebookRoutingMetadata,
+} from "@/lib/ai/chat-context"
+import { resolveIngestionRoute, type IngestionSource, type SourceMetadata } from "@/lib/ai/ingestion-routing"
+import { getPersonalTaskFailureFallback, logPersonalTaskToolFailure } from "@/lib/ai/personal-task-fallback"
 import { execFile } from "child_process"
 import { promisify } from "util"
 import os from "os"
@@ -76,6 +85,32 @@ const openclawEnabled = process.env.OPENCLAW_ENABLED === "true"
 
 const ACTIVITY_OPEN = "[[ACTIVITY]]"
 const ACTIVITY_CLOSE = "[[/ACTIVITY]]"
+const MAX_DECOMPOSITION_RAG_CONTEXT_CHARS = 2200
+
+type HistoryMessage = {
+  role: string
+  content: string
+  timestamp: Date
+  notebookId?: string | null
+}
+
+function buildForcedDecompositionResponse(result: unknown): string {
+  const subtasksRaw = (result as { subtasks?: unknown })?.subtasks
+  const subtasks = Array.isArray(subtasksRaw)
+    ? subtasksRaw.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : []
+
+  if (subtasks.length === 0) {
+    return "I ran decomposition but couldn't generate usable subtasks. Please restate the task with a bit more detail."
+  }
+
+  return [
+    "Here is the breakdown:",
+    ...subtasks.map((step, idx) => `${idx + 1}. ${step}`),
+    "",
+    "Suggested sequence: execute in order and adjust if a blocker appears.",
+  ].join("\n")
+}
 
 function stripActivity(content: string): string {
   const start = content.indexOf(ACTIVITY_OPEN)
@@ -255,7 +290,8 @@ async function deleteTodoistTaskByQuery(query: string): Promise<{status: "delete
     await callTodoist("delete_task", { task_id: taskId })
     return { status: "deleted", message: `Done: removed "${results[0].content}".` }
   } catch (err) {
-    return { status: "error", message: "Couldn't access Todoist right now." }
+    logPersonalTaskToolFailure("delete", err)
+    return { status: "error", message: getPersonalTaskFailureFallback("delete") }
   }
 }
 
@@ -274,7 +310,8 @@ async function completeTodoistTaskByQuery(query: string): Promise<{status: "comp
     await callTodoist("complete_task", { task_id: taskId })
     return { status: "completed", message: `Done: completed "${results[0].content}".` }
   } catch (err) {
-    return { status: "error", message: "Couldn't access Todoist right now." }
+    logPersonalTaskToolFailure("complete", err)
+    return { status: "error", message: getPersonalTaskFailureFallback("complete") }
   }
 }
 
@@ -293,7 +330,8 @@ async function updateTodoistTaskByQuery(query: string, newContent: string): Prom
     await callTodoist("update_task", { task_id: taskId, content: newContent })
     return { status: "updated", message: `Done: updated to "${newContent}".` }
   } catch (err) {
-    return { status: "error", message: "Couldn't access Todoist right now." }
+    logPersonalTaskToolFailure("update", err)
+    return { status: "error", message: getPersonalTaskFailureFallback("update") }
   }
 }
 
@@ -303,7 +341,8 @@ async function createTodoistTask(content: string): Promise<{status: "created" | 
     const title = created?.content || content
     return { status: "created", message: `Done: added "${title}".` }
   } catch (err) {
-    return { status: "error", message: "Couldn't access Todoist right now." }
+    logPersonalTaskToolFailure("create", err)
+    return { status: "error", message: getPersonalTaskFailureFallback("create") }
   }
 }
 
@@ -381,12 +420,22 @@ export async function POST(request: Request) {
       imageBase64,
       attachments,
       activityMode,
+      notebookId,
+      ragRouteMode,
+      candidateNotebookIds,
+      source,
+      sourceMetadata,
     } = await request.json() as {
       sessionId?: string
       message: string
       imageBase64?: string
       attachments?: AttachmentInput[]
       activityMode?: "show" | "hide" | boolean
+      notebookId?: string
+      ragRouteMode?: NotebookRoutingMode
+      candidateNotebookIds?: string[]
+      source?: IngestionSource
+      sourceMetadata?: SourceMetadata
     }
 
     const sessionId = providedSessionId || randomUUID()
@@ -403,13 +452,33 @@ export async function POST(request: Request) {
       })
     }
 
-    // Save user message
+    const activeClients = await db
+      .select({ name: clients.name })
+      .from(clients)
+      .where(eq(clients.isActive, 1))
+    const clientNames = activeClients.map((c) => c.name)
+    const ingress = resolveIngestionRoute({
+      content: message,
+      source,
+      notebookId,
+      sourceMetadata,
+    })
+    const persistedNotebookId = ingress.notebookId
+    const domain = classifyTaskDomain(message, clientNames)
+    const action = extractTaskAction(message)
+    const mentionedClient = findMentionedClient(message, clientNames)
+    const requireToolCall = shouldRequireToolCall(message)
     const userMsgId = randomUUID()
+
+    // Save user message after resolving notebook/source routing.
     await db.insert(messages).values({
       id: userMsgId,
       sessionId,
       role: "user",
       content: message,
+      notebookId: persistedNotebookId,
+      source: ingress.source,
+      sourceMetadata: ingress.sourceMetadata,
       timestamp: new Date(),
     })
 
@@ -434,15 +503,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const activeClients = await db
-      .select({ name: clients.name })
-      .from(clients)
-      .where(eq(clients.isActive, 1))
-    const clientNames = activeClients.map((c) => c.name)
-    const domain = classifyTaskDomain(message, clientNames)
-    const action = extractTaskAction(message)
-    const mentionedClient = findMentionedClient(message, clientNames)
-    const requireToolCall = shouldRequireToolCall(message)
+    let routingMetadata: NotebookRoutingMetadata | null = null
 
     // If work task requested without a client, ask before adding to WorkOS
     if (action?.type === "create" && domain === "work" && !mentionedClient) {
@@ -453,14 +514,18 @@ export async function POST(request: Request) {
         sessionId,
         role: "assistant",
         content: assistantContent,
+        notebookId: persistedNotebookId,
+        source: "assistant",
+        sourceMetadata: { replyToSource: ingress.source },
         timestamp: new Date(),
         taskCard: null,
       })
       await db.update(sessions).set({ lastActiveAt: new Date() }).where(eq(sessions.id, sessionId))
       return NextResponse.json({
         sessionId,
-        userMessage: { id: userMsgId, role: "user", content: message },
+        userMessage: { id: userMsgId, role: "user", content: message, notebookId: persistedNotebookId },
         assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent, taskCard: null },
+        routingMetadata,
       })
     }
 
@@ -490,14 +555,18 @@ export async function POST(request: Request) {
         sessionId,
         role: "assistant",
         content: assistantContent,
+        notebookId: persistedNotebookId,
+        source: "assistant",
+        sourceMetadata: { replyToSource: ingress.source },
         timestamp: new Date(),
         taskCard: null,
       })
       await db.update(sessions).set({ lastActiveAt: new Date() }).where(eq(sessions.id, sessionId))
       return NextResponse.json({
         sessionId,
-        userMessage: { id: userMsgId, role: "user", content: message },
+        userMessage: { id: userMsgId, role: "user", content: message, notebookId: persistedNotebookId },
         assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent, taskCard: null },
+        routingMetadata,
       })
     }
 
@@ -508,10 +577,15 @@ export async function POST(request: Request) {
 
     // Get conversation history
     const history = await db
-      .select()
+      .select({
+        role: messages.role,
+        content: messages.content,
+        timestamp: messages.timestamp,
+        notebookId: messages.notebookId,
+      })
       .from(messages)
       .where(eq(messages.sessionId, sessionId))
-      .orderBy(asc(messages.timestamp))
+      .orderBy(asc(messages.timestamp)) as HistoryMessage[]
 
     let avoidanceContext = ""
     try {
@@ -520,24 +594,52 @@ export async function POST(request: Request) {
       console.log("[chat] Failed to get avoidance context:", err)
     }
 
-    const enhancedPrompt = avoidanceContext
-      ? `${WORK_OS_PROMPT}\n\n## CURRENT AVOIDANCE AWARENESS\n${avoidanceContext}`
-      : WORK_OS_PROMPT
+    const mergedContextResult = buildMergedContextBlock({
+      history,
+      latestUserMessage: message,
+      avoidanceContext,
+      routing: {
+        mode: ragRouteMode,
+        notebookId,
+        candidateNotebookIds,
+      },
+    })
+    const mergedContext = mergedContextResult.text
+    routingMetadata = mergedContextResult.routing
+    const forceDecompositionWorkflow = shouldForceDecompositionWorkflow({
+      latestUserMessage: message,
+      recentTurns: mergedContextResult.recentTurns,
+      retrievedTurns: mergedContextResult.retrievedTurns,
+    })
+    const decompositionRagContext = buildDecompositionRagContext({
+      latestUserMessage: message,
+      recentTurns: mergedContextResult.recentTurns,
+      retrievedTurns: mergedContextResult.retrievedTurns,
+      routing: mergedContextResult.routing,
+      maxChars: MAX_DECOMPOSITION_RAG_CONTEXT_CHARS,
+    })
+    const decompositionWorkflowInstruction = forceDecompositionWorkflow
+      ? `\n\nMANDATORY DECOMPOSITION WORKFLOW
+- This turn is planning/decomposition intent (or follow-up to it) based on merged and retrieved context.
+- Before any generic guidance, call decompose_task exactly once.
+- Use decompose_task args:
+  - query: infer from latest user request and recent thread
+  - rag_context: include the most relevant prior context for continuity
+- After tool result, respond with the resulting subtasks and concise sequencing guidance.`
+      : ""
+    const enhancedPrompt = `${WORK_OS_PROMPT}\n\n${mergedContext}${decompositionWorkflowInstruction}`
 
-    // Build OpenAI messages
-    const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: enhancedPrompt },
-      ...history.slice(-20).map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      })),
-    ]
+    const conversationMessages: OpenAI.ChatCompletionMessageParam[] = history.slice(-20).map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }))
 
     // If there's an image, modify the last user message to include it
     if (imageBase64) {
-      const lastMsg = openaiMessages[openaiMessages.length - 1]
+      const lastIdx = conversationMessages.length - 1
+      const lastMsg = conversationMessages[lastIdx]
       if (lastMsg && lastMsg.role === "user") {
-        openaiMessages[openaiMessages.length - 1] = {
+        conversationMessages[lastIdx] = {
           role: "user",
           content: [
             { type: "text", text: message || "What's in this image?" },
@@ -547,8 +649,16 @@ export async function POST(request: Request) {
       }
     }
 
+    // Build OpenAI messages
+    const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
+      { role: "system", content: enhancedPrompt },
+      ...conversationMessages,
+    ]
+
     let assistantMessage: OpenAI.ChatCompletionMessage
     let taskCard = null
+    let decompositionToolInvoked = false
+    let forcedDecompositionContent: string | null = null
 
     const activityPreference =
       activityMode === "hide" || activityMode === false ? "hide" : "show"
@@ -566,10 +676,8 @@ export async function POST(request: Request) {
         ? "If you use tools, append an activity log block at the end in this exact format:\n\n[[ACTIVITY]]\n- tool_name: short summary of what happened\n[[/ACTIVITY]]"
         : "Do NOT include [[ACTIVITY]] blocks in your response."
 
-      const workosContext = `${WORK_OS_PROMPT}\n\nACTIVITY LOG\n- ${activityRule}`
-
-      // Pass through messages without modification (synapse workspace handles heartbeat override)
-      const chatMessages = openaiMessages.slice(1)
+      const workosContext = `${WORK_OS_PROMPT}\n\n${mergedContext}${decompositionWorkflowInstruction}\n\nACTIVITY LOG\n- ${activityRule}`
+      const chatMessages = [...conversationMessages]
 
       // Append attachment info to last user message if present
       if (attachmentInfo && chatMessages.length > 0) {
@@ -600,7 +708,7 @@ export async function POST(request: Request) {
           model: openclawModel,
           messages: clawConversation,
           tools: chatTools,
-          tool_choice: requireToolCall ? "required" : "auto",
+          tool_choice: forceDecompositionWorkflow || requireToolCall ? "required" : "auto",
         })
 
         console.log('[chat] OpenClaw response:', {
@@ -637,11 +745,25 @@ export async function POST(request: Request) {
           for (const toolCall of assistantMessage.tool_calls) {
             if (!("function" in toolCall)) continue
             const toolName = toolCall.function.name
-            const toolArgs = JSON.parse(toolCall.function.arguments)
+            const toolArgsRaw = JSON.parse(toolCall.function.arguments)
+            const toolArgs = typeof toolArgsRaw === "object" && toolArgsRaw !== null
+              ? (toolArgsRaw as Record<string, unknown>)
+              : {}
+            const hydratedToolArgs =
+              toolName === "decompose_task"
+                ? {
+                    ...toolArgs,
+                    query: String(toolArgs.query || message).trim() || message,
+                    rag_context: decompositionRagContext,
+                  }
+                : toolArgs
 
-            console.log(`[chat] OpenClaw calling tool: ${toolName}`, toolArgs)
+            console.log(`[chat] OpenClaw calling tool: ${toolName}`, hydratedToolArgs)
 
-            const result = await executeTool(toolName, toolArgs)
+            const result = await executeTool(toolName, hydratedToolArgs)
+            if (toolName === "decompose_task") {
+              decompositionToolInvoked = true
+            }
 
             if (toolName === "create_task" && (result as any)?.task) {
               const task = (result as any).task
@@ -686,7 +808,7 @@ export async function POST(request: Request) {
         model: "gpt-4o",
         messages: openaiMessages,
         tools: chatTools,
-        tool_choice: requireToolCall ? "required" : "auto",
+        tool_choice: forceDecompositionWorkflow || requireToolCall ? "required" : "auto",
       })
 
       assistantMessage = response.choices[0].message
@@ -698,11 +820,25 @@ export async function POST(request: Request) {
         for (const toolCall of assistantMessage.tool_calls) {
           if (!("function" in toolCall)) continue
           const toolName = toolCall.function.name
-          const toolArgs = JSON.parse(toolCall.function.arguments)
+          const toolArgsRaw = JSON.parse(toolCall.function.arguments)
+          const toolArgs = typeof toolArgsRaw === "object" && toolArgsRaw !== null
+            ? (toolArgsRaw as Record<string, unknown>)
+            : {}
+          const hydratedToolArgs =
+            toolName === "decompose_task"
+              ? {
+                  ...toolArgs,
+                  query: String(toolArgs.query || message).trim() || message,
+                  rag_context: decompositionRagContext,
+                }
+              : toolArgs
 
-          console.log(`Calling tool: ${toolName}`, toolArgs)
+          console.log(`Calling tool: ${toolName}`, hydratedToolArgs)
 
-          const result = await executeTool(toolName, toolArgs)
+          const result = await executeTool(toolName, hydratedToolArgs)
+          if (toolName === "decompose_task") {
+            decompositionToolInvoked = true
+          }
 
           // Create task card for task creation
           if (toolName === "create_task" && result.task) {
@@ -731,9 +867,18 @@ export async function POST(request: Request) {
       }
     }
 
+    if (forceDecompositionWorkflow && !decompositionToolInvoked) {
+      console.warn("[chat] Enforcing decomposition tool call because model skipped it")
+      const forcedResult = await executeTool("decompose_task", {
+        query: message,
+        rag_context: decompositionRagContext,
+      })
+      forcedDecompositionContent = buildForcedDecompositionResponse(forcedResult)
+    }
+
     // Save assistant message
     const assistantMsgId = randomUUID()
-    let assistantContent = assistantMessage.content || "Done."
+    let assistantContent = forcedDecompositionContent || assistantMessage.content || "Done."
 
     if (activityPreference === "hide") {
       assistantContent = stripActivity(assistantContent) || "Done."
@@ -760,6 +905,9 @@ export async function POST(request: Request) {
       sessionId,
       role: "assistant",
       content: assistantContent,
+      notebookId: persistedNotebookId,
+      source: "assistant",
+      sourceMetadata: { replyToSource: ingress.source },
       timestamp: new Date(),
       taskCard,
     })
@@ -769,8 +917,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       sessionId,
-      userMessage: { id: userMsgId, role: "user", content: message },
+      userMessage: { id: userMsgId, role: "user", content: message, notebookId: persistedNotebookId },
       assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent, taskCard },
+      routingMetadata,
     })
   } catch (error) {
     console.error("Chat error:", error)

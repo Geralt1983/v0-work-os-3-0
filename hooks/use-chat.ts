@@ -22,6 +22,9 @@ export interface Message {
   sessionId: string
   role: "user" | "assistant"
   content: string
+  notebookId?: string | null
+  source?: string
+  sourceMetadata?: Record<string, unknown> | null
   timestamp?: string
   taskCard?: TaskCard | null
   attachments?: Attachment[]
@@ -46,6 +49,19 @@ interface ChatResponse {
   sessionId: string
   userMessage: { id: string; role: "user"; content: string }
   assistantMessage: { id: string; role: "assistant"; content: string; taskCard?: TaskCard }
+  routingMetadata?: {
+    mode: "auto" | "specific"
+    requestedNotebookId: string | null
+    candidateNotebookIds: string[]
+    selectedNotebookIds: string[]
+    notebookScores: Array<{ notebookId: string; score: number; retrievedTurns: number }>
+  } | null
+}
+
+export interface ChatRagOptions {
+  notebookId?: string
+  ragRouteMode?: "auto" | "specific"
+  candidateNotebookIds?: string[]
 }
 
 // =============================================================================
@@ -139,6 +155,7 @@ export function useChat() {
       imageBase64?: string,
       attachments?: Attachment[],
       activityMode?: "show" | "hide",
+      ragOptions?: ChatRagOptions,
     ) => {
       if (!content.trim() && !imageBase64 && (!attachments || attachments.length === 0)) return
 
@@ -162,6 +179,11 @@ export function useChat() {
             sessionId: sessionId || undefined,
             message: content,
             activityMode: activityMode || "show",
+            ...(ragOptions?.notebookId && { notebookId: ragOptions.notebookId }),
+            ...(ragOptions?.ragRouteMode && { ragRouteMode: ragOptions.ragRouteMode }),
+            ...(ragOptions?.candidateNotebookIds && ragOptions.candidateNotebookIds.length > 0
+              ? { candidateNotebookIds: ragOptions.candidateNotebookIds }
+              : {}),
             ...(imageBase64 && { imageBase64 }),
             ...(attachments && attachments.length > 0 && { attachments }),
           }),

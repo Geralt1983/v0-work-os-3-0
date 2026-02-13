@@ -2,6 +2,33 @@ export const chatTools = [
   {
     type: "function" as const,
     function: {
+      name: "decompose_task",
+      description:
+        "Break a task into concrete subtasks. Mandatory first step when user asks to break down, plan, or sequence work, including follow-up planning turns.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Task text, title, or reference to decompose",
+          },
+          max_subtasks: {
+            type: "number",
+            enum: [2, 3, 4, 5, 6],
+            description: "Optional number of subtasks to return (default: 4)",
+          },
+          rag_context: {
+            type: "string",
+            description: "Optional retrieved context from prior conversation for follow-up continuity",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "get_all_client_pipelines",
       description:
         "Get pipeline status for ALL clients. Use first for portfolio/status questions so you can answer decisively from live data.",

@@ -66,6 +66,9 @@ export const messages = pgTable("messages", {
     .notNull(),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  notebookId: text("notebook_id").default("general"),
+  source: text("source").notNull().default("chat"),
+  sourceMetadata: jsonb("source_metadata").default({}),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   taskCard: jsonb("task_card"),
 })

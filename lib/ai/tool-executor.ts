@@ -4,6 +4,33 @@ import { eq, and, ne } from "drizzle-orm"
 import { generateAvoidanceReport } from "@/lib/ai/avoidance"
 import { getTaskHistory, logTaskEvent } from "@/lib/events"
 import { checkAndSendMilestone } from "@/lib/milestone-checker"
+import { generateText } from "ai"
+
+const DECOMPOSITION_SYSTEM_PROMPT = `
+You are ThanosAI, a productivity coach specializing in decomposition.
+
+Break work into 2-6 concrete subtasks that:
+- Start with strong verbs
+- Are specific and measurable
+- Are ordered logically
+- Stay within original scope
+
+Rules:
+- Return ONLY a JSON array of strings
+- Each subtask must be a single sentence
+`
+
+function parseSubtasks(raw: string): string[] | null {
+  try {
+    const cleanedText = raw.trim().replace(/```json\n?|\n?```/g, "")
+    const parsed = JSON.parse(cleanedText)
+    if (!Array.isArray(parsed)) return null
+    const normalized = parsed.filter((v) => typeof v === "string").map((v) => v.trim()).filter(Boolean)
+    return normalized.length > 0 ? normalized : null
+  } catch {
+    return null
+  }
+}
 
 export async function executeTool(name: string, args: Record<string, unknown>) {
   const db = getDb()
@@ -62,6 +89,98 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
         total: filtered.length,
         message:
           filtered.length === 0 ? "No tasks found matching that query" : `Found ${filtered.length} matching tasks`,
+      }
+    }
+
+    case "decompose_task": {
+      const rawQuery = String(args.query || "").trim()
+      if (!rawQuery) {
+        return { success: false, error: "query is required" }
+      }
+
+      const maxSubtasks = Number(args.max_subtasks || 4)
+      const safeMaxSubtasks = [2, 3, 4, 5, 6].includes(maxSubtasks) ? maxSubtasks : 4
+      const ragContext = String(args.rag_context || "").trim()
+      const normalizedQuery = rawQuery.toLowerCase()
+
+      const allTasks = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          description: tasks.description,
+          status: tasks.status,
+          clientId: tasks.clientId,
+          clientName: clients.name,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .where(ne(tasks.status, "done"))
+
+      const idMatch = rawQuery.match(/#?(\d{1,8})\b/)
+      const requestedId = idMatch ? Number(idMatch[1]) : null
+
+      let matchedTask =
+        (requestedId ? allTasks.find((task) => task.id === requestedId) : undefined) ||
+        allTasks.find((task) => task.title.toLowerCase() === normalizedQuery) ||
+        allTasks.find((task) => task.title.toLowerCase().includes(normalizedQuery) || normalizedQuery.includes(task.title.toLowerCase()))
+
+      if (!matchedTask && allTasks.length > 0) {
+        const ranked = allTasks
+          .map((task) => {
+            const haystack = `${task.title} ${task.description || ""} ${task.clientName || ""}`.toLowerCase()
+            const overlap = normalizedQuery
+              .split(/\s+/)
+              .filter((token) => token.length > 2 && haystack.includes(token)).length
+            return { task, overlap }
+          })
+          .filter((entry) => entry.overlap > 0)
+          .sort((a, b) => b.overlap - a.overlap)
+        matchedTask = ranked[0]?.task
+      }
+
+      const sourceTitle = matchedTask?.title || rawQuery
+      const sourceDescription = matchedTask?.description || ""
+      const sourceClient = matchedTask?.clientName || ""
+
+      const prompt = `
+Task: "${sourceTitle}"
+${sourceDescription ? `Description: "${sourceDescription}"` : ""}
+${sourceClient ? `Client: ${sourceClient}` : ""}
+Requested subtask count: ${safeMaxSubtasks}
+${ragContext ? `Retrieved context: "${ragContext}"` : ""}
+
+Break this into smaller subtasks. Return only a JSON array of strings.
+`.trim()
+
+      try {
+        const result = await generateText({
+          model: "openai/gpt-4o-mini",
+          system: DECOMPOSITION_SYSTEM_PROMPT,
+          prompt,
+        })
+
+        const parsed = parseSubtasks(result.text)
+        if (parsed && parsed.length > 0) {
+          return {
+            success: true,
+            task: matchedTask ? { id: matchedTask.id, title: matchedTask.title } : null,
+            subtasks: parsed.slice(0, safeMaxSubtasks),
+            source: matchedTask ? "matched_task" : "freeform_query",
+          }
+        }
+      } catch {
+        // Fall through to deterministic fallback below.
+      }
+
+      return {
+        success: true,
+        task: matchedTask ? { id: matchedTask.id, title: matchedTask.title } : null,
+        subtasks: [
+          `Clarify acceptance criteria and constraints for ${sourceTitle}.`,
+          `Execute the core implementation work for ${sourceTitle}.`,
+          `Validate results, fix issues, and prepare final handoff for ${sourceTitle}.`,
+        ].slice(0, safeMaxSubtasks),
+        source: "fallback",
       }
     }
 
