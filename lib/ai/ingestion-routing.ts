@@ -52,6 +52,13 @@ export type ResolvedIngestionRoute = {
   notebookId: string
   source: IngestionSource
   sourceMetadata: SourceMetadata
+  routing: {
+    notebookId: string
+    classifier: IngestionSource
+    confidence: number
+    explicit: boolean
+    reason: string
+  }
 }
 
 function compactWhitespace(input: string): string {
@@ -76,45 +83,82 @@ function getHintScore(text: string, hints: string[]): number {
 }
 
 export function classifyNotebookIdFromText(content: string): string {
+  return classifyNotebookFromText(content).notebookId
+}
+
+export function classifyNotebookFromText(content: string): {
+  notebookId: string
+  confidence: number
+  reason: string
+} {
   const text = compactWhitespace(content.toLowerCase())
-  if (!text) return DEFAULT_NOTEBOOK_ID
+  if (!text) {
+    return { notebookId: DEFAULT_NOTEBOOK_ID, confidence: 0.8, reason: "empty_default_general" }
+  }
 
   const workHits = getHintScore(text, WORK_HINTS)
   const personalHits = getHintScore(text, PERSONAL_HINTS)
+  const totalHits = workHits + personalHits
 
-  if (workHits > personalHits && workHits > 0) return WORK_NOTEBOOK_ID
-  if (personalHits > workHits && personalHits > 0) return PERSONAL_NOTEBOOK_ID
-  return DEFAULT_NOTEBOOK_ID
+  if (totalHits === 0) {
+    // We default to "general" when we have no signal, but treat this as reasonably safe.
+    return { notebookId: DEFAULT_NOTEBOOK_ID, confidence: 0.8, reason: "no_hints_default_general" }
+  }
+
+  if (workHits === personalHits) {
+    // Conflicting signal; don't pretend we're sure.
+    return { notebookId: DEFAULT_NOTEBOOK_ID, confidence: 0.45, reason: "hint_tie_default_general" }
+  }
+
+  const notebookId = workHits > personalHits ? WORK_NOTEBOOK_ID : PERSONAL_NOTEBOOK_ID
+  const diff = Math.abs(workHits - personalHits)
+  const strength = diff / Math.max(totalHits, 1) // 0..1
+  // Base confidence grows with total signal; strength boosts when it's not a close call.
+  const base = Math.min(0.9, 0.55 + totalHits * 0.08)
+  const confidence = Math.max(0, Math.min(0.99, base + strength * 0.25))
+
+  return { notebookId, confidence, reason: notebookId === WORK_NOTEBOOK_ID ? "work_hints" : "personal_hints" }
 }
 
 function classifyTelegramNotebookId(content: string, metadata: SourceMetadata): string {
+  return classifyTelegramNotebook(content, metadata).notebookId
+
+}
+
+function classifyTelegramNotebook(content: string, metadata: SourceMetadata): {
+  notebookId: string
+  confidence: number
+  reason: string
+} {
   const metadataNotebook = typeof metadata.notebookId === "string" ? metadata.notebookId : metadata.notebookKey
   if (typeof metadataNotebook === "string" && metadataNotebook.trim()) {
-    return normalizeNotebookId(metadataNotebook)
+    return { notebookId: normalizeNotebookId(metadataNotebook), confidence: 0.99, reason: "metadata_notebook" }
   }
 
   const metadataText = compactWhitespace(
-    [
-      metadata.chatTitle,
-      metadata.channelTitle,
-      metadata.chatType,
-      metadata.senderName,
-      metadata.tags,
-      metadata.topic,
-    ]
+    [metadata.chatTitle, metadata.channelTitle, metadata.chatType, metadata.senderName, metadata.tags, metadata.topic]
       .filter(Boolean)
       .join(" ")
       .toLowerCase(),
   )
 
   const combined = compactWhitespace(`${content} ${metadataText}`)
-  return classifyNotebookIdFromText(combined)
+  const classified = classifyNotebookFromText(combined)
+  return { ...classified, reason: `telegram_${classified.reason}` }
 }
 
 function classifyGoogleDriveNotebookId(content: string, metadata: SourceMetadata): string {
+  return classifyGoogleDriveNotebook(content, metadata).notebookId
+}
+
+function classifyGoogleDriveNotebook(content: string, metadata: SourceMetadata): {
+  notebookId: string
+  confidence: number
+  reason: string
+} {
   const metadataNotebook = typeof metadata.notebookId === "string" ? metadata.notebookId : metadata.notebookKey
   if (typeof metadataNotebook === "string" && metadataNotebook.trim()) {
-    return normalizeNotebookId(metadataNotebook)
+    return { notebookId: normalizeNotebookId(metadataNotebook), confidence: 0.99, reason: "metadata_notebook" }
   }
 
   const metadataText = compactWhitespace(
@@ -125,7 +169,8 @@ function classifyGoogleDriveNotebookId(content: string, metadata: SourceMetadata
   )
 
   const combined = compactWhitespace(`${content} ${metadataText}`)
-  return classifyNotebookIdFromText(combined)
+  const classified = classifyNotebookFromText(combined)
+  return { ...classified, reason: `google_drive_${classified.reason}` }
 }
 
 export function resolveIngestionRoute(input: IngestionRouteInput): ResolvedIngestionRoute {
@@ -133,14 +178,17 @@ export function resolveIngestionRoute(input: IngestionRouteInput): ResolvedInges
   const sourceMetadata = (input.sourceMetadata && typeof input.sourceMetadata === "object" ? input.sourceMetadata : {}) as SourceMetadata
 
   const explicitNotebookId = input.notebookId ? normalizeNotebookId(input.notebookId) : ""
-  const classifiedNotebookId =
+  const classified =
     source === "telegram"
-      ? classifyTelegramNotebookId(input.content, sourceMetadata)
+      ? classifyTelegramNotebook(input.content, sourceMetadata)
       : source === "google_drive"
-        ? classifyGoogleDriveNotebookId(input.content, sourceMetadata)
-        : classifyNotebookIdFromText(input.content)
+        ? classifyGoogleDriveNotebook(input.content, sourceMetadata)
+        : classifyNotebookFromText(input.content)
 
-  const notebookId = explicitNotebookId || classifiedNotebookId
+  const notebookId = explicitNotebookId || classified.notebookId
+  const explicit = Boolean(explicitNotebookId)
+  const confidence = explicit ? 1 : classified.confidence
+  const reason = explicit ? "explicit_notebook" : classified.reason
 
   return {
     notebookId,
@@ -151,7 +199,17 @@ export function resolveIngestionRoute(input: IngestionRouteInput): ResolvedInges
       routing: {
         notebookId,
         classifier: source,
+        confidence,
+        explicit,
+        reason,
       },
+    },
+    routing: {
+      notebookId,
+      classifier: source,
+      confidence,
+      explicit,
+      reason,
     },
   }
 }

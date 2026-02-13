@@ -15,6 +15,8 @@ describe("ingestion routing", () => {
     assert.equal(route.notebookId, "work")
     assert.equal(route.source, "telegram")
     assert.equal(route.sourceMetadata.source, "telegram")
+    assert.equal(route.routing.explicit, false)
+    assert.ok(route.routing.confidence > 0 && route.routing.confidence <= 1)
   })
 
   it("uses explicit notebook key when provided", () => {
@@ -25,6 +27,8 @@ describe("ingestion routing", () => {
     })
 
     assert.equal(route.notebookId, "ops-notes")
+    assert.equal(route.routing.explicit, true)
+    assert.equal(route.routing.confidence, 1)
   })
 
   it("classifies Google Drive documents by content and metadata", () => {
@@ -38,5 +42,6 @@ describe("ingestion routing", () => {
 
     assert.equal(route.notebookId, "personal")
     assert.equal(route.source, "google_drive")
+    assert.equal(route.routing.explicit, false)
   })
 })

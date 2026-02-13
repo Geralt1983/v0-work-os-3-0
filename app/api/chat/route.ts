@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
-import { sessions, messages, tasks, clients, messageAttachments } from "@/lib/schema"
+import { sessions, messages, tasks, clients, messageAttachments, notebooks } from "@/lib/schema"
 import { eq, asc, ne } from "drizzle-orm"
 import { randomUUID } from "crypto"
 import OpenAI from "openai"
@@ -87,6 +87,10 @@ const openclawEnabled = process.env.OPENCLAW_ENABLED === "true"
 const ACTIVITY_OPEN = "[[ACTIVITY]]"
 const ACTIVITY_CLOSE = "[[/ACTIVITY]]"
 const MAX_DECOMPOSITION_RAG_CONTEXT_CHARS = 2200
+const NOTEBOOK_FILING_CONFIDENCE_THRESHOLD = Math.max(
+  0,
+  Math.min(1, Number(process.env.NOTEBOOK_FILING_CONFIDENCE_THRESHOLD ?? "0.65")),
+)
 
 type HistoryMessage = {
   role: string
@@ -427,6 +431,8 @@ export async function POST(request: Request) {
       source,
       sourceMetadata,
       executor,
+      routingApproved,
+      createNotebookLabel,
     } = await request.json() as {
       sessionId?: string
       message: string
@@ -439,6 +445,8 @@ export async function POST(request: Request) {
       source?: IngestionSource
       sourceMetadata?: SourceMetadata
       executor?: CodingExecutor
+      routingApproved?: boolean
+      createNotebookLabel?: string
     }
 
     const sessionId = providedSessionId || randomUUID()
@@ -460,6 +468,7 @@ export async function POST(request: Request) {
       .from(clients)
       .where(eq(clients.isActive, 1))
     const clientNames = activeClients.map((c) => c.name)
+
     const ingress = resolveIngestionRoute({
       content: message,
       source,
@@ -467,6 +476,96 @@ export async function POST(request: Request) {
       sourceMetadata,
     })
     const persistedNotebookId = ingress.notebookId
+
+    // Approval gate for notebook filing:
+    // - If routing confidence is low (and user didn't explicitly specify) OR
+    // - If the notebook key doesn't exist, we must ask Jeremy to confirm/create.
+    //
+    // Nothing is written to `messages` until approval is explicit.
+    let existingNotebooks: Array<{ id: string; label: string }> = [
+      { id: "general", label: "General" },
+      { id: "work", label: "Work" },
+      { id: "personal", label: "Personal" },
+    ]
+    try {
+      existingNotebooks = await db
+        .select({ id: notebooks.id, label: notebooks.label })
+        .from(notebooks)
+        .orderBy(asc(notebooks.label))
+    } catch (err) {
+      console.log("[chat] Failed to read notebooks registry; falling back to defaults.", err)
+    }
+    const notebookExists = existingNotebooks.some((n) => n.id === persistedNotebookId)
+
+    const needsConfidenceApproval =
+      !routingApproved &&
+      !ingress.routing.explicit &&
+      ingress.routing.confidence < NOTEBOOK_FILING_CONFIDENCE_THRESHOLD
+
+    const canCreateNotebook = Boolean(routingApproved && createNotebookLabel && createNotebookLabel.trim().length > 0)
+    const needsExistenceApproval = !notebookExists && !canCreateNotebook
+
+    if (needsConfidenceApproval || needsExistenceApproval) {
+      const assistantMsgId = randomUUID()
+      const existingList = existingNotebooks.length
+        ? existingNotebooks.map((n) => `- ${n.label} (key: ${n.id})`).join("\n")
+        : "- (none found)"
+
+      const reasons: string[] = []
+      if (needsExistenceApproval) reasons.push(`notebook key "${persistedNotebookId}" does not exist`)
+      if (needsConfidenceApproval) {
+        reasons.push(
+          `low routing confidence (${ingress.routing.confidence.toFixed(2)} < ${NOTEBOOK_FILING_CONFIDENCE_THRESHOLD.toFixed(2)})`,
+        )
+      }
+
+      const assistantContent = [
+        "I need confirmation before filing this into a notebook.",
+        `Reason: ${reasons.join("; ")}.`,
+        "",
+        `Proposed notebook key: ${persistedNotebookId}`,
+        "",
+        "Reply with one of:",
+        "- an existing notebook key (e.g. `general`, `work`, `personal`)",
+        "- `new: <label>` to create a new notebook and file it there",
+        "- `cancel` to discard (nothing will be stored)",
+        "",
+        "Existing notebooks:",
+        existingList,
+      ].join("\n")
+
+      return NextResponse.json({
+        status: "approval_required",
+        sessionId,
+        approval: {
+          proposedNotebookId: persistedNotebookId,
+          confidence: ingress.routing.confidence,
+          threshold: NOTEBOOK_FILING_CONFIDENCE_THRESHOLD,
+          explicit: ingress.routing.explicit,
+          reason: ingress.routing.reason,
+          notebookExists,
+          existingNotebooks,
+        },
+        assistantMessage: { id: assistantMsgId, role: "assistant", content: assistantContent, taskCard: null },
+      })
+    }
+
+    // If explicitly approved to create a missing notebook, create it now (still before writing messages).
+    if (!notebookExists && canCreateNotebook) {
+      try {
+        await db
+          .insert(notebooks)
+          .values({
+            id: persistedNotebookId,
+            label: createNotebookLabel!.trim(),
+            createdAt: new Date(),
+          })
+          .onConflictDoNothing()
+      } catch (err) {
+        console.log("[chat] Failed to create notebook registry row.", err)
+      }
+    }
+
     const domain = classifyTaskDomain(message, clientNames)
     const action = extractTaskAction(message)
     const mentionedClient = findMentionedClient(message, clientNames)
@@ -849,10 +948,11 @@ export async function POST(request: Request) {
 
           // Create task card for task creation
           if (toolName === "create_task" && result.task) {
+            const task = result.task as { id: unknown; title?: unknown; status?: unknown }
             taskCard = {
-              title: result.task.title,
-              taskId: String(result.task.id),
-              status: result.task.status,
+              title: typeof task.title === "string" ? task.title : "New task",
+              taskId: String(task.id),
+              status: typeof task.status === "string" ? task.status : "backlog",
             }
           }
 

@@ -5,6 +5,7 @@ import { generateAvoidanceReport } from "@/lib/ai/avoidance"
 import { getTaskHistory, logTaskEvent } from "@/lib/events"
 import { checkAndSendMilestone } from "@/lib/milestone-checker"
 import { generateText } from "ai"
+import { confirmPendingIngestion, denyPendingIngestion, listPendingIngestions } from "@/lib/ingestion/pending"
 
 const DECOMPOSITION_SYSTEM_PROMPT = `
 You are ThanosAI, a productivity coach specializing in decomposition.
@@ -32,10 +33,37 @@ function parseSubtasks(raw: string): string[] | null {
   }
 }
 
-export async function executeTool(name: string, args: Record<string, unknown>) {
+export async function executeTool(name: string, args: Record<string, unknown>): Promise<any> {
   const db = getDb()
 
   switch (name) {
+    case "list_pending_ingestions": {
+      const statusRaw = args.status as unknown
+      const status =
+        typeof statusRaw === "string"
+          ? (statusRaw as any)
+          : Array.isArray(statusRaw)
+            ? (statusRaw.filter((s) => typeof s === "string") as any)
+            : undefined
+      const limit = typeof args.limit === "number" ? args.limit : undefined
+      const sources = Array.isArray(args.sources) ? (args.sources.filter((s) => typeof s === "string") as string[]) : undefined
+      const rows = await listPendingIngestions({ status, limit, sources })
+      return { success: true, pending: rows }
+    }
+
+    case "confirm_pending_ingestion": {
+      const id = String(args.id || "").trim()
+      const notebookId = args.notebook_id ? String(args.notebook_id).trim() : undefined
+      const decisionReason = args.decision_reason ? String(args.decision_reason).trim() : undefined
+      return confirmPendingIngestion({ id, notebookId, decisionReason })
+    }
+
+    case "deny_pending_ingestion": {
+      const id = String(args.id || "").trim()
+      const decisionReason = args.decision_reason ? String(args.decision_reason).trim() : undefined
+      return denyPendingIngestion({ id, decisionReason })
+    }
+
     case "get_all_client_pipelines": {
       const allClients = await db.select().from(clients).where(eq(clients.isActive, 1))
       const allTasks = await db.select().from(tasks).where(ne(tasks.status, "done"))

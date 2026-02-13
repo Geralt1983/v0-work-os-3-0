@@ -2,6 +2,63 @@ export const chatTools = [
   {
     type: "function" as const,
     function: {
+      name: "list_pending_ingestions",
+      description: "List pending ingestion items awaiting confirm/deny (Telegram/Drive gate).",
+      parameters: {
+        type: "object",
+        properties: {
+          status: {
+            oneOf: [
+              { type: "string", enum: ["pending", "confirmed", "denied"] },
+              { type: "array", items: { type: "string", enum: ["pending", "confirmed", "denied"] } },
+            ],
+            description: "Filter by status (default: pending)",
+          },
+          limit: { type: "number", description: "Max items (default 20, max 50)" },
+          sources: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional filter by sources (e.g. ['telegram','google_drive'])",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "confirm_pending_ingestion",
+      description:
+        "Confirm (approve) a pending ingestion item. This will file the content into the chat DB as a user message.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Pending ingestion id" },
+          notebook_id: { type: "string", description: "Optional notebook key override" },
+          decision_reason: { type: "string", description: "Optional reason/note for audit trail" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "deny_pending_ingestion",
+      description: "Deny (discard) a pending ingestion item. Nothing will be filed into messages.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Pending ingestion id" },
+          decision_reason: { type: "string", description: "Optional reason/note for audit trail" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "decompose_task",
       description:
         "Break a task into concrete subtasks. Mandatory first step when user asks to break down, plan, or sequence work, including follow-up planning turns.",

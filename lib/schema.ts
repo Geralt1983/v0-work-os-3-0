@@ -3,6 +3,18 @@ import type { InferSelectModel } from "drizzle-orm"
 import { relations } from "drizzle-orm"
 
 // =============================================================================
+// NOTEBOOKS
+// =============================================================================
+// Notebooks are lightweight "topic buckets" used for message/doc filing.
+// Messages store `notebookId` as a string; we keep a separate registry so we can
+// gate low-confidence routing and prevent accidental creation of new keys.
+export const notebooks = pgTable("notebooks", {
+  id: text("id").primaryKey(), // normalized key (e.g. "general", "work", "personal", "ops-notes")
+  label: text("label").notNull(), // display label (may include spaces/case)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// =============================================================================
 // CLIENTS
 // =============================================================================
 export const clients = pgTable("clients", {
@@ -39,13 +51,13 @@ export const tasks = pgTable("tasks", {
   pointsAiGuess: integer("points_ai_guess"),
   pointsFinal: integer("points_final"),
   pointsAdjustedAt: timestamp("points_adjusted_at", { withTimezone: true }),
-}, (table) => [
-  index("tasks_status_idx").on(table.status),
-  index("tasks_client_id_idx").on(table.clientId),
-  index("tasks_completed_at_idx").on(table.completedAt),
-  index("tasks_sort_order_idx").on(table.sortOrder),
-  index("tasks_status_sort_idx").on(table.status, table.sortOrder),
-])
+}, (table) => ({
+  tasks_status_idx: index("tasks_status_idx").on(table.status),
+  tasks_client_id_idx: index("tasks_client_id_idx").on(table.clientId),
+  tasks_completed_at_idx: index("tasks_completed_at_idx").on(table.completedAt),
+  tasks_sort_order_idx: index("tasks_sort_order_idx").on(table.sortOrder),
+  tasks_status_sort_idx: index("tasks_status_sort_idx").on(table.status, table.sortOrder),
+}))
 
 // =============================================================================
 // SESSIONS (for chat)
@@ -85,6 +97,36 @@ export const messageAttachments = pgTable("message_attachments", {
   durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
+
+// =============================================================================
+// PENDING INGESTIONS (human-in-the-loop gate for Telegram / Drive)
+// =============================================================================
+export const pendingIngestions = pgTable(
+  "pending_ingestions",
+  {
+    id: text("id").primaryKey(),
+    status: text("status").notNull().default("pending"), // pending | confirmed | denied
+    source: text("source").notNull(), // telegram | google_drive | ...
+    // Where to file the final message once confirmed.
+    sessionId: text("session_id"),
+    content: text("content").notNull(),
+    extractedTitle: text("extracted_title").notNull(),
+    suggestedNotebookId: text("suggested_notebook_id").notNull(),
+    suggestedNotebookConfidence: decimal("suggested_notebook_confidence", { precision: 5, scale: 4 }).notNull(),
+    finalNotebookId: text("final_notebook_id"),
+    attachments: jsonb("attachments").default([]),
+    sourceMetadata: jsonb("source_metadata").default({}),
+    decisionReason: text("decision_reason"),
+    decidedAt: timestamp("decided_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    pending_ingestions_status_idx: index("pending_ingestions_status_idx").on(table.status),
+    pending_ingestions_source_idx: index("pending_ingestions_source_idx").on(table.source),
+    pending_ingestions_created_at_idx: index("pending_ingestions_created_at_idx").on(table.createdAt),
+  }),
+)
 
 // =============================================================================
 // CLIENT MEMORY
