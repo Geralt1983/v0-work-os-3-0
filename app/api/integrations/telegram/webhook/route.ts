@@ -44,7 +44,8 @@ type TelegramUpdate = {
 
 function isAuthorized(request: Request): boolean {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim()
-  if (!expected) return true // allow if not configured
+  // Security hardening: webhook must be explicitly protected in all environments.
+  if (!expected) return false
   const got = request.headers.get("x-telegram-bot-api-secret-token")?.trim()
   return Boolean(got && got === expected)
 }
@@ -58,7 +59,7 @@ function formatSender(user?: TelegramUser): string {
 
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: true }, { status: 200 })
+    return NextResponse.json({ ok: false }, { status: 401 })
   }
 
   let update: TelegramUpdate | null = null
@@ -128,4 +129,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true }, { status: 200 })
 }
-

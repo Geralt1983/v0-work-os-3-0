@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "mcp:start": "tsx mcp-server/index.ts",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --import tsx --test"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "latest",
